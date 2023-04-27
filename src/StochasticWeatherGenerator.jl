@@ -5,7 +5,6 @@ using Distributions
 
 using ArgCheck
 using LogExpFunctions: logsumexp!
-# import BinaryHierarchicalPeriodicHiddenMarkovModels: polynomial_trigo, interleave2
 import Distributions: fit_mle
 using Optimization
 using JuMP, Ipopt

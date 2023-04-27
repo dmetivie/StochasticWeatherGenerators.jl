@@ -102,7 +102,7 @@ function update_dist(dist::AbstractVector{F} where {F<:Exponential}, θ_Y::Abstr
     optimize!(model)
     θ_Y[:] = value.(θ_jump)
 
-    p = [exp(polynomial_trigo(t, θ_Y[:], T=T)) for t = 1:T]
+    p = [exp(polynomial_trigo(t/T, θ_Y[:])) for t = 1:T]
     dist[:] = Exponential.(p)
     return dist, θ_Y
 end
@@ -213,7 +213,7 @@ function update_α!(
     optimize!(model)
     # Obtained the new parameters
     θ[:, :] = value.(θ_jump)
-    [α[k, t] = exp(polynomial_trigo(t, θ[k, :], T=T)) for k = 1:K-1, t = 1:T]
+    [α[k, t] = exp(polynomial_trigo(t/T, θ[k, :])) for k = 1:K-1, t = 1:T]
     [α[K, t] = 1 for t = 1:T] # last column is 1/normalization (one could do otherwise)
     normalization_polynomial = [1 + sum(α[k, t] for k = 1:K-1) for t = 1:T]
     [α[k, t] /= normalization_polynomial[t] for k = 1:K, t = 1:T]
