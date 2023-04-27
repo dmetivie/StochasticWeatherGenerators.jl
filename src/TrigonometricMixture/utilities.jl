@@ -1,3 +1,5 @@
+interleave2(args...) = collect(Iterators.flatten(zip(args...))) # merge two vector with alternate elements
+
 function polynomial_trigo(t::AbstractFloat, β)
     d = (length(β) - 1) ÷ 2
     # everything is shifted from 1 from usual notation due to array starting at 1
