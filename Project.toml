@@ -5,7 +5,6 @@ version = "1.0.0-DEV"
 
 [deps]
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
-BinaryHierarchicalPeriodicHiddenMarkovModels = "79668668-3461-4603-8296-2999d40b6679"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Copulas = "ae264745-0b69-425e-9d9d-cf662c5eec93"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
