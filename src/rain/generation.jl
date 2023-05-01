@@ -21,8 +21,8 @@ function rand_rain(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::
             end
         else
             C = GaussianCopula(Σk[z[n]][nz_r, nz_r]) #! use cor2cov if you just have correlations matrix !!! (#? in practice does it make a difference?)
-            D = SklarDist(C, tuple(mixs[z[n], t, nz_r]...)) # The final distribution
-            r[nz_r, n] = rand(D)
+            𝔇 = SklarDist(C, tuple(mixs[z[n], t, nz_r]...)) # The final distribution
+            r[nz_r, n] = rand(𝔇)
         end
     end
     return r
