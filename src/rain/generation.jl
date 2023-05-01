@@ -4,21 +4,24 @@ Generate a (nonhomegenous) sequence of length `length(n2t)` of rain amounts cond
 Univariate distribution are given by `mixs` while correlations are given by covariance matrix Σk.
 """
 function rand_rain(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::AbstractVector, y::AbstractArray, Σk::AbstractArray)
+    # My experience is that many correlations matrix choices works with same result in my example i.e. cor, cov, for rain per categorie with zeros included or not etc.
     D, N = size(y)
 
     r = zeros(D, N) # could be specific to `eltype` of mix
-	
+
     for (n, t) in enumerate(n2t)
-        nz_r = findall(!iszero, y[:,n]) # Station j with precipitation
+        nz_r = findall(!iszero, y[:, n]) # Station j with precipitation
         if length(nz_r) == 0
             continue
-        elseif length(nz_r) == 1 #|| z[n] == K (in a old version I did that because dry weather regime z = K was expected to be uncorrelated regime)
-            for j in nz_r
-                r[j, n] = rand(mixs[z[n], t, j])
+        elseif length(nz_r) == 1 #
+            if z[n] == K # I did that because dry weather regime z = K was expected to be uncorrelated regime, pragmatically without that because Σ₄ is not semi definite postive generation might fail
+                for j in nz_r
+                    r[j, n] = rand(mixs[z[n], t, j])
+                end
             end
         else
-			C = GaussianCopula(Σk[z[n]][nz_r, nz_r]) #! use cor2cov if you just have correlations matrix !!! (#? in practice does it make a difference?)
-			D = SklarDist(C, tuple(mixs[z[n], t, nz_r]...)) # The final distribution
+            C = GaussianCopula(Σk[z[n]][nz_r, nz_r]) #! use cor2cov if you just have correlations matrix !!! (#? in practice does it make a difference?)
+            D = SklarDist(C, tuple(mixs[z[n], t, nz_r]...)) # The final distribution
             r[nz_r, n] = rand(D)
         end
     end
