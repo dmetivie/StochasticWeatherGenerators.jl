@@ -13,11 +13,9 @@ function rand_rain(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::
         nz_r = findall(!iszero, y[:, n]) # Station j with precipitation
         if length(nz_r) == 0
             continue
-        elseif length(nz_r) == 1 #
-            if z[n] == K # I did that because dry weather regime z = K was expected to be uncorrelated regime, pragmatically without that because Σ₄ is not semi definite postive generation might fail
-                for j in nz_r
-                    r[j, n] = rand(mixs[z[n], t, j])
-                end
+        elseif length(nz_r) == 1 || z[n] == K # I did that because dry weather regime z = K was expected to be uncorrelated regime, pragmatically without that because Σ₄ is not semi definite postive generation might fail
+            for j in nz_r
+                r[j, n] = rand(mixs[z[n], t, j])
             end
         else
             C = GaussianCopula(Σk[z[n]][nz_r, nz_r]) #! use cor2cov if you just have correlations matrix !!! (#? in practice does it make a difference?)
