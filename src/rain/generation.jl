@@ -6,7 +6,7 @@ Univariate distribution are given by `mixs` while correlations are given by cova
 function rand_rain(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::AbstractVector, y::AbstractArray, Σk::AbstractArray)
     # My experience is that many correlations matrix choices works with same result in my example i.e. cor, cov, for rain per categorie with zeros included or not etc.
     D, N = size(y)
-
+    K = length(mixs)
     r = zeros(D, N) # could be specific to `eltype` of mix
 
     for (n, t) in enumerate(n2t)
