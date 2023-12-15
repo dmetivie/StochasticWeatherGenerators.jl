@@ -9,10 +9,14 @@ using LinearAlgebra: tril
 using Copulas # for correlated generation
 using RollingFunctions # rollmean for climate indices
 
+import SmoothPeriodicStatsModels: fit_mle_stations
+
+# missings
+using Impute: Interpolate, impute!
+
 # using RecipesBase#: @userplot, @recipe, @series
 # import RecipesBase: @userplot
 # include("plot_recipes.jl")
-import SmoothPeriodicStatsModels: fit_mle_stations
 
 # Data part
 include("utilities.jl")
