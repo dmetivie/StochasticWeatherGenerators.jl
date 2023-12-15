@@ -18,6 +18,8 @@ LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
+SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]

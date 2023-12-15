@@ -25,3 +25,15 @@ function rand_rain(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::
     end
     return r
 end
+
+#TODO clarify input shape (array of array or big array?)
+function rand_rain(mixs::AbstractArray{M}, n2t::AbstractVector, z::AbstractVector, y::AbstractArray, Σk::AbstractArray) where M <: AbstractMatrix{<:MixtureModel}
+    # My experience is that many correlations matrix choices works with same result in my example i.e. cor, cov, for rain per categorie with zeros included or not etc.
+    K, T = size(mixs[1])
+    D = length(mixs)
+    reshape_mixs = Array{MixtureModel}(undef, K, T, D)
+    for j in 1:D
+        reshape_mixs[:,:,j] = mixs[j]
+    end
+    return rand_rain(reshape_mixs, n2t, z, y, Σk)
+end

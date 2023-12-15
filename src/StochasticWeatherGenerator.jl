@@ -1,30 +1,19 @@
 module StochasticWeatherGenerator
 
-using Distributions
 # Trigonometric part
 
-using ArgCheck
-using LogExpFunctions: logsumexp!
-import Distributions: fit_mle
-using Optimization
-using JuMP, Ipopt
-
-# 
-
-abstract type AbstractMLE end
-
-include("TrigonometricMixture/utilities.jl")
-include("TrigonometricMixture/fit_mle_trig_EM.jl")
-include("TrigonometricMixture/fit_mle_trig_Optim.jl")
-
-export OptimMLE
-export μₜ, σₜ, αₜ
-
-using StatsBase
+using StatsBase, Distributions
 using DataFrames, DataFramesMeta, Dates
 using CSV, Printf # File Read/Load
 using LinearAlgebra: tril 
-using Copulas # for rain generation
+using Copulas # for correlated generation
+using RollingFunctions # rollmean for climate indices
+
+# using RecipesBase#: @userplot, @recipe, @series
+# import RecipesBase: @userplot
+# include("plot_recipes.jl")
+import SmoothPeriodicStatsModels: fit_mle_stations
+
 # Data part
 include("utilities.jl")
 include("data/extracting.jl")
@@ -34,12 +23,34 @@ include("data/stations.jl")
 include("rain/correlations.jl")
 include("rain/generation.jl")
 
-export rand_rain
+# Temperature
+include("AR1/fit_mle.jl")
+include("temperature/fit_mle.jl")
+
+# Climate
+include("climate_indices.jl")
+
+# ## Rain
+export rand_rain, fit_mle_RR, cov_rain
 export joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail
-export select_in_range_df, collect_data_ECA, shortname
-export cartopy_map_with_stations, distance_x_to_y, distance_x_to_all_stations, dms_to_dd
+
+# ## AR1
+export cov_ar1, fit_AR1
+
+# ## Data
+export select_in_range_df, collect_data_ECA, shortname, collect_data_ECA!
+# ### Geo
+export distance_x_to_y, distance_x_to_all_stations, dms_to_dd
+
+# ## Generic
 export vec_triu, onefy, zerofy
-export whole_year, dayofyear_Leap
 export my_color
+export whole_year, dayofyear_Leap
+
+# ## Climate 
+export longuest_spell, pmf_spell#, cartopy_map_with_stations, 
+export VCX3, cum_monthly
+
+# ### Plot
 
 end

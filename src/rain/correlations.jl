@@ -52,3 +52,31 @@ function corTail(x, q=0.95)
 
     return (c + c') / 2
 end
+
+"""
+    cov_rain(dfs::AbstractArray{<:DataFrame}, K)
+Each df must have :DATE, :RR, :z (same :z for each df)
+```julia
+Σ²RR = cov_rain(data_stations, K)
+```
+"""
+function cov_rain(dfs::AbstractArray{<:DataFrame}, K)
+    D = length(dfs)
+    ΣS_k = [zeros(D, D) + I for k in 1:K]
+    for j1 in 2:D
+        for j2 in 1:j1-1
+            for k in 1:K
+                R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :z .== k, :RR .> 0, :RR_1 .> 0)[!, [:RR, :RR_1]] |> Matrix
+                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = Σ_Spearman2Pearson(R1R2)[1, 2]
+            end
+        end
+    end
+    for k in 1:K
+        aremissing = findall(ismissing, ΣS_k[k])
+        if length(aremissing) > 0
+            @warn "ΣS_k[$(k)], $(findall(ismissing, ΣS_k[k])) are missing"
+        end
+    end
+    # ΣS_k = convert.(Matrix{Float64}, ΣS_k)
+    return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
+end
