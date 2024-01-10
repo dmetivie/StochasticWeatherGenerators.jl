@@ -1,4 +1,3 @@
-
 #TODO docstring + test + exemple
 #TODO @assert col = :DATE exists
 
@@ -30,7 +29,7 @@ end
 #* Rain amount
 
 #TODO add degree option! Here degree is forced to 1
-function mix_ini()
+function mix_ini(T::Integer)
     𝕗(θ) = MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
     θσ10 = [0, 0, 0]
     θσ20 = [2, 0, 0.0]
@@ -41,7 +40,7 @@ function mix_ini()
     return [𝕗([σₜ(t / T, θ_Y0[1]), σₜ(t / T, θ_Y0[2]), αₜ(t / T, θ_al0)]) for t in 1:T], θ_al0, θ_Y0
 end
 
-function fit_mle_RR(𝐑_per_z, n2t_rain, mix_ini, ; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none)
+function fit_mle_RR(𝐑_per_z, n2t_rain, mix_ini; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none)
     mix0, θ_al0, θ_Y0 = mix_ini
     D, K = size(𝐑_per_z)
     T = length(mix0)
@@ -56,13 +55,13 @@ function fit_mle_RR(𝐑_per_z, n2t_rain, mix_ini, ; maxiter=5000, tol=2e-4, rob
 end
 #TODO add degree option! Here degree is forced to 1
 """
-    fit_mle_RR(df::DataFrame, K, local_order; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini())
+    fit_mle_RR(df::DataFrame, K, local_order; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini(T))
 ```julia
 mix_allE = fit_mle_RR.(data_stations, K, local_order)
 ```
 
 """
-function fit_mle_RR(df::DataFrame, K, local_order; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini())
+function fit_mle_RR(df::DataFrame, K, local_order; maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini(length(unique(dayofyear_Leap.(df.DATE)))))
     mix0, θ_al0, θ_Y0 = mix₀
     dfs = df[1+local_order:end, :]
 

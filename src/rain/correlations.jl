@@ -54,13 +54,13 @@ function corTail(x, q=0.95)
 end
 
 """
-    cov_rain(dfs::AbstractArray{<:DataFrame}, K)
+    cov_RR(dfs::AbstractArray{<:DataFrame}, K)
 Each df must have :DATE, :RR, :z (same :z for each df)
 ```julia
 Σ²RR = cov_rain(data_stations, K)
 ```
 """
-function cov_rain(dfs::AbstractArray{<:DataFrame}, K)
+function cov_RR(dfs::AbstractArray{<:DataFrame}, K)
     D = length(dfs)
     ΣS_k = [zeros(D, D) + I for k in 1:K]
     for j1 in 2:D

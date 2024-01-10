@@ -1,4 +1,5 @@
-function fit_TN(df_full, 𝐃𝐞𝐠)
+#TODO: rebase that (with a part inside SmoothPeriodicStatsModels maybe), allow other distribution
+function fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
     #TODO check that dropmissing (and potentially not contigous data) does not cause issue in MLE
     df = dropmissing(df_full[:, [:DATE, :TX, :TN, :z]])
 
@@ -13,11 +14,11 @@ function fit_TN(df_full, 𝐃𝐞𝐠)
         @transform(:y = :TX - :TN)
         groupby([:z])
     end
-    sol_Ipopt = map(dfk) do dfkⱼ
+    sol_Ipopt = map(enumerate(dfk)) do (k, dfkⱼ)
         n2t = dfkⱼ.n2t
         ℓ(θ, x) = -sum(logpdf(f(t / T, θ), x[n]) for (n, t) in enumerate(n2t)) # = -loglikelihood
         y = dfkⱼ.y
-        return SmoothPeriodicStatsModels.fit_mle(SmoothPeriodicStatsModels.OptimMLE(ℓ, SmoothPeriodicStatsModels.Ipopt.Optimizer(), vec(θ0)), y)
+        return fit_loss_optim(ℓ, y, θ0; kwargs...)# fit_mle(OptimMLE(ℓ, Ipopt.Optimizer(), vec(θ0)), y)
     end
     return sol_Ipopt#[t->f(t,θ_fit) for θ_fit in sol_Ipopt]
 end

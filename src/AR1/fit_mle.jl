@@ -1,6 +1,6 @@
 
 #TODO: check that dropmissing (and potentially not contigous data) does not cause issue in MLE
-function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠)
+function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T, K)
     df = dropmissing(df_full[:, [:DATE, var, :z]])
     z = df.z
     n2t = dayofyear_Leap.(df.DATE)
