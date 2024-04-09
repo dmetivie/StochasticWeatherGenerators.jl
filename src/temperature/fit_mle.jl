@@ -3,7 +3,7 @@ function fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
     #TODO check that dropmissing (and potentially not contigous data) does not cause issue in MLE
     df = dropmissing(df_full[:, [:DATE, :TX, :TN, :z]])
 
-    f(θ) = Gamma(θ[1], θ[2])# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
+    f(θ) = Gamma(θ[1], θ[2], check_args = false)# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
     f(t, θ) = f([σₜ(t, θ[1:(2𝐃𝐞𝐠+1)]), σₜ(t, θ[(2𝐃𝐞𝐠+2):end])])
 
     θσ10 = zeros(2𝐃𝐞𝐠 + 1)

@@ -22,7 +22,7 @@ function Σ_Spearman2Pearson(M::AbstractMatrix)
 end
 
 """
-Σ_Kendall2Pearson(M::AbstractMatrix)
+    Σ_Kendall2Pearson(M::AbstractMatrix)
 Compute the Pearson correlation coefficient i.e. the classic one from the Kendall correlation
 #TODO Add ref
 """
@@ -60,23 +60,27 @@ Each df must have :DATE, :RR, :z (same :z for each df)
 Σ²RR = cov_rain(data_stations, K)
 ```
 """
-function cov_RR(dfs::AbstractArray{<:DataFrame}, K)
+function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson)
     D = length(dfs)
-    ΣS_k = [zeros(D, D) + I for k in 1:K]
+    ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerator.I for k in 1:K]
     for j1 in 2:D
         for j2 in 1:j1-1
+            R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
             for k in 1:K
-                R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :z .== k, :RR .> 0, :RR_1 .> 0)[!, [:RR, :RR_1]] |> Matrix
-                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = Σ_Spearman2Pearson(R1R2)[1, 2]
+                R1R2_k = @subset(R1R2, :z .== k)[!, [:RR, :RR_1]] |> Matrix
+                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = cor_method(R1R2_k)[1, 2]
             end
         end
     end
-    for k in 1:K
-        aremissing = findall(ismissing, ΣS_k[k])
-        if length(aremissing) > 0
-            @warn "ΣS_k[$(k)], $(findall(ismissing, ΣS_k[k])) are missing"
+    if all([all((!ismissing).(S)) for S in ΣS_k]) # are they no missing?
+        ΣS_k = convert.(Matrix{Float64}, ΣS_k)
+    else
+        for k in 1:K
+            aremissing = findall(ismissing, ΣS_k[k])
+            if length(aremissing) > 0
+                @warn "ΣS_k[$(k)], $(findall(ismissing, ΣS_k[k])) are missing"
+            end
         end
     end
-    # ΣS_k = convert.(Matrix{Float64}, ΣS_k)
     return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
 end
