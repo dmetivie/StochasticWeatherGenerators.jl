@@ -12,24 +12,49 @@ select_in_range_df(data, start_Date, interval_Date) = findall(df -> df[df.Q_RR.=
 select_in_range_df(data, start_Date, interval_Date, portion) = sort(findall(df -> df[df.Q_RR.==0, :].DATE[1] ≤ start_Date && df[df.Q_RR.==0, :].DATE[end] ≥ start_Date + interval_Date && size(df[.&(df.Q_RR .== 0, start_Date .≤ df.DATE .≤ start_Date + interval_Date), :])[1] ≥ portion * Day(start_Date + interval_Date - start_Date).value, data))
 
 """
-    collect_data_ECA(STAID::AbstractArray{<:Integer}, path::String, var::String="RR")
+    collect_data_ECA(STAID::Integer, path::String, var::String="RR"; skipto=19, header = 18) 
 `path` gives the path where all data files are stored in a vector
 """
-function collect_data_ECA(STAID::AbstractArray{<:Integer}, path::String, var::String="RR")
-    return [CSV.read(joinpath(path, string("ECA_blend_$(lowercase(var))/$(uppercase(var))_", @sprintf("STAID%06.d.txt", i))),
-        DataFrame, comment="#", normalizenames=true, dateformat="yyyymmdd", types=Dict(:DATE => Date))
-            for i in STAID]
+function collect_data_ECA(STAID::Integer, path::String, var::String="RR"; skipto=19, header = 18) 
+    file = joinpath(path, string("ECA_blend_$(lowercase(var))/$(uppercase(var))_", @sprintf("STAID%06.d.txt", STAID)))
+    if isfile(file)
+        return CSV.read(file, DataFrame, skipto=skipto, header = header, comment="#", normalizenames=true, dateformat="yyyymmdd", types=Dict(:DATE => Date))
+    else
+       return @warn "STAID $STAID File does not exists $(file)"
+    end
 end
 
-function collect_data_ECA(STAID::AbstractArray{<:Integer}, date_start::Date, date_end::Date, path::String, var::String="RR"; portion_valid_data::Real=1)
-    data = collect_data_ECA(STAID::AbstractArray{<:Integer}, path::String, var::String)
+"""
+    collect_data_ECA(STAID, date_start::Date, date_end::Date, path::String, var::String="RR"; portion_valid_data=1, skipto=19, header = 18, return_nothing = true)
+- `path` gives the path where all data files are stored in a vector
+- Filter the `DataFrame` s.t. `date_start ≤ :DATE ≤ date_end`
+- var = "RR", "TX" etc.
+- `portion_valid_data` is the portion of valid data we are ok with. If we don't want any missing, fix it to `1`.
+- `skipto` and `header` for `csv` files with meta informations/comments at the beginning of files. See `CSV.jl`.
+- `return_nothing` if `true` it will return `nothing` is the file does not exists or does not have enough valid data.
+"""
+function collect_data_ECA(STAID, date_start::Date, date_end::Date, path::String, var::String="RR"; portion_valid_data=1, skipto=19, header = 18, return_nothing = true)
+    @assert 0 ≤ portion_valid_data ≤ 1
+    data = collect_data_ECA(STAID, path, var; skipto=skipto, header = header)
     total_time = length(date_start:Day(1):date_end)
-    for i in eachindex(data)
-        @subset!(data[i], date_start .≤ :DATE .≤ date_end)
-        @assert nrow(data[i]) ≥ total_time * portion_valid_data
+    if data isa DataFrame
+        @subset!(data, date_start .≤ :DATE .≤ date_end)
+        enougrow = nrow(data) ≥ total_time * portion_valid_data
+        NONvalidrow = count(!iszero, data[:, Symbol(string("Q_",var))])
+        enougrow ? nothing : @warn "STAID $(data.STAID[1]) nrow = $(nrow(data)) < total_time = $(total_time * portion_valid_data)."
+        NONvalidrow == 0 ? nothing : @warn "STAID $(data.STAID[1]) There are $NONvalidrow missing rows."
+        if return_nothing
+            if NONvalidrow > 0 || !(enougrow)
+                return nothing
+            else
+                return data
+            end
+        else
+            return data
+        end
+    else
+        return data
     end
-
-    return data
 end
 
 function collect_data_ECA!(data, path::String, var; validity = false)
@@ -48,6 +73,14 @@ function collect_data_ECA!(data, path::String, var; validity = false)
     end
 end
 
+"""
+    shortname(name::String)
+Experimental function that returns only the most relevant part of a station name.
+```julia
+long_name = "TOULOUSE-BLAGNAC"
+shortname(long_name) # "TOULOUSE"
+```
+"""
 function shortname(name::String)
     n = uppercase(name)
     if startswith(n, "LA ") || startswith(n, "LE ") || startswith(n, "LES ") || startswith(n, "ST ") || startswith(n, "BELLE ")
@@ -56,6 +89,8 @@ function shortname(name::String)
         m = join(split(name)[3:4], " ")
     elseif startswith(n, "PTE DE ")
         m = split(name)[3]
+    elseif startswith(n, "ST-") || startswith(n, "MONT-")
+        return rstrip(n)
     else
         m = split(n)[1]
     end
