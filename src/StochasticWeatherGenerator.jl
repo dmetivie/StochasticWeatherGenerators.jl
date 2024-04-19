@@ -11,7 +11,7 @@ using RollingFunctions # rollmean for climate indices
 using SmoothPeriodicStatsModels: αₜ, σₜ, μₜ, ρₜ
 using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_optimize!
 using SmoothPeriodicStatsModels: fit_loss_optim
-
+using Geodesy
 import SmoothPeriodicStatsModels: fit_mle_stations
 
 # missings

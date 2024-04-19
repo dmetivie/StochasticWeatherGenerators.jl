@@ -10,6 +10,9 @@ function dms_to_dd(l)
     (abs(deg) + minutes / 60 + seconds / (60 * 60)) * sign(deg)
 end
 
+#! Type piracy
+Geodesy.LLA(x::String, y::String, z) = LLA(dms_to_dd(x), dms_to_dd(y), z)
+
 """
     distance_x_to_y
 Distance in km between two stations.

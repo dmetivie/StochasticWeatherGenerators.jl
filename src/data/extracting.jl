@@ -81,7 +81,7 @@ long_name = "TOULOUSE-BLAGNAC"
 shortname(long_name) # "TOULOUSE"
 ```
 """
-function shortname(name::String)
+function shortname(name::AbstractString)
     n = uppercase(name)
     if startswith(n, "LA ") || startswith(n, "LE ") || startswith(n, "LES ") || startswith(n, "ST ") || startswith(n, "BELLE ")
         m = join(split(name)[1:2], " ")
