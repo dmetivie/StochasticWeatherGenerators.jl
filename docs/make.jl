@@ -1,8 +1,26 @@
 using Documenter
+using Literate
 using StochasticWeatherGenerator
+
+
+examples_jl_path = joinpath(dirname(@__DIR__), "examples")
+examples_md_path = joinpath(@__DIR__, "src")
+
+for file in readdir(examples_md_path)
+    if endswith(file, ".md")
+        rm(joinpath(examples_md_path, file))
+    end
+end
+
+for file in readdir(examples_jl_path)
+    if !startswith(file, "geo")
+        Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
+    end
+end
 
 makedocs(
     sitename = "StochasticWeatherGenerator",
+    authors = "David Métivier",
     format = Documenter.HTML(),
     modules = [StochasticWeatherGenerator]
 )

@@ -1,3 +1,1 @@
-# StochasticWeatherGenerator.jl
-
-Documentation for StochasticWeatherGenerator.jl
+# Stochastic Weather Generator
