@@ -4,7 +4,7 @@ using StochasticWeatherGenerator
 
 
 examples_jl_path = joinpath(dirname(@__DIR__), "examples")
-examples_md_path = joinpath(@__DIR__, "src")
+examples_md_path = joinpath(@__DIR__, "src", "examples")
 
 for file in readdir(examples_md_path)
     if endswith(file, ".md")
@@ -18,10 +18,17 @@ for file in readdir(examples_jl_path)
     end
 end
 
+pages = [
+    "Home" => "index.md",
+    "Tutorials" => [
+        "Paper" => joinpath("examples", "tuto_paper.md")
+    ]
+]
 makedocs(
     sitename = "StochasticWeatherGenerator",
     authors = "David Métivier",
     format = Documenter.HTML(),
+    sitename="StochasticWeatherGenerator.jl",
     modules = [StochasticWeatherGenerator]
 )
 

@@ -38,7 +38,8 @@ scalefontsizes(1.5)
 md"""
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
 """
-include("geo_makie_features.jl")
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+include(file_for_maps_with_geomakie)
 
 md"""
 ## Data files
@@ -156,7 +157,8 @@ Here we
 - Shorten station names #TODO improve this function (maybe impose max string instead of all 'if')	
 """
 begin
-    station_all = CSV.read(joinpath(WORK_DIR, "stations.txt"), DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
+    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/stations.txt")
+    station_all = CSV.read(station_file, DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
     station_all = @chain station_all begin
         @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
         @subset(:CN .∈ tuple(["FR", "BE", "LU", "CH"]))
@@ -235,7 +237,7 @@ Filter by date and valid data ECA data
 
 
 begin
-    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, WORK_DIR, portion_valid_data=1, skipto=22, header = 21)
+    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
     for i = eachindex(data_stations)
         @transform!(data_stations[i], :bin = onefy.(:RR))
     end
@@ -326,7 +328,7 @@ md"""
 ## EM converged in 73 iterations, logtot = -116791.10065504618
 ## FitMLE SHMM (Baum Welch): 36.161685 seconds (185.76 M allocations: 32.581 GiB, 6.77% gc time, 10.09% compilation time)
 
-save_tuto_path = "../assets/tuto_1"
+save_tuto_path = "../../assets/tuto_1"
 
 save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit)
 

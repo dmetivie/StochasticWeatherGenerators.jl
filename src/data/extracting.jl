@@ -11,12 +11,14 @@ select_in_range_df(data, start_Date, interval_Date) = findall(df -> df[df.Q_RR.=
 
 select_in_range_df(data, start_Date, interval_Date, portion) = sort(findall(df -> df[df.Q_RR.==0, :].DATE[1] ≤ start_Date && df[df.Q_RR.==0, :].DATE[end] ≥ start_Date + interval_Date && size(df[.&(df.Q_RR .== 0, start_Date .≤ df.DATE .≤ start_Date + interval_Date), :])[1] ≥ portion * Day(start_Date + interval_Date - start_Date).value, data))
 
+#TODO: remove ECA_blend_RR in path, people can have other folder name
+
 """
     collect_data_ECA(STAID::Integer, path::String, var::String="RR"; skipto=19, header = 18) 
 `path` gives the path where all data files are stored in a vector
 """
-function collect_data_ECA(STAID::Integer, path::String, var::String="RR"; skipto=19, header = 18) 
-    file = joinpath(path, string("ECA_blend_$(lowercase(var))/$(uppercase(var))_", @sprintf("STAID%06.d.txt", STAID)))
+function collect_data_ECA(STAID::Integer, path::String, var::String="RR"; skipto=19, header = 18, url = false) 
+    file = url ? Base.download(string(path, @sprintf("STAID%06.d.txt", STAID))) : joinpath(path, string("ECA_blend_$(lowercase(var))/$(uppercase(var))_", @sprintf("STAID%06.d.txt", STAID)))
     if isfile(file)
         return CSV.read(file, DataFrame, skipto=skipto, header = header, comment="#", normalizenames=true, dateformat="yyyymmdd", types=Dict(:DATE => Date))
     else
@@ -33,9 +35,9 @@ end
 - `skipto` and `header` for `csv` files with meta informations/comments at the beginning of files. See `CSV.jl`.
 - `return_nothing` if `true` it will return `nothing` is the file does not exists or does not have enough valid data.
 """
-function collect_data_ECA(STAID, date_start::Date, date_end::Date, path::String, var::String="RR"; portion_valid_data=1, skipto=19, header = 18, return_nothing = true)
+function collect_data_ECA(STAID, date_start::Date, date_end::Date, path::String, var::String="RR"; portion_valid_data=1, skipto=19, header = 18, return_nothing = true, url = false)
     @assert 0 ≤ portion_valid_data ≤ 1
-    data = collect_data_ECA(STAID, path, var; skipto=skipto, header = header)
+    data = collect_data_ECA(STAID, path, var; skipto=skipto, header = header, url = url)
     total_time = length(date_start:Day(1):date_end)
     if data isa DataFrame
         @subset!(data, date_start .≤ :DATE .≤ date_end)
