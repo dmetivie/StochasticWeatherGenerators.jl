@@ -280,7 +280,7 @@ LON_idx = dms_to_dd.(station.LON)
 long_spell = [longuest_spell(y) for y in eachcol(𝐘)]
 
 
-map_with_stations(LON_idx, LAT_idx; station_name=station_name, value=long_spell, show_value=true, colorbar_show=true)
+map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
 
 md"""
 # Fit seasonal HMM
@@ -294,13 +294,13 @@ md"""
 
 md"""
 !!! note
-	Before infering the HMM parameters with EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.
+    Before inferring the HMM parameters with EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.
 """
 
 
 md"""
-Reference station `ref_station` used to sort hidden state for the slide initialization 
-Here it is j=1 -> STAID=32 -> BOURGES because it is a central station for France
+Reference station `ref_station` used to sort hidden state for the slide initialization
+Here we choose `j=1` $\to$ `STAID=32` $\to$ `BOURGES` because it is a central station for France
 """
 
 
@@ -334,12 +334,14 @@ save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).
 
 md"""
 Uncomment to load previously computed hmm
+```julia
+# hmm_infos = load("save/hmm_fit.jld")
+# hmm_fit = hmm_infos["hmm"]
+# hist = hmm_infos["hist"]
+# θq_fit = hmm_infos["Q_param"]
+# θy_fit = hmm_infos["Y_param"]
+```
 """
-## hmm_infos = load("save/hmm_fit.jld")
-## hmm_fit = hmm_infos["hmm"]
-## hist = hmm_infos["hist"]
-## θq_fit = hmm_infos["Q_param"]
-## θy_fit = hmm_infos["Y_param"]
 
 
 md"""
@@ -397,9 +399,6 @@ begin
     Σ²RR = convert.(Matrix{Float64}, Σ²RR)
 end
 
-
-
-
 if K == 4
     @warn "For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4"
 end
@@ -414,10 +413,14 @@ md"""
 ## HMM generation Dry/Wet + Rain
 """
 
-
+md"""
+`Nb` is the number of realization
+"""
 Nb = 1000
 
-
+md"""
+Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.
+"""
 begin
     zs = zeros(Int, N, Nb)
     ys = zeros(Bool, N, D, Nb)
@@ -427,6 +430,9 @@ begin
 end
 ## Simulations Z, Y: 34.998679 seconds (328.41 M allocations: 32.166 GiB, 8.24% gc time, 1.16% compilation time)
 
+md"""
+Given the hidden states and dry/wet, it generates the rain amounts at each stations (correlated with a Gaussian Copula).
+"""
 
 begin
     rs = zeros(D, N, Nb)
@@ -499,10 +505,10 @@ memory_past_cat = 1
 
 md"""
 h = 1 (day before dry) or 2 (day before wet)
-$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = $(memory_past_cat))
+$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = %$(memory_past_cat)
 """
 
-p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, K, value=[[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
+p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
 
 
 md"""
@@ -545,22 +551,19 @@ md"""
 `select_month` to chose the month where to compute the spells distributions (summer month, winter, etc.)
 `select_month = 1:12` corresponds to all month.
 """
+select_month = 1:12
 
+idx_months = [findall(x -> month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
 
 
 idx_month_vcat = vcat(idx_months[select_month]...)
 
 
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_months];
-select_month = 1:12
-
-idx_months = [findall(x -> month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
-
 
 md"""
 #### Historic spells
 """
-
 
 len_spell_hist = [pmf_spell(𝐘[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];
 
@@ -659,7 +662,7 @@ md"""
 
 
 md"""
-Historical vs $(Nb) simulations distribution
+Historical vs %$(Nb) simulations distribution
 """
 
 

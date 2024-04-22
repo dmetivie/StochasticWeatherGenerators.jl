@@ -14,7 +14,7 @@ end
 
 for file in readdir(examples_jl_path)
     if !startswith(file, "geo")
-        Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
+       Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
     end
 end
 
@@ -28,7 +28,6 @@ makedocs(
     sitename = "StochasticWeatherGenerator",
     authors = "David Métivier",
     format = Documenter.HTML(),
-    sitename="StochasticWeatherGenerator.jl",
     modules = [StochasticWeatherGenerator]
 )
 
