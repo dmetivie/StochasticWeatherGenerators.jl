@@ -87,18 +87,13 @@ ocean(scale="50m") = PolyFeature(string("ne_", scale, "_", "ocean"))
 Plot a [cartopy](https://scitools.org.uk/cartopy/docs/latest/) map (by default France) with point at the given Longitude and Latitude in  Decimal Degrees.
 One can add station names and a value display to it.
 """
-function map_with_stations(LON_idx, LAT_idx; station_name=nothing, value=:coral, show_value=false, fontsize=15,
+function map_with_stations(LON_idx, LAT_idx, value=:coral; station_name=nothing, show_value=false, fontsize=15,
     precision_scale="50m", colorbar_title=:none, colorbar_show=false, colorbar_limits=:none,
     LON_min=-5, # West
     LON_max=10.5, # Est
     LAT_min=41, # South
     LAT_max=52 # North
 )
-    N = length(LON_idx)
-    # Value to display next to station 
-    lat_shift = fill(-0.15, N)
-    lon_shift = fill(0.02, N)
-
     fig = GeoMakie.with_theme(GeoMakie.theme_latexfonts(), fontsize=fontsize) do
         fig = GeoMakie.Figure()
         ax = GeoMakie.GeoAxis(fig[1, 1], dest="+proj=merc", xgridvisible=false, ygridvisible=false, xticklabelsvisible=true, yticklabelsvisible=true, xticksvisible=false, yticksvisible=false)
@@ -109,7 +104,7 @@ function map_with_stations(LON_idx, LAT_idx; station_name=nothing, value=:coral,
         add_feature!(ax, coastline(precision_scale), color=:black, linewidth=0.75)
         add_feature!(ax, borders(precision_scale), linestyle=:dash, color=:black, linewidth=0.75)
 
-        sc = GeoMakie.scatter!(ax, LON_idx, LAT_idx; color=value, markersize=15, colormap=:plasma, clims=(30, 80))
+        sc = GeoMakie.scatter!(ax, LON_idx, LAT_idx; color=value, markersize=15, colormap=:plasma, colorrange =(30, 80))
         if show_value == true
             GeoMakie.text!(ax, LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
             # [annotate!(ax, "$(value[j])", (LON_idx[j] - lon_shift[j], LAT_idx[j] - lat_shift[j]), fontsize=fontsize, weight="bold") for j = 1:size(station_name, 1)]
@@ -130,18 +125,14 @@ function map_with_stations(LON_idx, LAT_idx; station_name=nothing, value=:coral,
     return fig
 end
 
-function map_with_stations(LON_idx, LAT_idx, K::Integer; station_name=nothing, value=:coral, show_value=false, fontsize=15,
+function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_name=nothing, show_value=false, fontsize=15,
     precision_scale="50m", colorbar_title=:none, colorbar_show=false, colorbar_limits=:none,
     LON_min=-5, # West
     LON_max=10.5, # Est
     LAT_min=41, # South
     LAT_max=52 # North
-)
-    N = length(LON_idx)
-    # Value to display next to station 
-    lat_shift = fill(-0.15, N)
-    lon_shift = fill(0.02, N)
-
+) where V<:AbstractArray
+    K = length(value)
     fig = GeoMakie.with_theme(GeoMakie.theme_latexfonts(), fontsize=fontsize) do
         fig = GeoMakie.Figure()
         ax = [GeoMakie.GeoAxis(fig[1, k], dest="+proj=merc", xgridvisible=false, ygridvisible=false, xticklabelsvisible=true, yticklabelsvisible=true, xticksvisible=false, yticksvisible=false) for k in 1:K]
@@ -153,7 +144,7 @@ function map_with_stations(LON_idx, LAT_idx, K::Integer; station_name=nothing, v
             add_feature!(ax[k], coastline(precision_scale), color=:black, linewidth=0.75)
             add_feature!(ax[k], borders(precision_scale), linestyle=:dash, color=:black, linewidth=0.75)
 
-            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=15, colormap=:plasma, clims=(30, 80))
+            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=15, colormap=:plasma, colorrange =(0, 1))
             if show_value == true
                 GeoMakie.text!(ax[k], LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
                 # [annotate!(ax, "$(value[j])", (LON_idx[j] - lon_shift[j], LAT_idx[j] - lat_shift[j]), fontsize=fontsize, weight="bold") for j = 1:size(station_name, 1)]
@@ -163,13 +154,14 @@ function map_with_stations(LON_idx, LAT_idx, K::Integer; station_name=nothing, v
                     # [ax.annotate(station_name[j], (LON_idx[j] - 30lon_shift[j], LAT_idx[j] + 2.5lat_shift[j]), fontsize=fontsize / 1.3, weight="bold") for j in 1:N]
                 end
             end
-        end
-        if colorbar_show == true
-            GeoMakie.Colorbar(fig[1, K+1], sc)
+            if colorbar_show == true && k == K
+                cb = GeoMakie.Colorbar(fig[1, K+1], sc)
+                cb.alignmode = GeoMakie.Mixed(right = 0)
+            end
         end
 
-        GeoMakie.colsize!(fig.layout, 1, GeoMakie.Aspect(1, 1.0)) # remove white gap in between colorbar/map
-        GeoMakie.resize_to_layout!(fig) # remove white gap around figure
+        # GeoMakie.colsize!(fig.layout, 1, GeoMakie.Aspect(1, 1.0)) # remove white gap in between colorbar/map
+        # GeoMakie.resize_to_layout!(fig) # remove white gap around figure
         fig
     end
     return fig
