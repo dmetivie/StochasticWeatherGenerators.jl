@@ -19,7 +19,12 @@ jobs:
           version: '1'
       - name: Install dependencies
       # see https://discourse.julialang.org/t/hosting-docs-with-documenter-jl-with-dependencies-github-actions-with-unregistered-packages/83364/10?u=dmetivie
-        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.add(url="https://github.com/dmetivie/SmoothPeriodicStatsModels.jl#master"); Pkg.instantiate()'
+        run: | 
+          julia --project=docs/ -e '
+            using Pkg; 
+            Pkg.add(url="https://github.com/dmetivie/SmoothPeriodicStatsModels.jl", rev= "develop"); 
+            Pkg.develop(PackageSpec(path=pwd())); 
+            Pkg.instantiate()'
       - name: Build and deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
