@@ -24,16 +24,22 @@ pages = [
         "Paper" => joinpath("examples", "tuto_paper.md")
     ]
 ]
+
+fmt = Documenter.HTML(;
+    prettyurls=get(ENV, "CI", "false") == "true",
+    repolink="https://github.com/dmetivie/StochasticWeatherGenerator.jl",
+    canonical="https://dmetivie.github.io/StochasticWeatherGenerator.jl",
+    assets=String[],
+)
+
 makedocs(
     sitename = "StochasticWeatherGenerator",
     authors = "David Métivier",
-    format = Documenter.HTML(),
+    format = fmt,
     modules = [StochasticWeatherGenerator]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(; repo="github.com/dmetivie/StochasticWeatherGenerator.jl", devbranch="master")
