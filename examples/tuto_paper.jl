@@ -1,7 +1,8 @@
 using Markdown
 cd(@__DIR__)#hide
+
 md"""
-# Utilities
+# Set up
 """
 
 md"""
@@ -18,9 +19,9 @@ using StatsBase, Random
 
 using Distributions
 
-using SmoothPeriodicStatsModels
+using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
 
-using StochasticWeatherGenerator
+using StochasticWeatherGenerator # interface to use with SmoothPeriodicStatsModels
 
 using StatsPlots, LaTeXStrings
 
@@ -29,7 +30,7 @@ using StatsPlots, LaTeXStrings
 Random.seed!(1234)
 
 md"""
-## For plotting
+## Settings for plotting
 """
 gr()
 default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
@@ -45,8 +46,6 @@ md"""
 ## Data files
 """
 
-
-WORK_DIR = "../weather_files/"
 
 
 md"""
@@ -146,7 +145,7 @@ md"""
 
 
 md"""
-## Select stations
+## Select relevant stations from the `station.txt` file
 """
 
 
@@ -232,7 +231,8 @@ md"""
 
 
 md"""
-Filter by date and valid data ECA data
+Load into DataFrames the (ECA) RR files (rain). It filters by date and valid data.
+It also add a column of rain event (0: dry, 1: wet).
 """
 
 
@@ -245,7 +245,7 @@ end
 
 
 md"""
-Binary output
+Binary matrix version of rain event at the `D` stations.
 """
 
 
@@ -267,7 +267,7 @@ md"""
 
 
 md"""
-Convert LAT DMS into DD which seems most widly accepted (and read by Cartopy)
+Convert LAT DMS into DD which seems most widly accepted format.
 """
 
 
@@ -283,9 +283,8 @@ long_spell = [longuest_spell(y) for y in eachcol(𝐘)]
 map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
 
 md"""
-# Fit seasonal HMM
+# Fit the seasonal HMM
 """
-
 
 md"""
 ## Fit slice: naive estimation
@@ -306,7 +305,9 @@ Here we choose `j=1` $\to$ `STAID=32` $\to$ `BOURGES` because it is a central st
 
 ref_station = 1
 
-
+md"""
+This generate a random Periodic HMM that we then fit slice by slice (day by day). See paper.
+"""
 hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
 
 
@@ -318,6 +319,8 @@ hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_statio
 
 md"""
 ## Fit with Baum Welch using slice estimate as starting point
+
+With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!
 """
 
 
@@ -343,11 +346,74 @@ Uncomment to load previously computed hmm
 ```
 """
 
-
 md"""
-## Infer historical hidden state with Viterbi
+## Visualisation of the HMM parameters
 """
 
+md"""
+### Transition matrix
+"""
+
+
+begin
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
+    for k in 1:K
+        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:topleft) for l in 1:K]
+        hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
+        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=10, ylims=(0, 1))
+    end
+    pallA = plot(pA..., size=(1000, 500))
+    ## savefig(pallA, "save/Q_transition_memo_1_K_4_d_2.pdf")
+end
+
+
+md"""
+### Rain probabilities
+"""
+
+
+begin
+    mm = 1
+    jt = D
+    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16) for j in 1:jt]
+    for j in 1:jt
+        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none) for k in 1:K]
+        hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
+        xticks!(
+            pB[j],
+            vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
+            vcat(string.(monthabbr.(1:12)), ""), xtickfontsize=10
+        )
+        xlims!(pB[j], (0, 367))
+        ylims!(pB[j], (0, 1))
+    end
+    pallB = plot(pB[staid_lat]..., size=(3000 / 1.25, 1000 / 1.25), layout=(2, 5))
+    ## savefig(pallB, "save/proba_rain_all_station.pdf")
+end
+
+
+
+md"""
+### Spatial Rain probability 
+"""
+
+memory_past_cat = 1
+
+md"""
+h = 1 (day before dry) or 2 (day before wet)
+$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = %$(memory_past_cat)
+"""
+
+p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
+
+
+md"""
+## Inference of the historical hidden states
+"""
+
+md"""
+###  Viterbi algorithm
+"""
 
 ẑ = viterbi(hmm_fit, 𝐘, 𝐘_past; n2t=n2t)
 
@@ -362,12 +428,50 @@ ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
 CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]))
 
-
 md"""
-# Adding Rain
+### Visualisation of the Historical sequences of hidden states
 """
 
+year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
 
+
+idx_year = [findall(x -> year.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in year_range];
+
+
+select_year = unique(sort([4:10:length(year_range); 21; 48; 64]))
+
+begin
+    year_nb = length(select_year)
+    z_hat_mat = zeros(year_nb, 366)
+
+    for (i, y) in enumerate(select_year)
+        if isleapyear(year_range[y])
+            z_hat_mat[i, :] = ẑ[idx_year[y]]
+        else
+            z_hat_mat[i, :] = [ẑ[idx_year[y]]; 0]
+        end
+    end
+    thick = 1
+    heatmap(z_hat_mat, colorbar=:none, c=my_palette(K), minorticks=:false, framestyle=:xbox, grid=:none, thickness_scaling=thick)
+    xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
+    hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
+    ylims!(0.5, year_nb + 0.5)
+    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]))
+    ## savefig(pviterbi, "save/temporal_1959_2009.pdf")
+end
+
+md"""
+# Adding Rain amounts to the model
+"""
+
+md"""
+## Marginal fit
+
+
+We fit the marginals at each station independently. 
+We use a mixture of exponential functions whose parameters evolve smoothly and periodically
+TODO: put equation
+"""
 @time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerator.mix_ini(T))
 ## FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
@@ -382,6 +486,8 @@ I did my approach (to save interpolate quantile) few months prior to this PR. It
 
 md"""
 ## Rain correlations
+
+We fit a Gaussian copula to each pair of stations for joint rainy days only.
 """
 
 md"""
@@ -406,11 +512,8 @@ end
 
 md"""
 # Simulation
-"""
 
-
-md"""
-## HMM generation Dry/Wet + Rain
+Now we are ready to generate samples from the SWG model.
 """
 
 md"""
@@ -442,106 +545,10 @@ begin
 end
 ## Simulations RR: 164.912113 seconds (299.73 M allocations: 43.020 GiB, 2.67% gc time, 0.54% compilation time)
 
-md"""
-# Plots
-"""
 
 md"""
-## Interpretation: HMM parameters
+# Results
 """
-
-
-md"""
-### Transition matrix
-"""
-
-
-begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
-    for k in 1:K
-        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:topleft) for l in 1:K]
-        hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=10, ylims=(0, 1))
-    end
-    pallA = plot(pA..., size=(1000, 500))
-    ## savefig(pallA, "save/Q_transition_memo_1_K_4_d_2.pdf")
-end
-
-
-
-
-md"""
-### Rain probabilities
-"""
-
-
-begin
-    mm = 1
-    jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16) for j in 1:jt]
-    for j in 1:jt
-        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none) for k in 1:K]
-        hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(
-            pB[j],
-            vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
-            vcat(string.(monthabbr.(1:12)), ""), xtickfontsize=10
-        )
-        xlims!(pB[j], (0, 367))
-        ylims!(pB[j], (0, 1))
-    end
-    pallB = plot(pB[staid_lat]..., size=(3000 / 1.25, 1000 / 1.25), layout=(2, 5))
-    ## savefig(pallB, "save/proba_rain_all_station.pdf")
-end
-
-
-
-
-md"""
-### Spatial Rain probability 
-"""
-
-memory_past_cat = 1
-
-md"""
-h = 1 (day before dry) or 2 (day before wet)
-$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = %$(memory_past_cat)
-"""
-
-p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
-
-
-md"""
-Historical sequences
-"""
-year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
-
-
-idx_year = [findall(x -> year.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in year_range];
-
-
-select_year = unique(sort([4:10:length(year_range); 21; 48; 64]))
-
-begin
-    year_nb = length(select_year)
-    z_hat_mat = zeros(year_nb, 366)
-
-    for (i, y) in enumerate(select_year)
-        if isleapyear(year_range[y])
-            z_hat_mat[i, :] = ẑ[idx_year[y]]
-        else
-            z_hat_mat[i, :] = [ẑ[idx_year[y]]; 0]
-        end
-    end
-    thick = 1
-    heatmap(z_hat_mat, colorbar=:none, c=my_palette(K), minorticks=:false, framestyle=:xbox, grid=:none, thickness_scaling=thick)
-    xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
-    hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
-    ylims!(0.5, year_nb + 0.5)
-    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]))
-    ## savefig(pviterbi, "save/temporal_1959_2009.pdf")
-end
-
 
 
 
