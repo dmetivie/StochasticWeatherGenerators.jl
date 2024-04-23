@@ -18,12 +18,14 @@ jobs:
         with:
           version: '1'
       - name: Install dependencies
-      # see https://discourse.julialang.org/t/hosting-docs-with-documenter-jl-with-dependencies-github-actions-with-unregistered-packages/83364/10?u=dmetivie
+      # see https://discourse.julialang.org/t/hosting-docs-with-documenter-jl-with-dependencies-github-actions-with-unregistered-packages/83364/10
         run: | 
           julia --project=docs/ -e '
             using Pkg; 
             Pkg.add(url="https://github.com/dmetivie/SmoothPeriodicStatsModels.jl"); 
+            println("done add smooth")
             Pkg.add(url="https://github.com/dmetivie/StochasticWeatherGenerator.jl"); 
+            println("done add swg")
             Pkg.develop(PackageSpec(path=pwd())); 
             Pkg.instantiate()'
       - name: Build and deploy
