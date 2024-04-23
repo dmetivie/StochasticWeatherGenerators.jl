@@ -22,7 +22,7 @@ jobs:
         run: | 
           julia --project=docs/ -e '
             using Pkg; 
-            Pkg.add(url="https://github.com/dmetivie/SmoothPeriodicStatsModels.jl", rev= "develop"); 
+            Pkg.add(url="https://github.com/dmetivie/SmoothPeriodicStatsModels.jl"); 
             Pkg.develop(PackageSpec(path=pwd())); 
             Pkg.instantiate()'
       - name: Build and deploy
