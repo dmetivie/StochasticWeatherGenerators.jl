@@ -144,7 +144,7 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
             add_feature!(ax[k], coastline(precision_scale), color=:black, linewidth=0.75)
             add_feature!(ax[k], borders(precision_scale), linestyle=:dash, color=:black, linewidth=0.75)
 
-            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=15, GeoMakie.Reverse(:plasma), colorrange =(0, 1))
+            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=15, :plasma, colorrange =(0, 1))
             if show_value == true
                 GeoMakie.text!(ax[k], LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
                 # [annotate!(ax, "$(value[j])", (LON_idx[j] - lon_shift[j], LAT_idx[j] - lat_shift[j]), fontsize=fontsize, weight="bold") for j = 1:size(station_name, 1)]
