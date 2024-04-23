@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Set up · StochasticWeatherGenerator</title><meta name="title" content="Set up · StochasticWeatherGenerator"/><meta property="og:title" content="Set up · StochasticWeatherGenerator"/><meta property="twitter:title" content="Set up · StochasticWeatherGenerator"/><meta name="description" content="Documentation for StochasticWeatherGenerator."/><meta property="og:description" content="Documentation for StochasticWeatherGenerator."/><meta property="twitter:description" content="Documentation for StochasticWeatherGenerator."/><meta property="og:url" content="https://dmetivie.github.io/StochasticWeatherGenerator.jl/examples/tuto_paper/"/><meta property="twitter:url" content="https://dmetivie.github.io/StochasticWeatherGenerator.jl/examples/tuto_paper/"/><link rel="canonical" href="https://dmetivie.github.io/StochasticWeatherGenerator.jl/examples/tuto_paper/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">StochasticWeatherGenerator</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">StochasticWeatherGenerator.jl</a></li><li class="is-active"><a class="tocitem" href>Set up</a><ul class="internal"><li><a class="tocitem" href="#Package-and-functions"><span>Package and functions</span></a></li><li><a class="tocitem" href="#Settings-for-plotting"><span>Settings for plotting</span></a></li><li><a class="tocitem" href="#Data-files"><span>Data files</span></a></li><li><a class="tocitem" href="#Global-Parameters"><span>Global Parameters</span></a></li><li class="toplevel"><a class="tocitem" href="#HMM-Hyperparameters"><span>HMM Hyperparameters</span></a></li><li class="toplevel"><a class="tocitem" href="#Data"><span>Data</span></a></li><li><a class="tocitem" href="#Select-relevant-stations-from-the-station.txt-file"><span>Select relevant stations from the <code>station.txt</code> file</span></a></li><li><a class="tocitem" href="#Date-range"><span>Date range</span></a></li><li><a class="tocitem" href="#Treat-data"><span>Treat data</span></a></li><li><a class="tocitem" href="#Map-of-stations"><span>Map of stations</span></a></li><li class="toplevel"><a class="tocitem" href="#Fit-the-seasonal-HMM"><span>Fit the seasonal HMM</span></a></li><li><a class="tocitem" href="#Fit-slice:-naive-estimation"><span>Fit slice: naive estimation</span></a></li><li><a class="tocitem" href="#Fit-with-Baum-Welch-using-slice-estimate-as-starting-point"><span>Fit with Baum Welch using slice estimate as starting point</span></a></li><li><a class="tocitem" href="#Visualisation-of-the-HMM-parameters"><span>Visualisation of the HMM parameters</span></a></li><li><a class="tocitem" href="#Inference-of-the-historical-hidden-states"><span>Inference of the historical hidden states</span></a></li><li class="toplevel"><a class="tocitem" href="#Adding-Rain-amounts-to-the-model"><span>Adding Rain amounts to the model</span></a></li><li><a class="tocitem" href="#Marginal-fit"><span>Marginal fit</span></a></li><li><a class="tocitem" href="#Rain-correlations"><span>Rain correlations</span></a></li><li class="toplevel"><a class="tocitem" href="#Simulation"><span>Simulation</span></a></li><li class="toplevel"><a class="tocitem" href="#Results"><span>Results</span></a></li><li><a class="tocitem" href="#Spell-distribution"><span>Spell distribution</span></a></li><li><a class="tocitem" href="#Rain"><span>Rain</span></a></li><li><a class="tocitem" href="#Correlations"><span>Correlations</span></a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Set up</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Set up</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/dmetivie/StochasticWeatherGenerator.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/dmetivie/StochasticWeatherGenerator.jl/blob/master/examples/tuto_paper.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><pre><code class="language-julia hljs">using Markdown</code></pre><h1 id="Set-up"><a class="docs-heading-anchor" href="#Set-up">Set up</a><a id="Set-up-1"></a><a class="docs-heading-anchor-permalink" href="#Set-up" title="Permalink"></a></h1><h2 id="Package-and-functions"><a class="docs-heading-anchor" href="#Package-and-functions">Package and functions</a><a id="Package-and-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Package-and-functions" title="Permalink"></a></h2><pre><code class="language-julia hljs">using CSV, JLD, DelimitedFiles # File Read/Load/Save
+
+using DataFrames, DataFramesMeta # DataFrames
+
+using Dates
+
+using StatsBase, Random
+
+using Distributions
+
+using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
+
+using StochasticWeatherGenerator # interface to use with SmoothPeriodicStatsModels
+
+using StatsPlots, LaTeXStrings</code></pre><pre><code class="language-julia hljs">Random.seed!(1234)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Random.TaskLocalRNG()</code></pre><h2 id="Settings-for-plotting"><a class="docs-heading-anchor" href="#Settings-for-plotting">Settings for plotting</a><a id="Settings-for-plotting-1"></a><a class="docs-heading-anchor-permalink" href="#Settings-for-plotting" title="Permalink"></a></h2><pre><code class="language-julia hljs">gr()
+default(thickness_scaling=1.2, fontfamily=&quot;Computer Modern&quot;, linewidth=2, label=nothing, size=(1000, 600))
+scalefontsizes(1.5)</code></pre><p>For map plot, we use <code>GeoMakie.jl</code> + a hack with <code>NaturalEarth.jl</code></p><pre><code class="language-julia hljs">file_for_maps_with_geomakie = download(&quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/examples/geo_makie_features.jl&quot;) # download file from a GitHub repo
+include(file_for_maps_with_geomakie)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">map_with_stations (generic function with 3 methods)</code></pre><h2 id="Data-files"><a class="docs-heading-anchor" href="#Data-files">Data files</a><a id="Data-files-1"></a><a class="docs-heading-anchor-permalink" href="#Data-files" title="Permalink"></a></h2><h2 id="Global-Parameters"><a class="docs-heading-anchor" href="#Global-Parameters">Global Parameters</a><a id="Global-Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Global-Parameters" title="Permalink"></a></h2><p>Number of day in a year (choice here is 366)</p><pre><code class="language-julia hljs">T = 366</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">366</code></pre><p>Define the French area for map (Longitude and latitudes) plot and the precision of the map <code>precision_scale</code></p><pre><code class="language-julia hljs">precision_scale = &quot;50m&quot;
+
+
+LON_min = -5 # West
+
+
+LON_max = 10 # Est
+
+
+LAT_min = 41 # South
+
+
+LAT_max = 52 # North</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">52</code></pre><p><code>conversion_factor</code> for rain amounts <code>RR</code> in 0.1 mm to mm</p><pre><code class="language-julia hljs">conversion_factor = 0.1 # 0.1 mm -&gt; mm</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">0.1</code></pre><h1 id="HMM-Hyperparameters"><a class="docs-heading-anchor" href="#HMM-Hyperparameters">HMM Hyperparameters</a><a id="HMM-Hyperparameters-1"></a><a class="docs-heading-anchor-permalink" href="#HMM-Hyperparameters" title="Permalink"></a></h1><p>Number of hidden states</p><pre><code class="language-julia hljs">K = 4
+
+
+cur_colors = get_color_palette(:auto, 100);
+
+
+my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
+
+
+my_pal = my_palette(K); # just colors I like for plotting weather regime!</code></pre><p>Degree <code>𝐃𝐞𝐠</code> of the trigonometric expansion It could be an array different for each station and variables. Not implemented yet though.</p><pre><code class="language-julia hljs">𝐃𝐞𝐠 = 2</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2</code></pre><p>Local memory order i.e. at station <span>$j$</span>, <span>$\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1}^{(j)} = y_{n-1}^{(j)}, \cdots, Y_{n-\texttt{local memory}}^{(j)} = y_{n-\texttt{local memory}}^{(j)})$</span></p><pre><code class="language-julia hljs">local_order = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>The <code>local_order</code> could be a vector/matrix of size <code>D</code> and different for each station, and also different depending on wet or dry past. Indeed it has been noted, TODO add ref, that dry spells have longer memory.</p></div></div><pre><code class="language-julia hljs">size_order = 2^local_order
+
+
+println(&quot;K = $K, &quot;, &quot;local_order = $local_order, &quot;, &quot;degree = $𝐃𝐞𝐠&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">K = 4, local_order = 1, degree = 2</code></pre><h1 id="Data"><a class="docs-heading-anchor" href="#Data">Data</a><a id="Data-1"></a><a class="docs-heading-anchor-permalink" href="#Data" title="Permalink"></a></h1><h2 id="Select-relevant-stations-from-the-station.txt-file"><a class="docs-heading-anchor" href="#Select-relevant-stations-from-the-station.txt-file">Select relevant stations from the <code>station.txt</code> file</a><a id="Select-relevant-stations-from-the-station.txt-file-1"></a><a class="docs-heading-anchor-permalink" href="#Select-relevant-stations-from-the-station.txt-file" title="Permalink"></a></h2><p>Here we</p><ul><li>remove white space at the right of the CN, STANAME which is caused by imperfect CVS importation</li><li>Select only the stations with 100% valid data for the period Date(1955,12,31) ≤ :DATE ≤ Date(2019,12,31)</li><li>Shorten station names #TODO improve this function (maybe impose max string instead of all &#39;if&#39;)</li></ul><pre><code class="language-julia hljs">begin
+    station_file = Base.download(&quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/stations.txt&quot;)
+    station_all = CSV.read(station_file, DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
+    station_all = @chain station_all begin
+        @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
+        @subset(:CN .∈ tuple([&quot;FR&quot;, &quot;BE&quot;, &quot;LU&quot;, &quot;CH&quot;]))
+        @subset(:STAID .∈ tuple([32, 33, 34, 36, 39, 203, 322, 323, 434, 736, 737, 738, 740, 742, 745, 749, 750, 755, 756, 757, 758, 786, 793, 2192, 2203, 2205, 2207, 2209, 11244, 11245, 11247, 11249]))
+        @transform(:STANAME = shortname.(:STANAME))
+    end
+end
+
+selected_station_name = [&quot;BOURGES&quot;, &quot;TOULOUSE&quot;, &quot;MARIGNANE&quot;, &quot;LUXEMBOURG&quot;, &quot;LILLE&quot;, &quot;EMBRUN&quot;, &quot;BASTIA&quot;, &quot;LA HAGUE&quot;, &quot;CHASSIRON&quot;, &quot;ORLY&quot;]
+
+
+station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
+
+
+STAID = station.STAID #[32, 33, 39, 203, 737, 755, 758, 793, 11244, 11249];
+
+
+station_name = station.STANAME</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{SubString{String}}:
+ &quot;BOURGES&quot;
+ &quot;TOULOUSE&quot;
+ &quot;MARIGNANE&quot;
+ &quot;LUXEMBOURG&quot;
+ &quot;LILLE&quot;
+ &quot;EMBRUN&quot;
+ &quot;BASTIA&quot;
+ &quot;LA HAGUE&quot;
+ &quot;CHASSIRON&quot;
+ &quot;ORLY&quot;</code></pre><p>Sort stations (index) by latitude. It is useful for plotting from North to South.</p><pre><code class="language-julia hljs">staid_lat = sortperm(station.LAT, rev=true);</code></pre><p>Station number</p><pre><code class="language-julia hljs">D = length(STAID)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10</code></pre><h2 id="Date-range"><a class="docs-heading-anchor" href="#Date-range">Date range</a><a id="Date-range-1"></a><a class="docs-heading-anchor-permalink" href="#Date-range" title="Permalink"></a></h2><pre><code class="language-julia hljs">date_start = Date(1956)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1956-01-01</code></pre><p>Date including the previous days used in the initial condition (in case <code>local_memory &gt; 0</code>)</p><pre><code class="language-julia hljs">date_start_w_memory = date_start - Day(local_order)
+
+
+date_end = Date(2020) - Day(1)
+
+
+every_year = date_start:Day(1):date_end
+
+
+every_year_w_memory = date_start_w_memory:Day(1):date_end
+
+
+n2t = dayofyear_Leap.(every_year)
+
+
+N = length(n2t)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">23376</code></pre><h2 id="Treat-data"><a class="docs-heading-anchor" href="#Treat-data">Treat data</a><a id="Treat-data-1"></a><a class="docs-heading-anchor-permalink" href="#Treat-data" title="Permalink"></a></h2><p>Load into DataFrames the (ECA) RR files (rain). It filters by date and valid data. It also add a column of rain event (0: dry, 1: wet).</p><pre><code class="language-julia hljs">begin
+    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, &quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/ECA_blend_rr/RR_&quot;, portion_valid_data=1, skipto=22, header = 21, url = true)
+    for i = eachindex(data_stations)
+        @transform!(data_stations[i], :bin = onefy.(:RR))
+    end
+end</code></pre><p>Binary matrix version of rain event at the <code>D</code> stations.</p><pre><code class="language-julia hljs">𝐘all = BitMatrix(reduce(hcat, [data_stations[j].bin for j = 1:D]))
+
+
+𝐘_past = BitMatrix(𝐘all[1:local_order, :]) # rand(Bool, local_order, D)
+
+
+ξ = [1; zeros(K - 1)];  # 1 jan 1956 was most likely a type Z = 1 wet day all over France
+
+
+𝐘 = 𝐘all[1+local_order:end, :]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">23376×10 BitMatrix:
+ 1  1  1  1  1  1  1  1  1  1
+ 1  1  0  1  1  0  1  0  1  0
+ 0  0  0  0  0  0  1  0  0  0
+ 0  0  0  0  0  0  0  0  0  0
+ 0  0  0  0  0  0  0  0  0  0
+ 0  1  1  0  0  0  0  0  0  1
+ 1  1  1  0  1  0  1  1  1  1
+ 1  1  1  1  1  1  0  0  1  1
+ 0  1  1  1  1  1  1  1  1  0
+ 1  0  0  1  1  1  0  1  1  1
+ ⋮              ⋮           
+ 1  1  0  1  1  1  0  1  1  1
+ 1  0  0  1  1  0  0  0  0  0
+ 0  0  0  1  0  0  0  1  1  0
+ 1  0  0  1  1  0  0  1  0  1
+ 1  0  0  1  0  0  0  0  0  0
+ 0  0  0  0  0  0  0  0  1  0
+ 0  0  0  0  1  0  0  0  1  0
+ 0  0  0  0  0  0  0  0  1  0
+ 0  0  0  0  0  0  0  0  1  0</code></pre><h2 id="Map-of-stations"><a class="docs-heading-anchor" href="#Map-of-stations">Map of stations</a><a id="Map-of-stations-1"></a><a class="docs-heading-anchor-permalink" href="#Map-of-stations" title="Permalink"></a></h2><p>Convert LAT DMS into DD which seems most widly accepted format.</p><pre><code class="language-julia hljs">LAT_idx = dms_to_dd.(station.LAT)
+
+
+LON_idx = dms_to_dd.(station.LON)
+
+
+long_spell = [longuest_spell(y) for y in eachcol(𝐘)]
+
+
+map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)</code></pre><img src="f034de9a.png" alt="Example block output"/><h1 id="Fit-the-seasonal-HMM"><a class="docs-heading-anchor" href="#Fit-the-seasonal-HMM">Fit the seasonal HMM</a><a id="Fit-the-seasonal-HMM-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-the-seasonal-HMM" title="Permalink"></a></h1><h2 id="Fit-slice:-naive-estimation"><a class="docs-heading-anchor" href="#Fit-slice:-naive-estimation">Fit slice: naive estimation</a><a id="Fit-slice:-naive-estimation-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-slice:-naive-estimation" title="Permalink"></a></h2><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>Before inferring the HMM parameters with EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.</p></div></div><p>Reference station <code>ref_station</code> used to sort hidden state for the slide initialization Here we choose <code>j=1</code> <span>$\to$</span> <code>STAID=32</code> <span>$\to$</span> <code>BOURGES</code> because it is a central station for France</p><pre><code class="language-julia hljs">ref_station = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>This generate a random Periodic HMM that we then fit slice by slice (day by day). See paper.</p><pre><code class="language-julia hljs">hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
+
+
+@time &quot;FitMLE SHMM (Slice)&quot; hmm_slice = fit_mle_all_slices(hmm_random, 𝐘, 𝐘_past; n2t=n2t, robust=true, rand_ini=true, Dirichlet_α=0.8, history=false, n_random_ini=1, 𝐘ₜ_extanted=[-12, -7, 0, 6, 13]);
+
+
+θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FitMLE SHMM (Slice): 29.396737 seconds (194.31 M allocations: 29.973 GiB, 10.76% gc time, 20.54% compilation time)
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit https://github.com/coin-or/Ipopt
+******************************************************************************</code></pre><h2 id="Fit-with-Baum-Welch-using-slice-estimate-as-starting-point"><a class="docs-heading-anchor" href="#Fit-with-Baum-Welch-using-slice-estimate-as-starting-point">Fit with Baum Welch using slice estimate as starting point</a><a id="Fit-with-Baum-Welch-using-slice-estimate-as-starting-point-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-with-Baum-Welch-using-slice-estimate-as-starting-point" title="Permalink"></a></h2><p>With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!</p><pre><code class="language-julia hljs">@time &quot;FitMLE SHMM (Baum Welch)&quot; hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, 𝐘, 𝐘_past,
+    maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
+# On my computer
+# Iteration 73: logtot = -116791.100655, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0002 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00103
+# EM converged in 73 iterations, logtot = -116791.10065504618
+# FitMLE SHMM (Baum Welch): 36.161685 seconds (185.76 M allocations: 32.581 GiB, 6.77% gc time, 10.09% compilation time)
+
+save_tuto_path = &quot;../../assets/tuto_1&quot;
+
+save(joinpath(save_tuto_path,&quot;hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld&quot;), &quot;hmm&quot;, hmm_fit, &quot;hist&quot;, hist, &quot;Q_param&quot;, θq_fit, &quot;Y_param&quot;, θy_fit)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Iteration 0: logtot = -121668.69437951197
+Iteration 1: logtot = -119591.894745, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.57225 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.74678
+Iteration 2: logtot = -118557.818538, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.3238 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.60553
+Iteration 3: logtot = -117806.210598, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.25589 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.69724
+Iteration 4: logtot = -117348.249149, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.21815 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.66889
+Iteration 5: logtot = -117105.297574, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.16878 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.53129
+Iteration 6: logtot = -116983.275211, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.12562 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.36906
+Iteration 7: logtot = -116917.024142, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.09272 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.2448
+Iteration 8: logtot = -116877.676256, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.08317 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.16331
+Iteration 9: logtot = -116852.910407, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0723 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.11095
+Iteration 10: logtot = -116836.638052, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.06177 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.0766
+Iteration 11: logtot = -116825.556297, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.05214 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.06805
+Iteration 12: logtot = -116817.777828, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.04363 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.06212
+Iteration 13: logtot = -116812.171682, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.03629 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.05526
+Iteration 14: logtot = -116808.031098, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.03008 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.0483
+Iteration 15: logtot = -116804.901258, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.02491 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.04178
+Iteration 16: logtot = -116802.483766, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.02066 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.03596
+Iteration 17: logtot = -116800.579767, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.01718 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.03095
+Iteration 18: logtot = -116799.054566, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.01435 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02673
+Iteration 19: logtot = -116797.815232, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.01206 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02532
+Iteration 20: logtot = -116796.79631, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.01019 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02572
+Iteration 21: logtot = -116795.950658, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00868 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02628
+Iteration 22: logtot = -116795.243536, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00743 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02588
+Iteration 23: logtot = -116794.648751, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00641 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02478
+Iteration 24: logtot = -116794.146126, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00557 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.0232
+Iteration 25: logtot = -116793.71981, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00487 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.02134
+Iteration 26: logtot = -116793.35714, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00447 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01935
+Iteration 27: logtot = -116793.047854, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00413 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01735
+Iteration 28: logtot = -116792.783545, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00381 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01541
+Iteration 29: logtot = -116792.557262, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00351 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01359
+Iteration 30: logtot = -116792.363217, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00324 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01191
+Iteration 31: logtot = -116792.196566, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00298 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.01039
+Iteration 32: logtot = -116792.053238, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00275 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00904
+Iteration 33: logtot = -116791.929801, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00254 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00783
+Iteration 34: logtot = -116791.82335, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00234 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00677
+Iteration 35: logtot = -116791.731426, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00216 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00584
+Iteration 36: logtot = -116791.65194, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00201 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00503
+Iteration 37: logtot = -116791.583116, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00188 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00433
+Iteration 38: logtot = -116791.523444, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00176 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00371
+Iteration 39: logtot = -116791.471634, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00165 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00329
+Iteration 40: logtot = -116791.426588, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00155 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00306
+Iteration 41: logtot = -116791.387365, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00145 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00283
+Iteration 42: logtot = -116791.353164, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00136 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00263
+Iteration 43: logtot = -116791.323296, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00128 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00243
+Iteration 44: logtot = -116791.297173, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0012 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00225
+Iteration 45: logtot = -116791.274291, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00113 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00208
+Iteration 46: logtot = -116791.254217, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00106 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00192
+Iteration 47: logtot = -116791.236578, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.001 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00177
+Iteration 48: logtot = -116791.221054, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00094 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00163
+Iteration 49: logtot = -116791.20737, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00089 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00151
+Iteration 50: logtot = -116791.195289, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00084 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00139
+Iteration 51: logtot = -116791.184606, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00079 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00128
+Iteration 52: logtot = -116791.175143, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00074 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00117
+Iteration 53: logtot = -116791.166749, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0007 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00108
+Iteration 54: logtot = -116791.159291, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00066 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00099
+Iteration 55: logtot = -116791.152653, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00063 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00091
+Iteration 56: logtot = -116791.146737, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00059 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00084
+Iteration 57: logtot = -116791.141456, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00056 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00077
+Iteration 58: logtot = -116791.136734, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00053 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.0007
+Iteration 59: logtot = -116791.132507, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0005 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00064
+Iteration 60: logtot = -116791.128716, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00048 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00059
+Iteration 61: logtot = -116791.125312, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00045 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00056
+Iteration 62: logtot = -116791.122251, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00043 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00054
+Iteration 63: logtot = -116791.119495, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00041 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00052
+Iteration 64: logtot = -116791.11701, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00039 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00051
+Iteration 65: logtot = -116791.114766, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00037 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00049
+Iteration 66: logtot = -116791.112738, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00035 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00048
+Iteration 67: logtot = -116791.110903, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00033 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00046
+Iteration 68: logtot = -116791.109239, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00032 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00045
+Iteration 69: logtot = -116791.107731, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0003 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00043
+Iteration 70: logtot = -116791.10636, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00029 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00042
+Iteration 71: logtot = -116791.105115, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00027 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.0004
+Iteration 72: logtot = -116791.103981, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00026 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00039
+Iteration 73: logtot = -116791.102949, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00025 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00037
+Iteration 74: logtot = -116791.102007, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.00024 &amp; max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00036
+EM converged in 74 iterations, logtot = -116791.10200745627
+FitMLE SHMM (Baum Welch): 64.964086 seconds (188.36 M allocations: 33.101 GiB, 6.37% gc time, 12.52% compilation time)</code></pre><p>Uncomment to load previously computed hmm</p><pre><code class="language-julia hljs"># hmm_infos = load(&quot;save/hmm_fit.jld&quot;)
+# hmm_fit = hmm_infos[&quot;hmm&quot;]
+# hist = hmm_infos[&quot;hist&quot;]
+# θq_fit = hmm_infos[&quot;Q_param&quot;]
+# θy_fit = hmm_infos[&quot;Y_param&quot;]</code></pre><h2 id="Visualisation-of-the-HMM-parameters"><a class="docs-heading-anchor" href="#Visualisation-of-the-HMM-parameters">Visualisation of the HMM parameters</a><a id="Visualisation-of-the-HMM-parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Visualisation-of-the-HMM-parameters" title="Permalink"></a></h2><h3 id="Transition-matrix"><a class="docs-heading-anchor" href="#Transition-matrix">Transition matrix</a><a id="Transition-matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Transition-matrix" title="Permalink"></a></h3><pre><code class="language-julia hljs">begin
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
+    for k in 1:K
+        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L&quot;Q_{%$(k)\to %$(l)}&quot;, legend=:topleft) for l in 1:K]
+        hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
+        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), &quot;&quot;), xlims=(0, 367), xtickfontsize=10, ylims=(0, 1))
+    end
+    pallA = plot(pA..., size=(1000, 500))
+    # savefig(pallA, &quot;save/Q_transition_memo_1_K_4_d_2.pdf&quot;)
+end</code></pre><img src="49c68455.svg" alt="Example block output"/><h3 id="Rain-probabilities"><a class="docs-heading-anchor" href="#Rain-probabilities">Rain probabilities</a><a id="Rain-probabilities-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-probabilities" title="Permalink"></a></h3><pre><code class="language-julia hljs">begin
+    mm = 1
+    jt = D
+    pB = [plot(legendfont=14, title=&quot;$(station_name[j])&quot;, titlefontsize=16) for j in 1:jt]
+    for j in 1:jt
+        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none) for k in 1:K]
+        hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
+        xticks!(
+            pB[j],
+            vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
+            vcat(string.(monthabbr.(1:12)), &quot;&quot;), xtickfontsize=10
+        )
+        xlims!(pB[j], (0, 367))
+        ylims!(pB[j], (0, 1))
+    end
+    pallB = plot(pB[staid_lat]..., size=(3000 / 1.25, 1000 / 1.25), layout=(2, 5))
+    # savefig(pallB, &quot;save/proba_rain_all_station.pdf&quot;)
+end</code></pre><img src="c3ad0d69.svg" alt="Example block output"/><h3 id="Spatial-Rain-probability"><a class="docs-heading-anchor" href="#Spatial-Rain-probability">Spatial Rain probability</a><a id="Spatial-Rain-probability-1"></a><a class="docs-heading-anchor-permalink" href="#Spatial-Rain-probability" title="Permalink"></a></h3><pre><code class="language-julia hljs">memory_past_cat = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>h = 1 (day before dry) or 2 (day before wet) <span>$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$</span> with h = %memory_past_cat</p><pre><code class="language-julia hljs">p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)</code></pre><img src="a218b60b.png" alt="Example block output"/><h2 id="Inference-of-the-historical-hidden-states"><a class="docs-heading-anchor" href="#Inference-of-the-historical-hidden-states">Inference of the historical hidden states</a><a id="Inference-of-the-historical-hidden-states-1"></a><a class="docs-heading-anchor-permalink" href="#Inference-of-the-historical-hidden-states" title="Permalink"></a></h2><h3 id="Viterbi-algorithm"><a class="docs-heading-anchor" href="#Viterbi-algorithm">Viterbi algorithm</a><a id="Viterbi-algorithm-1"></a><a class="docs-heading-anchor-permalink" href="#Viterbi-algorithm" title="Permalink"></a></h3><pre><code class="language-julia hljs">ẑ = viterbi(hmm_fit, 𝐘, 𝐘_past; n2t=n2t)
+
+
+data_stations_z = map(data_stations) do df
+    @transform(df, :z = [fill(missing, local_order); ẑ])
+end
+
+
+ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
+
+
+CSV.write(joinpath(save_tuto_path,&quot;z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv&quot;), DataFrame([:DATE, :z] .=&gt; [data_stations[1].DATE[1+local_order:end], ẑ]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;../../assets/tuto_1/z_hat_K_4_d_2_m_1.csv&quot;</code></pre><h3 id="Visualisation-of-the-Historical-sequences-of-hidden-states"><a class="docs-heading-anchor" href="#Visualisation-of-the-Historical-sequences-of-hidden-states">Visualisation of the Historical sequences of hidden states</a><a id="Visualisation-of-the-Historical-sequences-of-hidden-states-1"></a><a class="docs-heading-anchor-permalink" href="#Visualisation-of-the-Historical-sequences-of-hidden-states" title="Permalink"></a></h3><pre><code class="language-julia hljs">year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
+
+
+idx_year = [findall(x -&gt; year.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in year_range];
+
+
+select_year = unique(sort([4:10:length(year_range); 21; 48; 64]))
+
+begin
+    year_nb = length(select_year)
+    z_hat_mat = zeros(year_nb, 366)
+
+    for (i, y) in enumerate(select_year)
+        if isleapyear(year_range[y])
+            z_hat_mat[i, :] = ẑ[idx_year[y]]
+        else
+            z_hat_mat[i, :] = [ẑ[idx_year[y]]; 0]
+        end
+    end
+    thick = 1
+    heatmap(z_hat_mat, colorbar=:none, c=my_palette(K), minorticks=:false, framestyle=:xbox, grid=:none, thickness_scaling=thick)
+    xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), &quot;&quot;), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
+    hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
+    ylims!(0.5, year_nb + 0.5)
+    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]))
+    # savefig(pviterbi, &quot;save/temporal_1959_2009.pdf&quot;)
+end</code></pre><img src="7f244f9d.svg" alt="Example block output"/><h1 id="Adding-Rain-amounts-to-the-model"><a class="docs-heading-anchor" href="#Adding-Rain-amounts-to-the-model">Adding Rain amounts to the model</a><a id="Adding-Rain-amounts-to-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-Rain-amounts-to-the-model" title="Permalink"></a></h1><h2 id="Marginal-fit"><a class="docs-heading-anchor" href="#Marginal-fit">Marginal fit</a><a id="Marginal-fit-1"></a><a class="docs-heading-anchor-permalink" href="#Marginal-fit" title="Permalink"></a></h2><p>We fit the marginals at each station independently. We use a mixture of exponential functions whose parameters evolve smoothly and periodically TODO: put equation</p><pre><code class="language-julia hljs">@time &quot;FitMLE RR&quot; mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerator.mix_ini(T))
+# FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
+
+save(joinpath(save_tuto_path,&quot;rain_mix.jld&quot;), &quot;mix2Exp&quot;, mix_allE)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FitMLE RR: 102.149535 seconds (336.15 M allocations: 47.657 GiB, 3.54% gc time, 5.32% compilation time)</code></pre><p>Note that we don&#39;t need anymore to fit quantile functions, as <a href="https://github.com/JuliaStats/Distributions.jl/pull/1389">Distributions.jl PR #1389 (September 2nd, 2021)</a> handles that. I did my approach (to save interpolate quantile) few months prior to this PR. It would have saved me some times!</p><h2 id="Rain-correlations"><a class="docs-heading-anchor" href="#Rain-correlations">Rain correlations</a><a id="Rain-correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-correlations" title="Permalink"></a></h2><p>We fit a Gaussian copula to each pair of stations for joint rainy days only.</p><div class="admonition is-category-caution"><header class="admonition-header">Caution</header><div class="admonition-body"><p>When the number of hidden states is getting larger, it migth happen that for some pair of stations there are no simulteneous rain occurence in a rain category <span>$Z = k$</span>. In that case a <code>missing</code> coefficient is returned.</p></div></div><pre><code class="language-julia hljs">begin
+    Σ²RR = cov_RR(data_stations_z, K)
+    if K == 4
+        Σ²RR[2][6, 3] = Σ²RR[4][6, 3]
+        Σ²RR[2][3, 6] = Σ²RR[4][6, 3]
+    end
+    Σ²RR = convert.(Matrix{Float64}, Σ²RR)
+end
+
+if K == 4
+    @warn &quot;For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4&quot;
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: ΣS_k[2], CartesianIndex{2}[CartesianIndex(6, 3), CartesianIndex(3, 6)] are missing
+└ @ StochasticWeatherGenerator ~/work/StochasticWeatherGenerator.jl/StochasticWeatherGenerator.jl/src/rain/correlations.jl:81
+┌ Warning: For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4
+└ @ Main tuto_paper.md:440</code></pre><h1 id="Simulation"><a class="docs-heading-anchor" href="#Simulation">Simulation</a><a id="Simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation" title="Permalink"></a></h1><p>Now we are ready to generate samples from the SWG model.</p><p><code>Nb</code> is the number of realization</p><pre><code class="language-julia hljs">Nb = 1000</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1000</code></pre><p>Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.</p><pre><code class="language-julia hljs">begin
+    zs = zeros(Int, N, Nb)
+    ys = zeros(Bool, N, D, Nb)
+    @time &quot;Simulations Z, Y&quot; for i in 1:Nb
+        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=𝐘all[1:local_order, :], z_ini=1, seq=true)
+    end
+end
+# Simulations Z, Y: 34.998679 seconds (328.41 M allocations: 32.166 GiB, 8.24% gc time, 1.16% compilation time)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations Z, Y: 59.974643 seconds (328.75 M allocations: 32.195 GiB, 7.65% gc time, 1.48% compilation time)</code></pre><p>Given the hidden states and dry/wet, it generates the rain amounts at each stations (correlated with a Gaussian Copula).</p><pre><code class="language-julia hljs">begin
+    rs = zeros(D, N, Nb)
+    @time &quot;Simulations RR&quot; for i in 1:Nb
+        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]&#39;, Σ²RR)
+    end
+end
+# Simulations RR: 164.912113 seconds (299.73 M allocations: 43.020 GiB, 2.67% gc time, 0.54% compilation time)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations RR: 234.612766 seconds (285.46 M allocations: 37.953 GiB, 1.31% gc time, 0.74% compilation time)</code></pre><h1 id="Results"><a class="docs-heading-anchor" href="#Results">Results</a><a id="Results-1"></a><a class="docs-heading-anchor-permalink" href="#Results" title="Permalink"></a></h1><h2 id="Spell-distribution"><a class="docs-heading-anchor" href="#Spell-distribution">Spell distribution</a><a id="Spell-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Spell-distribution" title="Permalink"></a></h2><p><code>select_month</code> to chose the month where to compute the spells distributions (summer month, winter, etc.) <code>select_month = 1:12</code> corresponds to all month.</p><pre><code class="language-julia hljs">select_month = 1:12
+
+idx_months = [findall(x -&gt; month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
+
+
+idx_month_vcat = vcat(idx_months[select_month]...)
+
+
+idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_months];</code></pre><h4 id="Historic-spells"><a class="docs-heading-anchor" href="#Historic-spells">Historic spells</a><a id="Historic-spells-1"></a><a class="docs-heading-anchor-permalink" href="#Historic-spells" title="Permalink"></a></h4><pre><code class="language-julia hljs">len_spell_hist = [pmf_spell(𝐘[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];</code></pre><h4 id="Simulation-spells"><a class="docs-heading-anchor" href="#Simulation-spells">Simulation spells</a><a id="Simulation-spells-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation-spells" title="Permalink"></a></h4><pre><code class="language-julia hljs">len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];</code></pre><h3 id="Dry-spell"><a class="docs-heading-anchor" href="#Dry-spell">Dry spell</a><a id="Dry-spell-1"></a><a class="docs-heading-anchor-permalink" href="#Dry-spell" title="Permalink"></a></h3><pre><code class="language-julia hljs">make_range(y, step=1) = range(extrema(y)..., step=step)
+
+
+begin
+    dw_dry = 1 # dry
+    p_spell_dry = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=13, xtickfontsize=13) for j = 1:D]
+    for j = 1:D
+        [stephist!(p_spell_dry[j], len_spell_simu[i, j, dw_dry], alpha=0.15, c=:grey, label=:none, norm=:probability, bins=make_range(len_spell_simu[i, j, dw_dry])) for i = 1:Nb]
+        stephist!(p_spell_dry[j], len_spell_hist[j, dw_dry], label=:none, c=:blue, lw=1.5, norm=:probability, bins=make_range(len_spell_hist[j, dw_dry]))
+        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(len_spell_hist[j, dw_dry])))
+    end
+
+    [plot!(p_spell_dry[j], xlabel=&quot;Nb of days&quot;, xlabelfontsize=16) for j in staid_lat[6:10]]
+    [plot!(p_spell_dry[j], ylabel=&quot;PMF&quot;, ylabelfontsize=16) for j in staid_lat[[1, 6]]]
+    [title!(p_spell_dry[j], station_name[j], titlefontsize=16) for j = 1:D]
+    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
+    # savefig(pall_spell_dry, &quot;save/spell_steppost_dry_c1.pdf&quot;)
+end</code></pre><img src="b05322fc.svg" alt="Example block output"/><h3 id="Wet-spell"><a class="docs-heading-anchor" href="#Wet-spell">Wet spell</a><a id="Wet-spell-1"></a><a class="docs-heading-anchor-permalink" href="#Wet-spell" title="Permalink"></a></h3><pre><code class="language-julia hljs">begin
+    dw_wet = 2 # wet
+    p_spell_wet = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=13, xtickfontsize=13) for j = 1:D]
+    for j = 1:D
+        [stephist!(p_spell_wet[j], len_spell_simu[i, j, dw_wet], alpha=0.15, c=:grey, label=:none, norm=:probability, bins=make_range(len_spell_simu[i, j, dw_wet])) for i = 1:Nb]
+        stephist!(p_spell_wet[j], len_spell_hist[j, dw_wet], label=:none, c=:blue, lw=1.5, norm=:probability, bins=make_range(len_spell_hist[j, dw_wet]))
+        xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(len_spell_hist[j, dw_wet])))
+    end
+
+    [plot!(p_spell_wet[j], xlabel=&quot;Nb of days&quot;, xlabelfontsize=16) for j in staid_lat[6:10]]
+    [plot!(p_spell_wet[j], ylabel=&quot;PMF&quot;, ylabelfontsize=16) for j in staid_lat[[1, 6]]]
+
+    [title!(p_spell_wet[j], station_name[j], titlefontsize=16) for j = 1:D]
+    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
+    # savefig(pall_spell_wet, &quot;save/spell_steppost_wet_c1.pdf&quot;)
+end</code></pre><img src="afe1162f.svg" alt="Example block output"/><h2 id="Rain"><a class="docs-heading-anchor" href="#Rain">Rain</a><a id="Rain-1"></a><a class="docs-heading-anchor-permalink" href="#Rain" title="Permalink"></a></h2><h3 id="Interpretation:-Mean-Rain-per-weather-regime"><a class="docs-heading-anchor" href="#Interpretation:-Mean-Rain-per-weather-regime">Interpretation: Mean Rain per weather regime</a><a id="Interpretation:-Mean-Rain-per-weather-regime-1"></a><a class="docs-heading-anchor-permalink" href="#Interpretation:-Mean-Rain-per-weather-regime" title="Permalink"></a></h3><pre><code class="language-julia hljs">begin
+    p_rainpercat = [plot(ytickfontsize=16, xtickfontsize=14) for j = 1:D]
+    for j = 1:D
+        [plot!(p_rainpercat[j], 1:T, t -&gt; conversion_factor * mean(mix_allE[j][k, t]), label=:none, c=my_color(k, K), lw=1.5) for k in 1:K]
+    end
+    # [plot!(p_rainpercat[j], xlabel=&quot;Rain (mm/day)&quot;, xlabelfontsize=4) for j in staid_lat[6:10]]
+    [plot!(p_rainpercat[j], ylabel=&quot;Rain (mm/day)&quot;, ylabelfontsize=17) for j in staid_lat[[1, 6]]]
+    [xticks!(
+        p_rainpercat[j],
+        vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
+        vcat(string.(first.(string.(monthabbr.(1:12))))), xtickfontsize=10
+    ) for j in 1:D]
+    [title!(p_rainpercat[j], station_name[j], titlefontsize=16) for j = 1:D]
+    plot(p_rainpercat[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
+    # savefig(&quot;dist_steppost_rain.pdf&quot;)
+end</code></pre><img src="4bbc61ae.svg" alt="Example block output"/><h3 id="Univariate-Rain-distributions"><a class="docs-heading-anchor" href="#Univariate-Rain-distributions">Univariate Rain distributions</a><a id="Univariate-Rain-distributions-1"></a><a class="docs-heading-anchor-permalink" href="#Univariate-Rain-distributions" title="Permalink"></a></h3><p>Historical vs %Nb simulations distribution</p><pre><code class="language-julia hljs">begin
+    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=11, xtickfontsize=10) for j = 1:D]
+    for j = 1:D
+        [stephist!(p_uniR[j], conversion_factor * filter(!iszero, rs[j, :, i]), alpha=0.15, c=:grey, label=:none, norm=:pdf) for i = 1:Nb]
+        stephist!(p_uniR[j], conversion_factor * filter(!iszero, data_stations[j].RR), label=:none, c=:blue, lw=1.5, norm=:pdf)
+        xlims!(p_uniR[j], 0.0, Inf)
+    end
+    [plot!(p_uniR[j], xlabel=&quot;Rain (mm/day)&quot;, xlabelfontsize=12) for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], ylabel=&quot;PDF&quot;, ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+
+    [title!(p_uniR[j], station_name[j], titlefontsize=12) for j = 1:D]
+
+    pall_R = plot(p_uniR[staid_lat]..., size=(1100, 500), layout=(2, 5))
+end</code></pre><img src="12fce979.svg" alt="Example block output"/><h3 id="Monthly-quantile-amount"><a class="docs-heading-anchor" href="#Monthly-quantile-amount">Monthly quantile amount</a><a id="Monthly-quantile-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Monthly-quantile-amount" title="Permalink"></a></h3><pre><code class="language-julia hljs">rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
+
+
+month_rain_simu = [cum_monthly(rs[j, :, i], idx_all) for j in 1:D, i in 1:Nb];
+
+
+month_rain_histo = [cum_monthly(rh[:, j], idx_all) for j in 1:D]
+
+
+qs = [0.9, 0.5, 0.1]
+
+
+@time &quot;Plot monthly quantile&quot; begin
+    p_month_RR = [scatter(ytickfontsize=11) for j = 1:D]
+    for j = 1:D
+        for (α, per) in enumerate([[0, 100], [25, 75]])
+            for (cc, q) in enumerate(qs)
+                errorline!(p_month_RR[j], [quantile(month_rain_simu[j, i][:, m], q) * conversion_factor for m in 1:12, i in 1:Nb], label=:none, alpha=0.15 * α^2, centertype=:median, errortype=:percentile, percentiles=per, groupcolor=my_palette(length(qs))[cc])
+            end
+        end
+        for q in qs
+            scatter!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, ms=2, c=:blue)
+            plot!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue)
+        end
+        xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))), xtickfontsize=8)
+    end
+    [ylabel!(p_month_RR[j], &quot;Rain (mm/month)&quot;, ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+
+    [title!(p_month_RR[j], station_name[j], titlefontsize=12) for j = 1:D]
+    pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1500, 600), layout=(2, 5))
+    # savefig(&quot;save/EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf&quot;)
+end</code></pre><img src="c6e51512.svg" alt="Example block output"/><h2 id="Correlations"><a class="docs-heading-anchor" href="#Correlations">Correlations</a><a id="Correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Correlations" title="Permalink"></a></h2><h4 id="Rain-event-dry/wet"><a class="docs-heading-anchor" href="#Rain-event-dry/wet">Rain event dry/wet</a><a id="Rain-event-dry/wet-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-event-dry/wet" title="Permalink"></a></h4><pre><code class="language-julia hljs">cor_bin_hist = cor(reduce(hcat, [df.bin for df in data_stations]));
+
+cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
+
+
+begin
+    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, xtickfontsize=10, ytickfontsize=10) for _ in 1:1]
+    scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu), label=&quot;Correlations&quot;, xlabel=&quot;Observations&quot;, ylabel=&quot;Simulations&quot;, c=2)
+    [xlims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
+    [ylims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
+    plot(plots_cor_bin...)
+end</code></pre><img src="1ce1adf2.svg" alt="Example block output"/><h4 id="Rain-amount"><a class="docs-heading-anchor" href="#Rain-amount">Rain amount</a><a id="Rain-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-amount" title="Permalink"></a></h4><pre><code class="language-julia hljs">cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));
+
+
+corT_hist = corTail(reduce(hcat, [df.RR for df in data_stations]));
+
+
+cor_mean_simu = mean(cor(rs[:, :, i]&#39;) for i in 1:Nb);
+
+
+corT_mean_simu = mean(corTail(rs[:, :, i]&#39;) for i in 1:Nb);
+
+
+begin
+    plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, xtickfontsize=10, ytickfontsize=10) for _ in 1:2]
+    scatter!(plots_cor[1], vec_triu(cor_hist), vec_triu(cor_mean_simu), label=&quot;Correlations&quot;, xlabel=&quot;Observations&quot;, ylabel=&quot;Simulations&quot;, c=2)
+    scatter!(plots_cor[2], vec_triu(corT_hist), vec_triu(corT_mean_simu), label=&quot;Tail index&quot;, xlabel=&quot;Observations&quot;, ylabel=&quot;Simulations&quot;, c=3)
+    [xlims!(plots_cor[i], -0.1, 1) for i in 1:2]
+    [ylims!(plots_cor[i], -0.1, 1) for i in 1:2]
+    plot(plots_cor...)
+    # savefig(&quot;full_cor_hist_vs_1000_mean_simu.pdf&quot;)
+end</code></pre><img src="140cbab5.svg" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« StochasticWeatherGenerator.jl</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.0 on <span class="colophon-date" title="Tuesday 23 April 2024 23:13">Tuesday 23 April 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
