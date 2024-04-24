@@ -1,7 +1,7 @@
 name = "StochasticWeatherGenerators"
 uuid = "3eadb0b9-5057-49d2-9b8f-52a8c334ebf6"
 authors = ["David Métivier <david.metivier@inrae.fr>"]
-version = "1.0.2-DEV"
+version = "1.0.3-DEV"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
