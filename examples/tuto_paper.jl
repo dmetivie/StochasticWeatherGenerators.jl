@@ -2,11 +2,11 @@ using Markdown
 cd(@__DIR__)#hide
 
 md"""
-# Set up
+## Set up
 """
 
 md"""
-## Package and functions
+### Package and functions
 """
 
 using CSV, JLD, DelimitedFiles # File Read/Load/Save
@@ -30,7 +30,7 @@ using StatsPlots, LaTeXStrings
 Random.seed!(1234)
 
 md"""
-## Settings for plotting
+### Settings for plotting
 """
 gr()
 default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
@@ -43,13 +43,13 @@ file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetiv
 include(file_for_maps_with_geomakie)
 
 md"""
-## Data files
+### Data files
 """
 
 
 
 md"""
-## Global Parameters
+### Global Parameters
 """
 
 
@@ -89,7 +89,7 @@ md"""
 conversion_factor = 0.1 # 0.1 mm -> mm 
 
 md"""
-# HMM Hyperparameters
+## HMM Hyperparameters
 """
 
 
@@ -140,12 +140,12 @@ println("K = $K, ", "local_order = $local_order, ", "degree = $𝐃𝐞𝐠")
 
 
 md"""
-# Data
+## Data
 """
 
 
 md"""
-## Select relevant stations from the `station.txt` file
+### Select relevant stations from the `station.txt` file
 """
 
 
@@ -195,7 +195,7 @@ D = length(STAID)
 
 
 md"""
-## Date range
+### Date range
 """
 
 
@@ -226,7 +226,7 @@ N = length(n2t)
 
 
 md"""
-## Treat data
+### Treat data
 """
 
 
@@ -262,7 +262,7 @@ Binary matrix version of rain event at the `D` stations.
 
 
 md"""
-## Map of stations
+### Map of stations
 """
 
 
@@ -283,11 +283,11 @@ long_spell = [longuest_spell(y) for y in eachcol(𝐘)]
 map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
 
 md"""
-# Fit the seasonal HMM
+## Fit the seasonal HMM
 """
 
 md"""
-## Fit slice: naive estimation
+### Fit slice: naive estimation
 """
 
 
@@ -318,7 +318,7 @@ hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_statio
 
 
 md"""
-## Fit with Baum Welch using slice estimate as starting point
+### Fit with Baum Welch using slice estimate as starting point
 
 With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!
 """
@@ -347,11 +347,11 @@ Uncomment to load previously computed hmm
 """
 
 md"""
-## Visualisation of the HMM parameters
+### Visualisation of the HMM parameters
 """
 
 md"""
-### Transition matrix
+#### Transition matrix
 """
 
 
@@ -368,7 +368,7 @@ end
 
 
 md"""
-### Rain probabilities
+#### Rain probabilities
 """
 
 
@@ -394,25 +394,25 @@ end
 
 
 md"""
-### Spatial Rain probability 
+#### Spatial Rain probability 
 """
 
 memory_past_cat = 1
 
 md"""
 h = 1 (day before dry) or 2 (day before wet)
-$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = %$(memory_past_cat)
+$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = \$(memory_past_cat)
 """
 
 p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
 
 
 md"""
-## Inference of the historical hidden states
+### Inference of the historical hidden states
 """
 
 md"""
-###  Viterbi algorithm
+####  Viterbi algorithm
 """
 
 ẑ = viterbi(hmm_fit, 𝐘, 𝐘_past; n2t=n2t)
@@ -429,7 +429,7 @@ ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]))
 
 md"""
-### Visualisation of the Historical sequences of hidden states
+#### Visualisation of the Historical sequences of hidden states
 """
 
 year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
@@ -461,11 +461,11 @@ begin
 end
 
 md"""
-# Adding Rain amounts to the model
+## Adding Rain amounts to the model
 """
 
 md"""
-## Marginal fit
+### Marginal fit
 
 
 We fit the marginals at each station independently. 
@@ -485,7 +485,7 @@ I did my approach (to save interpolate quantile) few months prior to this PR. It
 
 
 md"""
-## Rain correlations
+### Rain correlations
 
 We fit a Gaussian copula to each pair of stations for joint rainy days only.
 """
@@ -511,7 +511,7 @@ end
 
 
 md"""
-# Simulation
+## Simulation
 
 Now we are ready to generate samples from the SWG model.
 """
@@ -547,13 +547,13 @@ end
 
 
 md"""
-# Results
+## Results
 """
 
 
 
 md"""
-## Spell distribution
+### Spell distribution
 
 `select_month` to chose the month where to compute the spells distributions (summer month, winter, etc.)
 `select_month = 1:12` corresponds to all month.
@@ -569,14 +569,14 @@ idx_month_vcat = vcat(idx_months[select_month]...)
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_months];
 
 md"""
-#### Historic spells
+##### Historic spells
 """
 
 len_spell_hist = [pmf_spell(𝐘[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];
 
 
 md"""
-#### Simulation spells
+##### Simulation spells
 """
 
 
@@ -584,7 +584,7 @@ len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:
 
 
 md"""
-### Dry spell
+#### Dry spell
 """
 
 
@@ -611,7 +611,7 @@ end
 
 
 md"""
-### Wet spell
+#### Wet spell
 """
 
 
@@ -636,12 +636,12 @@ end
 
 
 md"""
-## Rain
+### Rain
 """
 
 
 md"""
-### Interpretation: Mean Rain per weather regime
+#### Interpretation: Mean Rain per weather regime
 """
 
 
@@ -664,12 +664,12 @@ end
 
 
 md"""
-### Univariate Rain distributions
+#### Univariate Rain distributions
 """
 
 
 md"""
-Historical vs %$(Nb) simulations distribution
+Historical vs \$(Nb) simulations distribution
 """
 
 
@@ -690,7 +690,7 @@ end
 
 
 md"""
-### Monthly quantile amount
+#### Monthly quantile amount
 """
 
 
@@ -731,12 +731,12 @@ end
 
 
 md"""
-## Correlations
+### Correlations
 """
 
 
 md"""
-#### Rain event dry/wet
+##### Rain event dry/wet
 """
 
 
@@ -755,7 +755,7 @@ end
 
 
 md"""
-#### Rain amount
+##### Rain amount
 """
 
 
