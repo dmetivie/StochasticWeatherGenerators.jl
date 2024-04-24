@@ -21,7 +21,7 @@ using Distributions
 
 using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
 
-using StochasticWeatherGenerator # interface to use with SmoothPeriodicStatsModels
+using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels
 
 using StatsPlots, LaTeXStrings
 
@@ -39,7 +39,7 @@ scalefontsizes(1.5)
 md"""
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
 """
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 
 md"""
@@ -156,7 +156,7 @@ Here we
 - Shorten station names #TODO improve this function (maybe impose max string instead of all 'if')	
 """
 begin
-    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/stations.txt")
+    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/stations.txt")
     station_all = CSV.read(station_file, DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
     station_all = @chain station_all begin
         @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
@@ -237,7 +237,7 @@ It also add a column of rain event (0: dry, 1: wet).
 
 
 begin
-    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
+    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
     for i = eachindex(data_stations)
         @transform!(data_stations[i], :bin = onefy.(:RR))
     end
@@ -472,7 +472,7 @@ We fit the marginals at each station independently.
 We use a mixture of exponential functions whose parameters evolve smoothly and periodically
 TODO: put equation
 """
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerator.mix_ini(T))
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
 ## FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
 save(joinpath(save_tuto_path,"rain_mix.jld"), "mix2Exp", mix_allE)

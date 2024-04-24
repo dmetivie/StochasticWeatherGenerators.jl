@@ -24,7 +24,7 @@ using Distributions
 
 using SmoothPeriodicStatsModels
 
-using StochasticWeatherGenerator
+using StochasticWeatherGenerators
 
 using StatsPlots, LaTeXStrings
 ````
@@ -44,7 +44,7 @@ scalefontsizes(1.5)
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
 
 ````@example tuto_paper
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 ````
 
@@ -138,7 +138,7 @@ Here we
 
 ````@example tuto_paper
 begin
-    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/stations.txt")
+    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/stations.txt")
     station_all = CSV.read(station_file, DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
     station_all = @chain station_all begin
         @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
@@ -206,7 +206,7 @@ Filter by date and valid data ECA data
 
 ````@example tuto_paper
 begin
-    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerator.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
+    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
     for i = eachindex(data_stations)
         @transform!(data_stations[i], :bin = onefy.(:RR))
     end
@@ -313,7 +313,7 @@ CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_orde
 # Adding Rain
 
 ````@example tuto_paper
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerator.mix_ini(T))
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
 # FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
 save(joinpath(save_tuto_path,"rain_mix.jld"), "mix2Exp", mix_allE)

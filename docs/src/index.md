@@ -1,9 +1,9 @@
-# StochasticWeatherGenerator.jl
+# StochasticWeatherGenerators.jl
 
-Documentation for StochasticWeatherGenerator.jl
+Documentation for StochasticWeatherGenerators.jl
 
 ## Index
 
 ```@autodocs
-Modules = [StochasticWeatherGenerator]
+Modules = [StochasticWeatherGenerators]
 ```

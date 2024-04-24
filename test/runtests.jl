@@ -1,2 +1,2 @@
-using StochasticWeatherGenerator
+using StochasticWeatherGenerators
 using Test

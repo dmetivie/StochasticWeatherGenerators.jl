@@ -62,7 +62,7 @@ Each df must have :DATE, :RR, :z (same :z for each df)
 """
 function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson)
     D = length(dfs)
-    ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerator.I for k in 1:K]
+    ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerators.I for k in 1:K]
     for j1 in 2:D
         for j2 in 1:j1-1
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)

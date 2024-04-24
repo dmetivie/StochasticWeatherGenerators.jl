@@ -24,7 +24,7 @@ using Distributions
 
 using SmoothPeriodicStatsModels
 
-using StochasticWeatherGenerator
+using StochasticWeatherGenerators
 
 using StatsPlots, LaTeXStrings
 ````
@@ -312,7 +312,7 @@ CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_orde
 # Adding Rain
 
 ````@example tuto_paper
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerator.mix_ini(T))
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
 # FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
 save(joinpath(save_tuto_path,"rain_mix.jld"), "mix2Exp", mix_allE)

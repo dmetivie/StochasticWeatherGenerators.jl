@@ -1,6 +1,6 @@
 using Documenter
 using Literate
-using StochasticWeatherGenerator
+using StochasticWeatherGenerators
 
 
 examples_jl_path = joinpath(dirname(@__DIR__), "examples")
@@ -27,19 +27,19 @@ pages = [
 
 fmt = Documenter.HTML(;
     prettyurls=get(ENV, "CI", "false") == "true",
-    repolink="https://github.com/dmetivie/StochasticWeatherGenerator.jl",
-    canonical="https://dmetivie.github.io/StochasticWeatherGenerator.jl",
+    repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
+    canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
     assets=String[],
 )
 
 makedocs(
-    sitename = "StochasticWeatherGenerator",
+    sitename = "StochasticWeatherGenerators",
     authors = "David Métivier",
     format = fmt,
-    modules = [StochasticWeatherGenerator]
+    modules = [StochasticWeatherGenerators]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-deploydocs(; repo="github.com/dmetivie/StochasticWeatherGenerator.jl", devbranch="master")
+deploydocs(; repo="github.com/dmetivie/StochasticWeatherGenerators.jl", devbranch="master")
