@@ -48,7 +48,7 @@ my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_co
 md"""
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
 """
-file_for_maps_with_geomakie = "geo_makie_features.jl"#download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 
 md"""
@@ -520,7 +520,7 @@ Now we are ready to generate samples from the SWG model.
 md"""
 `Nb` is the number of realization
 """
-Nb = 100
+Nb = 1000
 
 md"""
 Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.
