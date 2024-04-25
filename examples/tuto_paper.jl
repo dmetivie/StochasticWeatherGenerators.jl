@@ -1,6 +1,13 @@
-using Markdown
+using Markdown#hide
 cd(@__DIR__)#hide
 
+md"""
+# Multisite daily Stochastic Weather Generator
+"""
+
+md"""
+SWG as described in Métivier, Gobet and Parey
+"""
 md"""
 ## Set up
 """
@@ -32,26 +39,25 @@ Random.seed!(1234)
 md"""
 ### Settings for plotting
 """
-gr()
+gr() # plotly() # for interactive plots
 default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
 scalefontsizes(1.5)
+cur_colors = get_color_palette(:auto, 100);
+my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
 
 md"""
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
 """
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = "geo_makie_features.jl"#download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 
 md"""
 ### Data files
 """
 
-
-
 md"""
 ### Global Parameters
 """
-
 
 md"""
 Number of day in a year (choice here is 366)
@@ -97,18 +103,9 @@ md"""
 Number of hidden states
 """
 
-
 K = 4
 
-
-cur_colors = get_color_palette(:auto, 100);
-
-
-my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
-
-
 my_pal = my_palette(K); # just colors I like for plotting weather regime!
-
 
 md"""
 Degree `𝐃𝐞𝐠` of the trigonometric expansion 
@@ -152,8 +149,8 @@ md"""
 md"""
 Here we
 - remove white space at the right of the CN, STANAME which is caused by imperfect CVS importation
-- Select only the stations with 100% valid data for the period Date(1955,12,31) ≤ :DATE ≤ Date(2019,12,31)
-- Shorten station names #TODO improve this function (maybe impose max string instead of all 'if')	
+- Select only the stations with 100% valid data for the period `Date(1955,12,31) .≤ :DATE .≤ Date(2019,12,31)`
+- Shorten station names 	
 """
 begin
     station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/stations.txt")
@@ -167,7 +164,11 @@ begin
 end
 
 selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILLE", "EMBRUN", "BASTIA", "LA HAGUE", "CHASSIRON", "ORLY"]
-
+md"""
+!!! note
+    You can change the selected stations. However, keep in mind that for the model to work, the conditional independence hypothesis must holds between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
+    Hence stations must be sufficiently far apart.
+"""
 
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
 
@@ -519,7 +520,7 @@ Now we are ready to generate samples from the SWG model.
 md"""
 `Nb` is the number of realization
 """
-Nb = 1000
+Nb = 100
 
 md"""
 Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.
