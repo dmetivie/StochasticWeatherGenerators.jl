@@ -591,47 +591,54 @@ md"""
 
 make_range(y, step=1) = range(extrema(y)..., step=step)
 
-
-begin
+@time begin
     dw_dry = 1 # dry
-    p_spell_dry = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=13, xtickfontsize=13) for j = 1:D]
+    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10) for j = 1:D]
     for j = 1:D
-        [stephist!(p_spell_dry[j], len_spell_simu[i, j, dw_dry], alpha=0.15, c=:grey, label=:none, norm=:probability, bins=make_range(len_spell_simu[i, j, dw_dry])) for i = 1:Nb]
-        stephist!(p_spell_dry[j], len_spell_hist[j, dw_dry], label=:none, c=:blue, lw=1.5, norm=:probability, bins=make_range(len_spell_hist[j, dw_dry]))
-        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(len_spell_hist[j, dw_dry])))
+        all_spells = len_spell_simu[:, j, dw_dry]
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+
+        histo_spell = len_spell_hist[j, dw_dry]
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=:none, groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
+        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
+        yaxis!(:log10)
     end
 
-    [plot!(p_spell_dry[j], xlabel="Nb of days", xlabelfontsize=16) for j in staid_lat[6:10]]
-    [plot!(p_spell_dry[j], ylabel="PMF", ylabelfontsize=16) for j in staid_lat[[1, 6]]]
-    [title!(p_spell_dry[j], station_name[j], titlefontsize=16) for j = 1:D]
-    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
-    ## savefig(pall_spell_dry, "save/spell_steppost_dry_c1.pdf")
+    [xlabel!(p_spell_dry[j], "Nb of days", xlabelfontsize=10) for j in staid_lat[6:10]]
+    [ylabel!(p_spell_dry[j], "PMF", ylabelfontsize=10) for j in staid_lat[[1, 6]]]
+    [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
+    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5))
 end
-
-
+savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf"))
 
 
 md"""
 #### Wet spell
 """
 
-
-begin
-    dw_wet = 2 # wet
-    p_spell_wet = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=13, xtickfontsize=13) for j = 1:D]
+@time begin
+    dw_dry = 2 # wet
+    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10) for j = 1:D]
     for j = 1:D
-        [stephist!(p_spell_wet[j], len_spell_simu[i, j, dw_wet], alpha=0.15, c=:grey, label=:none, norm=:probability, bins=make_range(len_spell_simu[i, j, dw_wet])) for i = 1:Nb]
-        stephist!(p_spell_wet[j], len_spell_hist[j, dw_wet], label=:none, c=:blue, lw=1.5, norm=:probability, bins=make_range(len_spell_hist[j, dw_wet]))
-        xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(len_spell_hist[j, dw_wet])))
+        all_spells = len_spell_simu[:, j, dw_dry]
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+
+        histo_spell = len_spell_hist[j, dw_dry]
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=:none, groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
+        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
+        yaxis!(:log10)
     end
 
-    [plot!(p_spell_wet[j], xlabel="Nb of days", xlabelfontsize=16) for j in staid_lat[6:10]]
-    [plot!(p_spell_wet[j], ylabel="PMF", ylabelfontsize=16) for j in staid_lat[[1, 6]]]
-
-    [title!(p_spell_wet[j], station_name[j], titlefontsize=16) for j = 1:D]
-    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
-    ## savefig(pall_spell_wet, "save/spell_steppost_wet_c1.pdf")
+    [xlabel!(p_spell_dry[j], "Nb of days", xlabelfontsize=10) for j in staid_lat[6:10]]
+    [ylabel!(p_spell_dry[j], "PMF", ylabelfontsize=10) for j in staid_lat[[1, 6]]]
+    [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
+    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5))
 end
+savefig(joinpath(save_tuto_path,"spell_steppost_wet_c1.pdf"))
 
 
 
