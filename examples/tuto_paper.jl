@@ -681,20 +681,25 @@ Historical vs \$(Nb) simulations distribution
 
 
 begin
-    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=11, xtickfontsize=10) for j = 1:D]
+    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10, legendfontsize = 11) for j = 1:D]
     for j = 1:D
-        [stephist!(p_uniR[j], conversion_factor * filter(!iszero, rs[j, :, i]), alpha=0.15, c=:grey, label=:none, norm=:pdf) for i = 1:Nb]
-        stephist!(p_uniR[j], conversion_factor * filter(!iszero, data_stations[j].RR), label=:none, c=:blue, lw=1.5, norm=:pdf)
+        dists_RR_positive_j = conversion_factor * [filter(!iszero, rs[j, :, i]) for i in 1:Nb]
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:pdf, errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:pdf, errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+
+        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype = :percentile)
+
         xlims!(p_uniR[j], 0.0, Inf)
     end
-    [plot!(p_uniR[j], xlabel="Rain (mm/day)", xlabelfontsize=12) for j in staid_lat[6:10]]
-    [plot!(p_uniR[j], ylabel="PDF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+    [plot!(p_uniR[j], xlabel=L"Rain (mm/m$^2$)", xlabelfontsize=10) for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], ylabel="PDF", ylabelfontsize=10) for j in staid_lat[[1, 6]]]
 
-    [title!(p_uniR[j], station_name[j], titlefontsize=12) for j = 1:D]
+    [title!(p_uniR[j], station_name[j], titlefontsize=13) for j = 1:D]
 
-    pall_R = plot(p_uniR[staid_lat]..., size=(1100, 500), layout=(2, 5))
+    pall_R = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin = 3px)
 end
-
+savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive.pdf"))
 
 md"""
 #### Monthly quantile amount
