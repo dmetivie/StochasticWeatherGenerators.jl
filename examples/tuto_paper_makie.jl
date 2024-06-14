@@ -1,20 +1,21 @@
-```@meta
-EditURL = "../../../examples/tuto_paper.jl"
-```
-
-````@example tuto_paper
 using Markdown#hide
 cd(@__DIR__)#hide
-````
 
+md"""
 # Multisite daily Stochastic Weather Generator
+"""
 
+md"""
 SWG as described in Métivier, Gobet and Parey
+"""
+md"""
 ## Set up
+"""
 
+md"""
 ### Package and functions
+"""
 
-````@example tuto_paper
 using CSV, JLD, DelimitedFiles # File Read/Load/Save
 
 using DataFrames, DataFramesMeta # DataFrames
@@ -29,43 +30,61 @@ using SmoothPeriodicStatsModels # Name might change. Small collection of smooth 
 
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels
 
-using StatsPlots, LaTeXStrings
-````
+using CairoMakie
 
-````@example tuto_paper
+#-
+
 Random.seed!(1234)
-````
 
+md"""
 ### Settings for plotting
+"""
+# gr() # plotly() # for interactive plots
+# default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
+# scalefontsizes(1.5)
+# cur_colors = get_color_palette(:auto, 100);
+using Colors
+logocolors = Colors.JULIA_LOGO_COLORS
+ju_colors = [logocolors.blue, logocolors.green, logocolors.purple, logocolors.red]
+if K == 1
+    my_palette = ju_colors[4]
+elseif K == 2
+    my_palette = ju_colors[[1, 4]]
+elseif K == 3
+    my_palette = ju_colors[[1, 2, 4]]
+elseif K == 4
+    my_palette = ju_colors
+elseif K > 4
+    my_palette = range(ju_colors[1], ju_colors[4], length=K)
+end
 
-````@example tuto_paper
-gr() # plotly() # for interactive plots
-default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
-scalefontsizes(1.5)
-cur_colors = get_color_palette(:auto, 100);
-my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
-````
-
+md"""
 For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`
-
-````@example tuto_paper
+"""
 file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
-````
 
+md"""
 ### Data files
+"""
 
+md"""
 ### Global Parameters
+"""
 
+md"""
 Number of day in a year (choice here is 366)
+"""
 
-````@example tuto_paper
+
 T = 366
-````
 
+
+md"""
 Define the French area for map (Longitude and latitudes) plot and the precision of the map `precision_scale`
+"""
 
-````@example tuto_paper
+
 precision_scale = "50m"
 
 
@@ -79,61 +98,76 @@ LAT_min = 41 # South
 
 
 LAT_max = 52 # North
-````
 
-`conversion_factor` for rain amounts `RR` in 0.1 mm to mm
 
-````@example tuto_paper
-conversion_factor = 0.1 # 0.1 mm -> mm
-````
+md"""
+`conversion_factor` for rain amounts `RR` in 0.1 mm to mm 
+"""
 
+
+conversion_factor = 0.1 # 0.1 mm -> mm 
+
+md"""
 ## HMM Hyperparameters
+"""
 
+
+md"""
 Number of hidden states
+"""
 
-````@example tuto_paper
 K = 4
 
 my_pal = my_palette(K); # just colors I like for plotting weather regime!
-nothing #hide
-````
 
-Degree `𝐃𝐞𝐠` of the trigonometric expansion
+md"""
+Degree `𝐃𝐞𝐠` of the trigonometric expansion 
 It could be an array different for each station and variables. Not implemented yet though.
+"""
 
-````@example tuto_paper
+
 𝐃𝐞𝐠 = 2
-````
 
+
+md"""
 Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1}^{(j)} = y_{n-1}^{(j)}, \cdots, Y_{n-\texttt{local memory}}^{(j)} = y_{n-\texttt{local memory}}^{(j)})$
+"""
 
-````@example tuto_paper
+
 local_order = 1
-````
 
-!!! note
+
+md"""
+!!! note  
 	The `local_order` could be a vector/matrix of size `D` and different for each station, and also different depending on wet or dry past. Indeed it has been noted, TODO add ref, that dry spells have longer memory.
+"""
 
-````@example tuto_paper
+
 size_order = 2^local_order
 
 
 println("K = $K, ", "local_order = $local_order, ", "degree = $𝐃𝐞𝐠")
-````
 
+
+md"""
 ## Data
+"""
 
+
+md"""
 ### Select relevant stations from the `station.txt` file
+"""
 
+
+md"""
 Here we
 - remove white space at the right of the CN, STANAME which is caused by imperfect CVS importation
 - Select only the stations with 100% valid data for the period `Date(1955,12,31) .≤ :DATE .≤ Date(2019,12,31)`
-- Shorten station names
-
-````@example tuto_paper
+- Shorten station names 	
+"""
 begin
     station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/stations.txt")
-    station_all = CSV.read(station_file, DataFrame, header = 18, normalizenames=true, ignoreemptyrows=true)
+    station_all = CSV.read(station_file, DataFrame, header=18, normalizenames=true, ignoreemptyrows=true)
     station_all = @chain station_all begin
         @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
         @subset(:CN .∈ tuple(["FR", "BE", "LU", "CH"]))
@@ -143,44 +177,50 @@ begin
 end
 
 selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILLE", "EMBRUN", "BASTIA", "LA HAGUE", "CHASSIRON", "ORLY"]
-````
-
+md"""
 !!! note
     You can change the selected stations. However, keep in mind that for the model to work, the conditional independence hypothesis must holds between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
     Hence stations must be sufficiently far apart.
+"""
 
-````@example tuto_paper
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
 
 
-STAID = station.STAID #[32, 33, 39, 203, 737, 755, 758, 793, 11244, 11249];
+STAID = station.STAID #[32, 33, 39, 203, 737, 755, 758, 793, 11244, 11249]; 
 
 
 station_name = station.STANAME
-````
 
+
+md"""
 Sort stations (index) by latitude. It is useful for plotting from North to South.
+"""
 
-````@example tuto_paper
+
 staid_lat = sortperm(station.LAT, rev=true);
-nothing #hide
-````
 
+
+md"""
 Station number
+"""
 
-````@example tuto_paper
+
 D = length(STAID)
-````
 
+
+md"""
 ### Date range
+"""
 
-````@example tuto_paper
+
 date_start = Date(1956)
-````
 
+
+md"""
 Date including the previous days used in the initial condition (in case `local_memory > 0`)
+"""
 
-````@example tuto_paper
+
 date_start_w_memory = date_start - Day(local_order)
 
 
@@ -197,25 +237,32 @@ n2t = dayofyear_Leap.(every_year)
 
 
 N = length(n2t)
-````
 
+
+md"""
 ### Treat data
+"""
 
+
+md"""
 Load into DataFrames the (ECA) RR files (rain). It filters by date and valid data.
 It also add a column of rain event (0: dry, 1: wet).
+"""
 
-````@example tuto_paper
+
 begin
-    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header = 21, url = true)
+    data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header=21, url=true)
     for i = eachindex(data_stations)
         @transform!(data_stations[i], :bin = onefy.(:RR))
     end
 end
-````
 
+
+md"""
 Binary matrix version of rain event at the `D` stations.
+"""
 
-````@example tuto_paper
+
 𝐘all = BitMatrix(reduce(hcat, [data_stations[j].bin for j = 1:D]))
 
 
@@ -226,13 +273,18 @@ Binary matrix version of rain event at the `D` stations.
 
 
 𝐘 = 𝐘all[1+local_order:end, :]
-````
 
+
+md"""
 ### Map of stations
+"""
 
+
+md"""
 Convert LAT DMS into DD which seems most widly accepted format.
+"""
 
-````@example tuto_paper
+
 LAT_idx = dms_to_dd.(station.LAT)
 
 
@@ -243,52 +295,61 @@ long_spell = [longuest_spell(y) for y in eachcol(𝐘)]
 
 
 map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
-````
 
+md"""
 ## Fit the seasonal HMM
+"""
 
+md"""
 ### Fit slice: naive estimation
+"""
 
+
+md"""
 !!! note
     Before inferring the HMM parameters with EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.
+"""
 
+
+md"""
 Reference station `ref_station` used to sort hidden state for the slide initialization
 Here we choose `j=1` $\to$ `STAID=32` $\to$ `BOURGES` because it is a central station for France
+"""
 
-````@example tuto_paper
+
 ref_station = 1
-````
 
+md"""
 This generate a random Periodic HMM that we then fit slice by slice (day by day). See paper.
-
-````@example tuto_paper
+"""
 hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
 
 
-@time "FitMLE SHMM (Slice)" hmm_slice = fit_mle_all_slices(hmm_random, 𝐘, 𝐘_past; n2t=n2t, robust=true, rand_ini=true, Dirichlet_α=0.8, history=false, n_random_ini=1, 𝐘ₜ_extanted=[-12, -7, 0, 6, 13]);
+@time "FitMLE SHMM (Slice)" hmm_slice = fit_mle_all_slices(hmm_random, 𝐘, 𝐘_past; n2t=n2t, robust=true, rand_ini=true, Dirichlet_α=0.8, history=false, n_random_ini=1, Yₜ_extanted=[-12, -7, 0, 6, 13]);
 
 
 θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);
-nothing #hide
-````
 
+
+md"""
 ### Fit with Baum Welch using slice estimate as starting point
 
 With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!
+"""
 
-````@example tuto_paper
+
 @time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, 𝐘, 𝐘_past,
     maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
-# On my computer
-# Iteration 73: logtot = -116791.100655, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0002 & max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00103
-# EM converged in 73 iterations, logtot = -116791.10065504618
-# FitMLE SHMM (Baum Welch): 36.161685 seconds (185.76 M allocations: 32.581 GiB, 6.77% gc time, 10.09% compilation time)
+## On my computer
+## Iteration 73: logtot = -116791.100655, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0002 & max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00103
+## EM converged in 73 iterations, logtot = -116791.10065504618
+## FitMLE SHMM (Baum Welch): 36.161685 seconds (185.76 M allocations: 32.581 GiB, 6.77% gc time, 10.09% compilation time)
 
 save_tuto_path = "../../assets/tuto_1"
 
-save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit)
-````
+save(joinpath(save_tuto_path, "hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit)
 
+md"""
 Uncomment to load previously computed hmm
 ```julia
 # hmm_infos = load("save/hmm_fit.jld")
@@ -297,31 +358,73 @@ Uncomment to load previously computed hmm
 # θq_fit = hmm_infos["Q_param"]
 # θy_fit = hmm_infos["Y_param"]
 ```
+"""
 
+md"""
 ### Visualisation of the HMM parameters
+"""
 
+md"""
 #### Transition matrix
+"""
 
-````@example tuto_paper
-begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
-    for k in 1:K
-        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:topleft) for l in 1:K]
-        hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=10, ylims=(0, 1))
+
+with_theme(theme_latexfonts()) do
+    pA = Figure(size=(700, 700), fontsize = 17)
+    sqrtK = ceil(Int, sqrt(K))
+    # pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
+    for i in 1:sqrtK
+        for j in 1:sqrtK
+            k = i + (j - 1) * sqrtK
+            if k > K
+                continue
+            else
+                ax = Axis(pA[i, j], xticks=(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), string.(vcat(first.(monthabbr.(1:12)), ""))))
+                [plot!(ax, hmm_fit.A[k, l, :], label=L"Q_{%$(k)\to %$(l)}", color=my_palette[l]) for l in 1:K]
+                axislegend(ax, merge=true, unique=false, position = :lt, orientation = :horizontal, nbanks = 2)
+                hlines!(ax, [0.5], color=:black, label=:none, s=:dot)
+                xlims!(ax, 0, 367)
+                ylims!(ax, 0, 1)
+            end
+        end
     end
-    pallA = plot(pA..., size=(1000, 500))
-    # savefig(pallA, "save/Q_transition_memo_1_K_4_d_2.pdf")
+    # pallA = plot(pA..., size=(1000, 500))
+    ## savefig(pallA, "save/Q_transition_memo_1_K_4_d_2.pdf")
+    pA
 end
-````
 
+
+md"""
 #### Rain probabilities
+"""
+with_theme(theme_latexfonts()) do
+    mm = 1
+    pB = Figure(size=(1000, 700), fontsize = 17)
+    sqrtK = 2#ceil(Int, sqrt(D))
+    for i in 1:2
+        for j in 1:5
+            s_o = i + (j - 1) * sqrtK
+            s = staid_lat[s_o]
+            if s_o > D
+                continue
+            else
+                ax = Axis(pB[i, j], title="$(station_name[s])", xticks=(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), string.(vcat(first.(monthabbr.(1:12)), ""))))
+                [plot!(ax, succprob.(hmm_fit.B[k, :, s, mm]), color=my_palette[k], label=:none) for k in 1:K]
+                hlines!(ax, [0.5], color=:black, label=:none, s=:dot)
+                xlims!(ax, 0, 367)
+                ylims!(ax, 0, 1)
+            end
+        end
+    end
+    Legend(ga[1, 2], axmain)
+    ## savefig(pallB, "save/proba_rain_all_station.pdf")
+    pB
+end
 
-````@example tuto_paper
 begin
     mm = 1
-    jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16) for j in 1:jt]
+    pB = Figure()
+    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16) for j in 1:D]
     for j in 1:jt
         [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none) for k in 1:K]
         hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
@@ -334,28 +437,34 @@ begin
         ylims!(pB[j], (0, 1))
     end
     pallB = plot(pB[staid_lat]..., size=(3000 / 1.25, 1000 / 1.25), layout=(2, 5))
-    # savefig(pallB, "save/proba_rain_all_station.pdf")
+    ## savefig(pallB, "save/proba_rain_all_station.pdf")
 end
-````
 
-#### Spatial Rain probability
+plt = [scatter(rand(5), rand(5)) for j in 1:10]
+plot(plt...)
 
-````@example tuto_paper
+md"""
+#### Spatial Rain probability 
+"""
+
 memory_past_cat = 1
-````
 
+md"""
 h = 1 (day before dry) or 2 (day before wet)
 $\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = \$(memory_past_cat)
+"""
 
-````@example tuto_paper
 p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
-````
 
+
+md"""
 ### Inference of the historical hidden states
+"""
 
+md"""
 ####  Viterbi algorithm
+"""
 
-````@example tuto_paper
 ẑ = viterbi(hmm_fit, 𝐘, 𝐘_past; n2t=n2t)
 
 
@@ -367,12 +476,12 @@ end
 ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
 
-CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]))
-````
+CSV.write(joinpath(save_tuto_path, "z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]))
 
+md"""
 #### Visualisation of the Historical sequences of hidden states
+"""
 
-````@example tuto_paper
 year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
 
 
@@ -398,38 +507,45 @@ begin
     hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
     ylims!(0.5, year_nb + 0.5)
     pviterbi = yticks!(1:year_nb, string.(year_range[select_year]))
-    # savefig(pviterbi, "save/temporal_1959_2009.pdf")
+    ## savefig(pviterbi, "save/temporal_1959_2009.pdf")
 end
-````
 
+md"""
 ## Adding Rain amounts to the model
+"""
 
+md"""
 ### Marginal fit
 
 
-We fit the marginals at each station independently.
+We fit the marginals at each station independently. 
 We use a mixture of exponential functions whose parameters evolve smoothly and periodically
 TODO: put equation
-
-````@example tuto_paper
+"""
 @time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
-# FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
+## FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
-save(joinpath(save_tuto_path,"rain_mix.jld"), "mix2Exp", mix_allE)
-````
+save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE)
 
+
+md"""
 Note that we don't need anymore to fit quantile functions, as [Distributions.jl PR #1389 (September 2nd, 2021)](https://github.com/JuliaStats/Distributions.jl/pull/1389) handles that.
 I did my approach (to save interpolate quantile) few months prior to this PR. It would have saved me some times!
+"""
 
+
+md"""
 ### Rain correlations
 
 We fit a Gaussian copula to each pair of stations for joint rainy days only.
+"""
 
+md"""
 !!! caution
     When the number of hidden states is getting larger, it migth happen that for some pair of stations there are no simulteneous rain occurence in a rain category $Z = k$.
     In that case a `missing` coefficient is returned.
+"""
 
-````@example tuto_paper
 begin
     Σ²RR = cov_RR(data_stations_z, K)
     if K == 4
@@ -442,21 +558,22 @@ end
 if K == 4
     @warn "For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4"
 end
-````
 
+
+md"""
 ## Simulation
 
 Now we are ready to generate samples from the SWG model.
+"""
 
+md"""
 `Nb` is the number of realization
+"""
+Nb = 1000
 
-````@example tuto_paper
-Nb = 100
-````
-
+md"""
 Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.
-
-````@example tuto_paper
+"""
 begin
     zs = zeros(Int, N, Nb)
     ys = zeros(Bool, N, D, Nb)
@@ -464,29 +581,33 @@ begin
         zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=𝐘all[1:local_order, :], z_ini=1, seq=true)
     end
 end
-# Simulations Z, Y: 34.998679 seconds (328.41 M allocations: 32.166 GiB, 8.24% gc time, 1.16% compilation time)
-````
+## Simulations Z, Y: 34.998679 seconds (328.41 M allocations: 32.166 GiB, 8.24% gc time, 1.16% compilation time)
 
+md"""
 Given the hidden states and dry/wet, it generates the rain amounts at each stations (correlated with a Gaussian Copula).
+"""
 
-````@example tuto_paper
 begin
     rs = zeros(D, N, Nb)
     @time "Simulations RR" for i in 1:Nb
         rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]', Σ²RR)
     end
 end
-# Simulations RR: 164.912113 seconds (299.73 M allocations: 43.020 GiB, 2.67% gc time, 0.54% compilation time)
-````
+## Simulations RR: 164.912113 seconds (299.73 M allocations: 43.020 GiB, 2.67% gc time, 0.54% compilation time)
 
+
+md"""
 ## Results
+"""
 
+
+
+md"""
 ### Spell distribution
 
 `select_month` to chose the month where to compute the spells distributions (summer month, winter, etc.)
 `select_month = 1:12` corresponds to all month.
-
-````@example tuto_paper
+"""
 select_month = 1:12
 
 idx_months = [findall(x -> month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
@@ -496,26 +617,27 @@ idx_month_vcat = vcat(idx_months[select_month]...)
 
 
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_months];
-nothing #hide
-````
 
+md"""
 ##### Historic spells
+"""
 
-````@example tuto_paper
 len_spell_hist = [pmf_spell(𝐘[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];
-nothing #hide
-````
 
+
+md"""
 ##### Simulation spells
+"""
 
-````@example tuto_paper
+
 len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];
-nothing #hide
-````
 
+
+md"""
 #### Dry spell
+"""
 
-````@example tuto_paper
+
 make_range(y, step=1) = range(extrema(y)..., step=step)
 
 
@@ -532,13 +654,17 @@ begin
     [plot!(p_spell_dry[j], ylabel="PMF", ylabelfontsize=16) for j in staid_lat[[1, 6]]]
     [title!(p_spell_dry[j], station_name[j], titlefontsize=16) for j = 1:D]
     pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
-    # savefig(pall_spell_dry, "save/spell_steppost_dry_c1.pdf")
+    ## savefig(pall_spell_dry, "save/spell_steppost_dry_c1.pdf")
 end
-````
 
+
+
+
+md"""
 #### Wet spell
+"""
 
-````@example tuto_paper
+
 begin
     dw_wet = 2 # wet
     p_spell_wet = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=13, xtickfontsize=13) for j = 1:D]
@@ -553,21 +679,28 @@ begin
 
     [title!(p_spell_wet[j], station_name[j], titlefontsize=16) for j = 1:D]
     pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
-    # savefig(pall_spell_wet, "save/spell_steppost_wet_c1.pdf")
+    ## savefig(pall_spell_wet, "save/spell_steppost_wet_c1.pdf")
 end
-````
 
+
+
+
+md"""
 ### Rain
+"""
 
+
+md"""
 #### Interpretation: Mean Rain per weather regime
+"""
 
-````@example tuto_paper
+
 begin
     p_rainpercat = [plot(ytickfontsize=16, xtickfontsize=14) for j = 1:D]
     for j = 1:D
         [plot!(p_rainpercat[j], 1:T, t -> conversion_factor * mean(mix_allE[j][k, t]), label=:none, c=my_color(k, K), lw=1.5) for k in 1:K]
     end
-    # [plot!(p_rainpercat[j], xlabel="Rain (mm/day)", xlabelfontsize=4) for j in staid_lat[6:10]]
+    ## [plot!(p_rainpercat[j], xlabel="Rain (mm/day)", xlabelfontsize=4) for j in staid_lat[6:10]]
     [plot!(p_rainpercat[j], ylabel="Rain (mm/day)", ylabelfontsize=17) for j in staid_lat[[1, 6]]]
     [xticks!(
         p_rainpercat[j],
@@ -576,15 +709,20 @@ begin
     ) for j in 1:D]
     [title!(p_rainpercat[j], station_name[j], titlefontsize=16) for j = 1:D]
     plot(p_rainpercat[staid_lat]..., size=(3000 / 1.5, 1000 / 1.25), layout=(2, 5))
-    # savefig("dist_steppost_rain.pdf")
+    ## savefig("dist_steppost_rain.pdf")
 end
-````
 
+
+md"""
 #### Univariate Rain distributions
+"""
 
+
+md"""
 Historical vs \$(Nb) simulations distribution
+"""
 
-````@example tuto_paper
+
 begin
     p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=11, xtickfontsize=10) for j = 1:D]
     for j = 1:D
@@ -599,11 +737,13 @@ begin
 
     pall_R = plot(p_uniR[staid_lat]..., size=(1100, 500), layout=(2, 5))
 end
-````
 
+
+md"""
 #### Monthly quantile amount
+"""
 
-````@example tuto_paper
+
 rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
 
 
@@ -634,15 +774,22 @@ qs = [0.9, 0.5, 0.1]
 
     [title!(p_month_RR[j], station_name[j], titlefontsize=12) for j = 1:D]
     pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1500, 600), layout=(2, 5))
-    # savefig("save/EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")
+    ## savefig("save/EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")
 end
-````
 
+
+
+
+md"""
 ### Correlations
+"""
 
+
+md"""
 ##### Rain event dry/wet
+"""
 
-````@example tuto_paper
+
 cor_bin_hist = cor(reduce(hcat, [df.bin for df in data_stations]));
 
 cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
@@ -655,11 +802,13 @@ begin
     [ylims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
     plot(plots_cor_bin...)
 end
-````
 
+
+md"""
 ##### Rain amount
+"""
 
-````@example tuto_paper
+
 cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));
 
 
@@ -679,11 +828,5 @@ begin
     [xlims!(plots_cor[i], -0.1, 1) for i in 1:2]
     [ylims!(plots_cor[i], -0.1, 1) for i in 1:2]
     plot(plots_cor...)
-    # savefig("full_cor_hist_vs_1000_mean_simu.pdf")
+    ## savefig("full_cor_hist_vs_1000_mean_simu.pdf")
 end
-````
-
----
-
-*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

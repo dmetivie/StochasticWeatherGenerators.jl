@@ -96,3 +96,37 @@ function savefigcrop(plt, save_name)
 end
 
 savefigcrop(save_name) = savefigcrop(nothing, save_name)
+
+ker(u) = 3 / 4 * (1 - abs(u)^2)
+
+"""
+    cyclic_moving_average(a::AbstractArray, window::AbstractVector)
+    cyclic_moving_average(a::AbstractArray, window::Integer)
+Simple periodic moving average with Epanechnikov kernel.
+"""
+
+function cyclic_moving_average(A::AbstractArray, t::AbstractVector, T::Integer, window)
+    a = zeros(T)
+    a[t] .= A
+    return cyclic_moving_average(a, window)
+end
+
+cyclic_moving_average(a::AbstractArray, window::Integer) = cyclic_moving_average(a, -window:window)
+
+function cyclic_moving_average(a::AbstractArray, window::AbstractVector)
+    W = length(window)
+    @assert W ≥ 1
+    T = length(a)
+    tot_weight = sum(ker(i / W) for i in window)
+    return [sum(a[cyclic(t+i, T)] * ker(i / W) for i in window) for t = 1:T] / tot_weight
+end
+
+function cyclic(i, T)
+    if 1≤i≤T
+        return i
+    elseif T+1≤i≤2T
+        return i - T
+    elseif -T+1≤i≤0
+        return T + i
+    end
+end
