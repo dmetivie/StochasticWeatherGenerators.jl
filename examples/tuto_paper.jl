@@ -596,12 +596,12 @@ make_range(y, step=1) = range(extrema(y)..., step=step)
     p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dw_dry]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
 
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
 
         histo_spell = len_spell_hist[j, dw_dry]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=:none, groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
         xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
@@ -617,18 +617,17 @@ savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf"))
 md"""
 #### Wet spell
 """
-
 @time begin
     dw_dry = 2 # wet
-    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10) for j = 1:D]
+    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10, legendfontsize = 11) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dw_dry]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
 
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=:none, norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
 
         histo_spell = len_spell_hist[j, dw_dry]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=:none, groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell))
         xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
