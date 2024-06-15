@@ -1,3 +1,5 @@
+using StatsPlots
+
 """
     errorlinehist(y; kwargs)
     Function for parsing inputs to easily make a [`ribbons`] (https://ggplot2.tidyverse.org/reference/geom_ribbon.html),
