@@ -365,7 +365,7 @@ memory_past_cat = 1
 
 md"""
 h = 1 (day before dry) or 2 (day before wet)
-$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = %$(memory_past_cat)
+$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = $(memory_past_cat)
 """
 
 p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
@@ -628,7 +628,7 @@ md"""
 """
 
 md"""
-Historical vs %$(Nb) simulations distribution
+Historical vs $(Nb) simulations distribution
 """
 
 begin

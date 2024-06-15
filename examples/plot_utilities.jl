@@ -1,10 +1,10 @@
 """
-# errorlinehist(y; kwargs):
+    errorlinehist(y; kwargs)
     Function for parsing inputs to easily make a [`ribbons`] (https://ggplot2.tidyverse.org/reference/geom_ribbon.html),
     stick errorbar (https://www.mathworks.com/help/matlab/ref/errorbar.html), or plume
     (https://stackoverflow.com/questions/65510619/how-to-prepare-my-data-for-plume-plots) with several histograms plot.
 
-# Inputs: default values are indicated with *s
+Inputs: default values are indicated with *s
 
 y is a Vector of vector
 
@@ -30,7 +30,8 @@ y is a Vector of vector
 
     stickwidth (Float64 *.01*) - How much of the x-axis the horizontal aspect of the error stick should take up.
 
-# Example
+Example
+
 ```julia
 using Distributions
 
@@ -59,7 +60,7 @@ errorlinehist(yc, errortype = :percentile, percentiles = [0,100], fillalpha = 0.
 
     ngroups = length(v)
 
-    # compute weights (frequencies) by group using those edges
+    ## compute weights (frequencies) by group using those edges
     y = zeros(nbins, ngroups)
     for i in 1:ngroups
         v_i = filter(isfinite, v[i])
@@ -89,7 +90,6 @@ islabel(j, j_target, label, other_option) = j ∈ j_target ? label : :other_opti
 Save the figure and crop it to avoid white spaces
 """
 function savefigcrop(plt, save_name)
-    # save_name = replace(save_name, "." => "p")
     isnothing(plt) ? savefig(string(save_name, ".pdf")) : savefig(plt, string(save_name, ".pdf"))
     run(`pdfcrop $(string(save_name,".pdf"))`) # Petit délire pour croper proprement la figure 
     mv(string(save_name, "-crop", ".pdf"), string(save_name, ".pdf"), force=true)
@@ -104,7 +104,6 @@ ker(u) = 3 / 4 * (1 - abs(u)^2)
     cyclic_moving_average(a::AbstractArray, window::Integer)
 Simple periodic moving average with Epanechnikov kernel.
 """
-
 function cyclic_moving_average(A::AbstractArray, t::AbstractVector, T::Integer, window)
     a = zeros(T)
     a[t] .= A
