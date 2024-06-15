@@ -26,8 +26,6 @@ using StatsBase, Random
 
 using Distributions
 
-using StatsPlots, LaTeXStrings
-using Plots.PlotMeasures # To play with margin in Plots
 
 md"""
 The two main package are not yet registered to the official Julia registry. 
@@ -53,6 +51,8 @@ md"""
 
 Some settings to have nice plots and save cropped version of plots (necessary in some cases).
 """
+using StatsPlots, LaTeXStrings
+using Plots.PlotMeasures # To play with margin in Plots
 
 gr() # plotly() # for interactive plots
 default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
@@ -60,12 +60,19 @@ scalefontsizes(1.5)
 cur_colors = get_color_palette(:auto, 100);
 my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
 
+using Plots: @userplot, @recipe
 file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/plot_utilities.jl")
 include(file_for_plot_utilities)
 
 md"""
-For map plot, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`. This is quite experimental.
+To plot maps, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`. This is quite experimental.
 I used `cartopy` before with `PyCall.jl` which works very well.
+
+For the following code to work you will need to add the following packages
+```julia
+import Pkg
+Pkg.add("HTTP", "JSON3", "GeoMakie", "CairoMakie")
+```
 """
 
 file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
