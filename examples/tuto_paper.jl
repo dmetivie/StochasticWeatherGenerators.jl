@@ -259,9 +259,7 @@ LAT_idx = dms_to_dd.(station.LAT)
 LON_idx = dms_to_dd.(station.LON)
 
 long_spell = [longuest_spell(y) for y in eachcol(Y)]
-
-
-map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
+## map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
 
 md"""
 ## Fit the seasonal HMM
@@ -376,7 +374,7 @@ h = 1 (day before dry) or 2 (day before wet)
 $\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = $(memory_past_cat)
 """
 
-p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
+## p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
 
 md"""
 ### Inference of the historical hidden states
