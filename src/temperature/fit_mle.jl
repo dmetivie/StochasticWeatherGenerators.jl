@@ -1,4 +1,8 @@
 #TODO: rebase that (with a part inside SmoothPeriodicStatsModels maybe), allow other distribution
+"""
+    fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
+Fit the variable `TN` (daily minimum temperature). In fact it fits the difference `ΔT = TX - TN` to ensure a positive difference between `TX` and `TN`
+"""
 function fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
     #TODO check that dropmissing (and potentially not contigous data) does not cause issue in MLE
     df = dropmissing(df_full[:, [:DATE, :TX, :TN, :z]])

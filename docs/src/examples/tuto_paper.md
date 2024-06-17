@@ -62,7 +62,7 @@ default(fontfamily="Computer Modern")
 cur_colors = get_color_palette(:auto, 100);
 my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
 
-file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/plot_utilities.jl")
+file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_plot.jl")
 include(file_for_plot_utilities)
 ````
 
@@ -76,7 +76,7 @@ Pkg.add("HTTP", "JSON3", "GeoMakie", "CairoMakie")
 ```
 
 ````@example tuto_paper
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 ````
 

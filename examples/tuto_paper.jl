@@ -271,7 +271,7 @@ md"""
 #!nb #     ``` 
 #!nb #     with 
 #!nb #     ```math
-#!nb #     P_c(t) = c_0 + \sum_{j=1}^\cDeg \left(c_{2j-1}\cos\left(\dfrac{2\pi}{T}j t\right) + c_{2j}\sin\left(\dfrac{2\pi}{T}j t\right).
+#!nb #         P_c(t) = c_0 + \sum_{j=1}^\cDeg \left(c_{2j-1}\cos\left(\dfrac{2\pi}{T}j t\right) + c_{2j}\sin\left(\dfrac{2\pi}{T}j t\right)\right).
 #!nb #     ```
 
 md"""

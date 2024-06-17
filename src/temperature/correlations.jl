@@ -44,11 +44,11 @@ end
 Genererate a random variable conditionnaly to another one
 Using Copula
 ```math
-X_1 \mid X_2 = ϵ \sim \mathbb{N}\left(\mu_1 + \dfrac{\sigma_1}{\sigma_2}\rho (a - \mu_2), (1-\rho^2)\sigma_1^2 \right)
+X_1 \mid X_2 = ϵ \sim \mathcal{N}\left(\mu_1 + \dfrac{\sigma_1}{\sigma_2}\rho (a - \mu_2), (1-\rho^2)\sigma_1^2 \right)
 ```
 For two N(0,1)
 ```math
-X_1 \mid X_2 = ϵ \sim \mathbb{N}\left(\rho a , (1-\rho^2) \right)
+X_1 \mid X_2 = ϵ \sim \mathcal{N}\left(\rho a , (1-\rho^2) \right)
 ```
 """
 function rand_cond(ϵ, z, θ_uni, θ_cor, n2t, T)
