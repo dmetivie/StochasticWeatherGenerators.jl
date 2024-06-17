@@ -45,7 +45,7 @@ using SmoothPeriodicStatsModels # Name might change. Small collection of smooth 
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
 
 #-
-save_tuto_path = "../../assets/tuto_1"
+save_tuto_path = "../../assets/tuto_1" #src
 
 Random.seed!(1234)
 
@@ -308,7 +308,7 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 
 #-
 
-save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit);
+save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit); #src
 
 md"""
 Uncomment to load previously computed hmm
@@ -341,7 +341,7 @@ begin
 end
 
 #-
-savefig(pallA, joinpath(save_tuto_path,"Q_transition_memo_1_K_4_d_2.pdf"));
+savefig(pallA, joinpath(save_tuto_path,"Q_transition_memo_1_K_4_d_2.pdf")); #src
 
 md"""
 #### Rain probabilities
@@ -366,7 +366,7 @@ begin
 end
 
 #-
-savefig(pallB, joinpath(save_tuto_path,"proba_rain_all_station.pdf"));
+savefig(pallB, joinpath(save_tuto_path,"proba_rain_all_station.pdf")); #src
 
 md"""
 #### Spatial Rain probability 
@@ -397,7 +397,7 @@ end
 
 ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
-## CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]));
+CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ])); #src
 
 md"""
 #### Visualization of the historical sequences of hidden states
@@ -429,7 +429,7 @@ begin
 end
 
 #-
-savefig(pviterbi, joinpath(save_tuto_path,"temporal_1959_2009.pdf"));
+savefig(pviterbi, joinpath(save_tuto_path,"temporal_1959_2009.pdf")); #src
 
 md"""
 ## Adding Rain amounts to the model
@@ -448,7 +448,7 @@ whose parameters $w(t)$, $\vartheta_1(t)$ and $\vartheta_2(t)$ are smooth period
 
 @time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
 
-save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE);
+save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE); #src
 
 md"""
 Thanks to [Distributions.jl PR #1389 (September 2nd, 2021)](https://github.com/JuliaStats/Distributions.jl/pull/1389) and Julia multiple dispatch, the quantile function of Mixtures can be very efficiently computed.
@@ -570,7 +570,7 @@ begin
 end
 
 #-
-savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf"));
+savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf")); #src
 
 md"""
 #### Wet spell
@@ -598,7 +598,7 @@ begin
 end
 
 #-
-savefig(joinpath(save_tuto_path,"spell_steppost_wet_c1.pdf"));
+savefig(joinpath(save_tuto_path,"spell_steppost_wet_c1.pdf")); #src
 
 md"""
 ### Rain
@@ -639,7 +639,7 @@ begin
 end
 
 #-
-savefig(plt_rain_cat_mix, joinpath(save_tuto_path,"mean_positive_rain_per_cat_from_mixture.pdf"));
+savefig(plt_rain_cat_mix, joinpath(save_tuto_path,"mean_positive_rain_per_cat_from_mixture.pdf")); #src
 
 md"""
 #### Univariate Rain distributions
@@ -670,7 +670,7 @@ begin
 end
 
 #-
-savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive.pdf"));
+savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive.pdf")); #src
 
 md"""
 #### Monthly quantile amount
@@ -705,7 +705,7 @@ qs = [0.9, 0.5, 0.1]
 end
 
 #-
-savefigcrop(pall_month_RR, joinpath(save_tuto_path, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)"));
+savefigcrop(pall_month_RR, joinpath(save_tuto_path, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
 
 md"""
 ### Correlations
@@ -730,7 +730,7 @@ begin
 end
 
 #-
-savefigcrop(plot_cor_bin, joinpath(save_tuto_path, "full_cor_binary_hist_vs_1000_mean_simu"));
+savefigcrop(plot_cor_bin, joinpath(save_tuto_path, "full_cor_binary_hist_vs_1000_mean_simu")); #src
 
 md"""
 The largest pair correlation error for rain occurence comes from the pair 
@@ -764,8 +764,8 @@ begin
 end
 
 #-
-savefigcrop(plots_cor[1], joinpath(save_tuto_path, "full_cor_hist_vs_1000_mean_simu"));
-savefigcrop(plots_cor[2], joinpath(save_tuto_path, "full_corT_hist_vs_1000_mean_simu"));
+savefigcrop(plots_cor[1], joinpath(save_tuto_path, "full_cor_hist_vs_1000_mean_simu")); #src
+savefigcrop(plots_cor[2], joinpath(save_tuto_path, "full_corT_hist_vs_1000_mean_simu")); #src
 
 md"""
 The largest pair correlation error for rain (zero and non zero amounts) comes from the pair 
@@ -806,4 +806,4 @@ end
 end
 
 #-
-savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full"));
+savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full")); #src
