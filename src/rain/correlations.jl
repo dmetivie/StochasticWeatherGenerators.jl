@@ -3,7 +3,6 @@
 """
     joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r = 0)
 Select all the rows of `M` with values for (two) colums above some value `r`.
-    
 """
 joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r=0) = M[(M[:, j1].>r).&(M[:, j2].>r), [j1, j2]]
 

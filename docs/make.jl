@@ -2,7 +2,6 @@ using Documenter
 using Literate
 using StochasticWeatherGenerators
 
-
 examples_jl_path = joinpath(dirname(@__DIR__), "examples")
 examples_md_path = joinpath(@__DIR__, "src", "examples")
 
@@ -13,7 +12,7 @@ for file in readdir(examples_md_path)
 end
 
 for file in readdir(examples_jl_path)
-    if !startswith(file, "geo")
+    if !startswith(file, "utilities")
        Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
     end
 end
@@ -26,7 +25,7 @@ pages = [
 ]
 
 fmt = Documenter.HTML(;
-    prettyurls=get(ENV, "CI", "false") == "true",
+    prettyurls=true, #get(ENV, "CI", "false") == "true",
     repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
     canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
     assets=String[],

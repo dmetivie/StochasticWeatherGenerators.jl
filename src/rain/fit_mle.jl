@@ -5,7 +5,8 @@
 
 """
     fit_mle_stations(df::DataFrame, K, T, degree, local_order)
-Given a
+Given a DataFrame `df` with known hidden states column `z ∈ 1:K`. The rain occurrences of the new station are fitted conditionally to the hidden state.
+For `local_order>0` the model is also autoregressive with its past.
 """
 function fit_mle_stations(df::DataFrame, K, T, degree, local_order)
     z = df.z[1+local_order:end]

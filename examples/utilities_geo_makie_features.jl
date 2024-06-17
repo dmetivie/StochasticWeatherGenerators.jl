@@ -49,6 +49,30 @@ struct PolyFeature <: AbstractFeatures
     name::String
 end
 
+CairoMakie.@recipe(NE_feature, x, y, z) do scene
+    Attributes(
+
+    )
+end
+
+function CairoMakie.plot!(myplot::NE_feature)
+    # normal plotting code, building on any previously defined recipes
+    # or atomic plotting operations, and adding to the combined `myplot`:
+    lstrings = fetch_dataset(myplot.x.name)
+    GeoMakie.lines!(myplot, lstrings)
+    myplot
+end
+
+const MyPoly = NE_feature{PolyFeature}
+
+function CairoMakie.plot!(myplot::MyPoly)
+    # normal plotting code, building on any previously defined recipes
+    # or atomic plotting operations, and adding to the combined `myplot`:
+    lstrings = fetch_dataset(myplot.x.name)
+    GeoMakie.poly!(myplot, lstrings)
+    myplot
+end
+
 function add_feature!(ax, feature::LineFeature; kwargs...)
     lstrings = fetch_dataset(feature.name)
     GeoMakie.lines!(ax, lstrings; kwargs...)

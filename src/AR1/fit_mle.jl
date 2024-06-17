@@ -1,5 +1,10 @@
 
 #TODO: check that dropmissing (and potentially not contigous data) does not cause issue in MLE
+"""
+    fit_AR1(df_full::DataFrame, X, 𝐃𝐞𝐠, T, K)
+Fit a Seasonal AR(1) model of period `T` and with `K` hidden states for the variable `X` of the DataFrame `df_full`.
+``X_{n+1} = \\mu(t_n) + \\phi(t_n) X_t + \\sigma(t_n)\\xi``
+"""
 function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T, K)
     df = dropmissing(df_full[:, [:DATE, var, :z]])
     z = df.z

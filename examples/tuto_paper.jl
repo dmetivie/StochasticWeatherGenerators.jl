@@ -6,8 +6,8 @@ md"""
 """
 
 md"""
-This tutorial describes the Stochastic Weather Generator describes in *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generator in France* by Emmanuel Gobet, David Métivier and Sylvie Parey.
-It provides a step by step construction of the Seasonal Hidden Markov Model (SHMM), the interpretation of the hidden states as Weather regimes over France and eventually the validation of the model with simulations.
+This tutorial describes the Stochastic Weather Generator described in the *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generator in France* paper by Emmanuel Gobet, David Métivier and Sylvie Parey.
+It provides a step-by-step construction of the Seasonal Hidden Markov Model (SHMM), the interpretation of the hidden states as Weather regimes over France and eventually the validation of the model with simulations.
 """
 
 md"""
@@ -30,9 +30,9 @@ using Distributions
 
 
 md"""
-The two main package are not yet registered to the official Julia registry. 
-They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/MyJuliaRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl).
-Or simply `add`ed via url i.e.
+The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
+They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package (or url).
+Or directly on the master branch with `add`ed via url i.e.
 ```julia
 import Pkg
 Pkg.add("https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
@@ -52,24 +52,23 @@ Random.seed!(1234)
 md"""
 ### Settings for plotting
 
-Some settings to have nice plots and save cropped version of plots (necessary in some cases).
+Some settings and packages to have nice plots.
 """
 
 using StatsPlots, LaTeXStrings
 using StatsPlots.PlotMeasures # To play with margin in Plots
 
 gr() # plotly() # for interactive plots
-default(thickness_scaling=1.2, fontfamily="Computer Modern", linewidth=2, label=nothing, size=(1000, 600))
-scalefontsizes(1.5)
+default(fontfamily="Computer Modern")
 cur_colors = get_color_palette(:auto, 100);
 my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
 
-file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/plot_utilities.jl")
+file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_plot.jl")
 include(file_for_plot_utilities)
 
 md"""
 To plot maps, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`. This is still experimental.
-I used `cartopy` before with `PyCall.jl` which works very well.
+Note that using `cartopy` with `PyCall.jl` also works very well.
 
 For the following code to work you will need to add the following packages
 ```julia
@@ -78,7 +77,7 @@ Pkg.add("HTTP", "JSON3", "GeoMakie", "CairoMakie")
 ```
 """
 
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/geo_makie_features.jl") # download file from a GitHub repo
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") # download file from a GitHub repo
 include(file_for_maps_with_geomakie)
 
 md"""
@@ -86,13 +85,13 @@ md"""
 """
 
 md"""
-Number of day in a year (choice here is 366)
+Number of days in a year (choice here is 366)
 """
 
 T = 366
 
 md"""
-Define the French area for map (Longitude and latitudes) plot and the precision of the map `precision_scale`
+Define the French area for map (Longitude and latitude) plot and the precision of the map `precision_scale`
 """
 
 precision_scale = "50m"
@@ -125,21 +124,19 @@ my_pal = my_palette(K); # just colors I like for plotting weather regime!
 
 md"""
 Degree `𝐃𝐞𝐠` of the trigonometric expansion 
-It could be an array different for each station and variables. Not implemented yet though.
+It could be an array different for each station and variable. Not implemented yet though.
 """
 
 𝐃𝐞𝐠 = 2
 
 md"""
-Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1:n-\texttt{local memory}}^{(j)} = y_{n-1:n-\texttt{local memory}^{(j)})$
+Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1:n-\texttt{local memory}}^{(j)} = y_{n-1:n-\texttt{local memory}}^{(j)})$
 """
 
 local_order = 1
 
-md"""
-!!! note  
-	The `local_order` could be a vector/matrix of size `D` and different for each station, and also different depending on wet or dry past. Not yet implemented.
-"""
+#!nb # !!! note
+#!nb #     The `local_order` could be a vector/matrix of size `D` and different for each station, and also different depending on wet or dry past. Not yet implemented.
 
 size_order = 2^local_order
 
@@ -171,11 +168,11 @@ begin
 end
 
 selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILLE", "EMBRUN", "BASTIA", "LA HAGUE", "CHASSIRON", "ORLY"]
-md"""
-!!! note
-    You can change the selected stations. However, keep in mind that for the model to work, the conditional independence hypothesis must holds between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
-    Hence stations must be sufficiently far apart.
-"""
+
+#!nb # !!! note "Hypothesis: Conditional Independence of Rain Occurrences"
+#!nb #     You can change the selected stations. However, keep in mind that for the model to work, the **conditional independence hypothesis** must hold between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
+#!nb #     Hence stations must be sufficiently far apart.
+
 
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
 
@@ -222,8 +219,8 @@ md"""
 """
 
 md"""
-Load into DataFrames the (ECA) RR files (rain). It filters by date and valid data.
-It also add a column of rain event (0: dry, 1: wet).
+Load into a `DataFrame` the (ECA) RR files (rain). It filters by date and valid data.
+It also adds a column `:bin` for rain events (0: dry, 1: wet).
 """
 
 begin
@@ -235,7 +232,7 @@ end
 
 
 md"""
-Binary matrix version of rain event at the `D` stations.
+Binary matrix version of the rain event at the `D` stations.
 """
 
 Yall = BitMatrix(reduce(hcat, [data_stations[j].bin for j = 1:D]))
@@ -251,7 +248,7 @@ md"""
 """
 
 md"""
-Convert LAT DMS into DD which seems most widly accepted format.
+Convert LAT/LON coordinates from DMS to DD which seems most widely accepted format.
 """
 
 LAT_idx = dms_to_dd.(station.LAT)
@@ -259,30 +256,40 @@ LAT_idx = dms_to_dd.(station.LAT)
 LON_idx = dms_to_dd.(station.LON)
 
 long_spell = [longuest_spell(y) for y in eachcol(Y)]
+
 ## map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
 
 md"""
 ## Fit the seasonal HMM
 """
 
+#!nb # !!! note "Hypothesis: Smooth parameter evolution"
+#!nb #     We assume all models e.g. HMM, rain mixture to have parameters evolving smoothly with periodicity $T$ for $t \in [1, T]$.
+#!nb #     For example a Bernoulli parameter will write
+#!nb #     ```math 
+#!nb #     p(t) = \dfrac{1}{1 + e^{P(t)}} \in [0, 1],
+#!nb #     ``` 
+#!nb #     with 
+#!nb #     ```math
+#!nb #     P_c(t) = c_0 + \sum_{j=1}^\cDeg \left(c_{2j-1}\cos\left(\dfrac{2\pi}{T}j t\right) + c_{2j}\sin\left(\dfrac{2\pi}{T}j t\right).
+#!nb #     ```
+
 md"""
 ### Fit slice: naive estimation
 """
 
-md"""
-!!! note
-    Before inferring the HMM parameters with EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.
-"""
+#!nb # !!! note
+#!nb #     Before inferring the HMM parameters with the EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.
 
 md"""
-Reference station `ref_station` used to sort hidden state for the slide initialization
+The reference station `ref_station` is used to sort the hidden states obtained via the slide initialization
 Here we choose `j=1` $\to$ `STAID=32` $\to$ `BOURGES` because it is a central station for France
 """
 
 ref_station = 1
 
 md"""
-This generate a random Periodic HMM that we then fit slice by slice (day by day). See paper.
+This generates a random Periodic HMM that we then fit slice by slice (day by day). See paper.
 """
 hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
 
@@ -291,19 +298,17 @@ hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_statio
 θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);
 
 md"""
-### Fit with Baum Welch using slice estimate as starting point
+### Fit with Baum Welch using the slice estimate as a starting point
 
 With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!
 """
 
 @time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past,
-    maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
-## On my computer
-## Iteration 73: logtot = -116791.100655, max(|θᴬᵢ-θᴬᵢ₋₁|) = 0.0002 & max(|θᴮᵢ-θᴮᵢ₋₁|) = 0.00103
-## EM converged in 73 iterations, logtot = -116791.10065504618
-## FitMLE SHMM (Baum Welch): 36.161685 seconds (185.76 M allocations: 32.581 GiB, 6.77% gc time, 10.09% compilation time)
+    maxiter=10000, robust=true; display=:final, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
 
-## save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit)
+#-
+
+save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit);
 
 md"""
 Uncomment to load previously computed hmm
@@ -317,7 +322,7 @@ Uncomment to load previously computed hmm
 """
 
 md"""
-### Visualisation of the HMM parameters
+### Visualization of the HMM parameters
 """
 
 md"""
@@ -326,7 +331,7 @@ md"""
 
 
 begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing) for k in 1:K]
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, yticksfontsize = 12) for k in 1:K]
     for k in 1:K
         [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:topleft) for l in 1:K]
         hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
@@ -336,7 +341,7 @@ begin
 end
 
 #-
-savefig(pallA, joinpath(save_tuto_path,"Q_transition_memo_1_K_4_d_2.pdf"))
+savefig(pallA, joinpath(save_tuto_path,"Q_transition_memo_1_K_4_d_2.pdf"));
 
 md"""
 #### Rain probabilities
@@ -361,7 +366,7 @@ begin
 end
 
 #-
-savefig(pallB, joinpath(save_tuto_path,"proba_rain_all_station.pdf"))
+savefig(pallB, joinpath(save_tuto_path,"proba_rain_all_station.pdf"));
 
 md"""
 #### Spatial Rain probability 
@@ -371,10 +376,10 @@ memory_past_cat = 1
 
 md"""
 h = 1 (day before dry) or 2 (day before wet)
-$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with h = $(memory_past_cat)
+$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with `h = memory_past_cat`
 """
 
-## p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
+#src p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
 
 md"""
 ### Inference of the historical hidden states
@@ -392,10 +397,10 @@ end
 
 ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
-## CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]))
+## CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ]));
 
 md"""
-#### Visualisation of the Historical sequences of hidden states
+#### Visualization of the historical sequences of hidden states
 """
 
 year_range = unique(year.(data_stations[1][1+local_order:end, :DATE]));
@@ -424,27 +429,29 @@ begin
 end
 
 #-
-savefig(pviterbi, joinpath(save_tuto_path,"temporal_1959_2009.pdf"))
+savefig(pviterbi, joinpath(save_tuto_path,"temporal_1959_2009.pdf"));
 
 md"""
 ## Adding Rain amounts to the model
 """
 
 md"""
-### Marginal fit
+### Marginal distribution
 
-We fit the marginals at each station independently. 
-We use a mixture of exponential functions whose parameters evolve smoothly and periodically
-TODO: put equation
+We fit the marginals of the rain amount $R>0$ at each station $s$ and for each hidden state $Z$ independently. 
+We use a mixture of exponential functions 
+```math
+g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-{\frac {r}{\vartheta_2}}}}{\vartheta_2}.
+```
+whose parameters $w(t)$, $\vartheta_1(t)$ and $\vartheta_2(t)$ are smooth periodic functions of the day of the year.
 """
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
-## FitMLE RR: 66.104980 seconds (339.13 M allocations: 47.931 GiB, 5.53% gc time, 4.18% compilation time)
 
-save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE)
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))
+
+save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE);
 
 md"""
-Note that we don't need anymore to fit quantile functions, as [Distributions.jl PR #1389 (September 2nd, 2021)](https://github.com/JuliaStats/Distributions.jl/pull/1389) handles that.
-I did my approach (to save interpolate quantile) few months prior to this PR. It would have saved me some times!
+Thanks to [Distributions.jl PR #1389 (September 2nd, 2021)](https://github.com/JuliaStats/Distributions.jl/pull/1389) and Julia multiple dispatch, the quantile function of Mixtures can be very efficiently computed.
 """
 
 md"""
@@ -453,11 +460,11 @@ md"""
 We fit a Gaussian copula to each pair of stations for joint rainy days only.
 """
 
-md"""
-!!! caution
-    When the number of hidden states is getting larger, it migth happen that for some pair of stations there are no simulteneous rain occurence in a rain category $Z = k$.
-    In that case a `missing` coefficient is returned.
-"""
+
+#!nb #   !!! warning
+#!nb #   For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are no simultaneous rain occurrences in a rain category $Z = k$.
+#!nb #   In that case a `missing` coefficient is returned.
+
 
 begin
     Σ²RR = cov_RR(data_stations_z, K)
@@ -493,19 +500,17 @@ begin
         zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=Yall[1:local_order, :], z_ini=1, seq=true)
     end
 end
-## Simulations Z, Y: 34.998679 seconds (328.41 M allocations: 32.166 GiB, 8.24% gc time, 1.16% compilation time)
 
 md"""
-Given the hidden states and dry/wet, it generates the rain amounts at each stations (correlated with a Gaussian Copula).
+Given the hidden states and dry/wet, it generates the rain amounts at each station (correlated with a Gaussian Copula).
 """
 
 begin
     rs = zeros(D, N, Nb)
-    @time "Simulations RR" for i in 1:Nb
+    @time "Simulations RR>0" for i in 1:Nb
         rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]', Σ²RR)
     end
 end
-## Simulations RR: 164.912113 seconds (299.73 M allocations: 43.020 GiB, 2.67% gc time, 0.54% compilation time)
 
 md"""
 ## Results
@@ -514,8 +519,8 @@ md"""
 md"""
 ### Spell distribution
 
-`select_month` to chose the month where to compute the spells distributions (summer month, winter, etc.)
-`select_month = 1:12` corresponds to all month.
+`select_month` to choose the month where to compute the spell distributions (summer month, winter, etc.)
+`select_month = 1:12` corresponds to all months.
 """
 select_month = 1:12
 
@@ -565,7 +570,7 @@ begin
 end
 
 #-
-savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf"))
+savefig(joinpath(save_tuto_path,"spell_steppost_dry_c1.pdf"));
 
 md"""
 #### Wet spell
@@ -593,7 +598,7 @@ begin
 end
 
 #-
-savefig(joinpath(save_tuto_path,"spell_steppost_wet_c1.pdf"))
+savefig(joinpath(save_tuto_path,"spell_steppost_wet_c1.pdf"));
 
 md"""
 ### Rain
@@ -615,7 +620,7 @@ begin
             @by([:day, :z], :MEAN_RR = mean(:RR))
             groupby(:z)
         end
-        ## Uncomment to see how the double exponential mixtures compares to the empirical data.
+        ## Uncomment to see how the double exponential mixtures compare to the empirical data.
         ## [plot!(p_rainpercat[j], 1:T, t -> conversion_factor * mean(mix_allE[j][k, t]), label=:none, c=my_color(k, K), lw=1.5, legend = :topleft) for k in 1:K]
         for k in 1:K
             cycle_avg = replace(cyclic_moving_average(df_j[k].MEAN_RR, df_j[k].day, T,  15), 0=>missing)
@@ -634,14 +639,14 @@ begin
 end
 
 #-
-savefig(plt_rain_cat_mix, joinpath(save_tuto_path,"mean_positive_rain_per_cat_from_mixture.pdf"))
+savefig(plt_rain_cat_mix, joinpath(save_tuto_path,"mean_positive_rain_per_cat_from_mixture.pdf"));
 
 md"""
 #### Univariate Rain distributions
 """
 
 md"""
-Historical vs $(Nb) simulations distribution
+Historical vs Nb simulations distribution
 """
 
 begin
@@ -665,7 +670,7 @@ begin
 end
 
 #-
-savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive.pdf"))
+savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive.pdf"));
 
 md"""
 #### Monthly quantile amount
@@ -700,7 +705,7 @@ qs = [0.9, 0.5, 0.1]
 end
 
 #-
-savefigcrop(pall_month_RR, joinpath(save_tuto_path, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)"))
+savefigcrop(pall_month_RR, joinpath(save_tuto_path, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)"));
 
 md"""
 ### Correlations
@@ -725,11 +730,13 @@ begin
 end
 
 #-
-savefigcrop(plot_cor_bin, joinpath(save_tuto_path, "full_cor_binary_hist_vs_1000_mean_simu"))
+savefigcrop(plot_cor_bin, joinpath(save_tuto_path, "full_cor_binary_hist_vs_1000_mean_simu"));
 
 md"""
-The largest pair correlation error for rain occurence comes from the pair $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][1]]) and $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][2]])
+The largest pair correlation error for rain occurence comes from the pair 
 """
+
+println("$(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][1]]) and $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][2]])")
 
 md"""
 ##### Rain amount
@@ -757,17 +764,19 @@ begin
 end
 
 #-
-savefigcrop(plots_cor[1], joinpath(save_tuto_path, "full_cor_hist_vs_1000_mean_simu"))
-savefigcrop(plots_cor[2], joinpath(save_tuto_path, "full_corT_hist_vs_1000_mean_simu"))
+savefigcrop(plots_cor[1], joinpath(save_tuto_path, "full_cor_hist_vs_1000_mean_simu"));
+savefigcrop(plots_cor[2], joinpath(save_tuto_path, "full_corT_hist_vs_1000_mean_simu"));
 
 md"""
-The largest pair correlation error for rain (zero and non zero amounts) comes from the pair $(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_name[findmax(cor_hist - cor_mean_simu)[2][2]])
+The largest pair correlation error for rain (zero and non zero amounts) comes from the pair 
 """
+
+println("$(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_name[findmax(cor_hist - cor_mean_simu)[2][2]])")
 
 md"""
 ##### Gaussian copula hypothesis
 
-For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution to the theoritical $\chi(2)$-distriubtion.
+For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution to the theoretical $\chi(2)$-distriubtion.
 """
 
 begin
@@ -797,4 +806,4 @@ end
 end
 
 #-
-savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full"))
+savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full"));

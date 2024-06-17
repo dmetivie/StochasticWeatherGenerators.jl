@@ -18,7 +18,7 @@ dayofyear_Leap(d) = @. dayofyear(d) + ((!isleapyear(d)) & (month(d) > 2))
 
 """
     my_color(k, K)
-Convenience for plot colors and hidden states to blue for k=1 (∼wetter)  and orange for k=K (∼driest)
+Convenience for plot colors pattern and hidden states to blue for k=1 (∼wetter) and orange for k=K (∼driest)
 """
 function my_color(k, K)# 
     if k == 1
