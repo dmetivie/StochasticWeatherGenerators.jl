@@ -13,6 +13,7 @@ Documentation for StochasticWeatherGenerators.jl
 fit_mle_stations
 fit_mle_RR
 fit_TN
+fit_AR1
 ```
 
 ### Climate indexes
