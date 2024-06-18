@@ -308,7 +308,7 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 
 #-
 
-save(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit); #src
+save(joinpath(save_tuto_path, "hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit); #src
 
 md"""
 Uncomment to load previously computed hmm
@@ -331,9 +331,9 @@ md"""
 
 
 begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont = 12, legendfontsize = 16) for k in 1:K]
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=16) for k in 1:K]
     for k in 1:K
-        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:top, lw = 1.75) for l in 1:K]
+        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:top, lw=1.75) for l in 1:K]
         hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
         xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), ylims=(0, 1))
     end
@@ -341,7 +341,7 @@ begin
 end
 
 #-
-savefig(pallA, joinpath(save_tuto_path,"Q_transition_memo_1_K_4_d_2_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pallA, joinpath(save_tuto_path, "Q_transition_memo_1_K_4_d_2_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Rain probabilities
@@ -350,15 +350,15 @@ md"""
 begin
     mm = 1
     jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16, tickfont = 12) for j in 1:jt]
+    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16, tickfont=12) for j in 1:jt]
     for j in 1:jt
-        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none, lw = 2) for k in 1:K]
+        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none, lw=2) for k in 1:K]
         hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
         xticks!(
             pB[j],
             vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
             vcat(string.(first.(monthabbr.(1:12)))), xtickfontsize=10
-            )
+        )
         xlims!(pB[j], (0, 367))
         ylims!(pB[j], (0, 1))
     end
@@ -366,7 +366,7 @@ begin
 end
 
 #-
-savefig(pallB, joinpath(save_tuto_path,"proba_rain_all_station_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pallB, joinpath(save_tuto_path, "proba_rain_all_station_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Spatial Rain probability 
@@ -397,7 +397,7 @@ end
 
 ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
-CSV.write(joinpath(save_tuto_path,"z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ])); #src
+CSV.write(joinpath(save_tuto_path, "z_hat_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).csv"), DataFrame([:DATE, :z] .=> [data_stations[1].DATE[1+local_order:end], ẑ])); #src
 
 md"""
 #### Visualization of the historical sequences of hidden states
@@ -425,11 +425,11 @@ begin
     xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
     hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
     ylims!(0.5, year_nb + 0.5)
-    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]), size = (1000,600))
+    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]), size=(1000, 600))
 end
 
 #-
-savefig(pviterbi, joinpath(save_tuto_path,"temporal_1959_2009_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pviterbi, joinpath(save_tuto_path, "temporal_1959_2009_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 ## Adding Rain amounts to the model
@@ -548,15 +548,15 @@ make_range(y, step=1) = range(extrema(y)..., step=step)
 
 begin
     dry_or_wet = 1 # dry
-    p_spell_dry = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize = 13) for j = 1:D]
+    p_spell_dry = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype = :percentile)
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
         xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
@@ -564,11 +564,11 @@ begin
     [xlabel!(p_spell_dry[j], "Nb of days", xlabelfontsize=12) for j in staid_lat[6:10]]
     [ylabel!(p_spell_dry[j], "PMF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
     [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin = 0.5cm, bottom_margin = 0.275cm)
+    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
 end
 
 #-
-savefig(pall_spell_dry, joinpath(save_tuto_path,"spell_steppost_dry_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pall_spell_dry, joinpath(save_tuto_path, "spell_steppost_dry_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Wet spell
@@ -576,15 +576,15 @@ md"""
 
 begin
     dry_or_wet = 2 # wet
-    p_spell_wet = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize = 13) for j = 1:D]
+    p_spell_wet = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype = :percentile)
+        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
         xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
@@ -592,11 +592,11 @@ begin
     [xlabel!(p_spell_wet[j], "Nb of days", xlabelfontsize=12) for j in staid_lat[6:10]]
     [ylabel!(p_spell_wet[j], "PMF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
     [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin = 0.5cm, bottom_margin = 0.275cm)
+    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
 end
 
 #-
-savefig(pall_spell_wet, joinpath(save_tuto_path,"spell_steppost_wet_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pall_spell_wet, joinpath(save_tuto_path, "spell_steppost_wet_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 ### Rain
@@ -609,7 +609,7 @@ We plot the empirical (strictly) positive **mean** rain amounts per weather regi
 """
 
 begin
-    p_rainpercat = [plot(tickfont=12, ylabelfontsize=14, titlefontsize=14, legendfontsize = 13) for j = 1:D]
+    p_rainpercat = [plot(tickfont=12, ylabelfontsize=14, titlefontsize=14, legendfontsize=13) for j = 1:D]
     for j = 1:D
         df_j = @chain data_stations_z[j] begin
             dropmissing
@@ -621,8 +621,8 @@ begin
         ## Uncomment to see how the double exponential mixtures compare to the empirical data.
         ## [plot!(p_rainpercat[j], 1:T, t -> conversion_factor * mean(mix_allE[j][k, t]), label=:none, c=my_color(k, K), lw=1.5, legend = :topleft) for k in 1:K]
         for k in 1:K
-            cycle_avg = replace(cyclic_moving_average(df_j[k].MEAN_RR, df_j[k].day, T,  15), 0=>missing)
-            @df df_j[k] plot!(p_rainpercat[j], 1:T, conversion_factor * cycle_avg, c=my_color(k, K), alpha = 1, label=islabel(j, staid_lat[[4]], L"Z = %$k"), lw=1.5)
+            cycle_avg = replace(cyclic_moving_average(df_j[k].MEAN_RR, df_j[k].day, T, 15), 0 => missing)
+            @df df_j[k] plot!(p_rainpercat[j], 1:T, conversion_factor * cycle_avg, c=my_color(k, K), alpha=1, label=islabel(j, staid_lat[[4]], L"Z = %$k"), lw=1.5)
         end
         ylims!(p_rainpercat[j], 0, Inf)
     end
@@ -633,11 +633,11 @@ begin
         vcat(string.(first.(string.(monthabbr.(1:12)))))
     ) for j in 1:D]
     [title!(p_rainpercat[j], station_name[j]) for j = 1:D]
-    plt_rain_cat_mix = plot(p_rainpercat[staid_lat]..., size=(3000 / 2.2, 1000 / 1.5), layout=(2, 5), left_margin = 25px)
+    plt_rain_cat_mix = plot(p_rainpercat[staid_lat]..., size=(3000 / 2.2, 1000 / 1.5), layout=(2, 5), left_margin=25px)
 end
 
 #-
-savefig(plt_rain_cat_mix, joinpath(save_tuto_path,"mean_positive_rain_per_cat_from_mixture_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(plt_rain_cat_mix, joinpath(save_tuto_path, "mean_positive_rain_per_cat_from_mixture_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Univariate Rain distributions
@@ -648,14 +648,14 @@ Historical vs Nb simulations distribution
 """
 
 begin
-    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), tickfont=11, legendfontsize = 13, titlefontsize=13) for j = 1:D]
+    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13, titlefontsize=13) for j = 1:D]
     for j = 1:D
         dists_RR_positive_j = conversion_factor * [filter(!iszero, rs[j, :, i]) for i in 1:Nb]
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:pdf, errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:pdf, errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
-        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype = :percentile)
+        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
 
         xlims!(p_uniR[j], 0.0, Inf)
     end
@@ -664,7 +664,7 @@ begin
 
     [title!(p_uniR[j], station_name[j]) for j = 1:D]
 
-    pall_R = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin = 11px, left_margin = 15px)
+    pall_R = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin=11px, left_margin=15px)
 end
 
 #-
@@ -692,14 +692,14 @@ qs = [0.9, 0.5, 0.1]
         end
         for q in qs
             scatter!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, ms=2.5, c=:blue)
-            plot!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue, lw =1.75)
+            plot!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue, lw=1.75)
         end
         xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))))
     end
     [ylabel!(p_month_RR[j], L"Rain (mm/m$^2$)") for j in staid_lat[[1, 6]]]
 
     [title!(p_month_RR[j], station_name[j], titlefontsize=12) for j = 1:D]
-    pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1190, 500), layout=(2, 5), left_margin = 19px)
+    pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1190, 500), layout=(2, 5), left_margin=19px)
 end
 
 #-
@@ -719,7 +719,7 @@ cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
 
 
 begin
-    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize = 13) for _ in 1:1]
+    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:1]
     scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu), label="Correlations", xlabel="Observations", ylabel="Simulations", c=2)
     [xlims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
     [ylims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
@@ -749,7 +749,7 @@ cor_mean_simu = mean(cor(rs[:, :, i]') for i in 1:Nb);
 corT_mean_simu = mean(corTail(rs[:, :, i]') for i in 1:Nb);
 
 begin
-    plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize = 13) for _ in 1:2]
+    plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:2]
     scatter!(plots_cor[1], vec_triu(cor_hist), vec_triu(cor_mean_simu), label="Correlations", xlabel="Observations", ylabel="Simulations", c=2)
     annotate!(plots_cor[1], 0.3, 0.7, "MSE ≃ $(round(mean(abs2, vec_triu(cor_hist) - vec_triu(cor_mean_simu)), digits = 4))")
 
@@ -758,7 +758,7 @@ begin
 
     [xlims!(plots_cor[i], -0.1, 1) for i in 1:2]
     [ylims!(plots_cor[i], -0.1, 1) for i in 1:2]
-    plot(plots_cor..., size = (800,400), left_margin = 15px)
+    plot(plots_cor..., size=(800, 400), left_margin=15px)
 end
 
 #-
@@ -774,37 +774,34 @@ println("$(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_
 md"""
 ##### Gaussian copula hypothesis
 
-For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution to the theoretical $\chi(2)$-distriubtion.
+For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution with the Mahalanobis distance to the theoretical $\chi^2(2)$-distriubtion.
 """
 
 begin
     j1 = 1
     j2 = 3
-    plt_qqp_copula = plot(0:25, 0:25, aspect_ratio = :equal, legendfontsize = 14, c=:black, label = :none, tickfont = 12, ylabelfontsize = 13, xlabelfontsize = 13)
+    plt_qqp_copula = plot(0:25, 0:25, aspect_ratio=:equal, legendfontsize=14, c=:black, label=:none, tickfont=12, ylabelfontsize=13, xlabelfontsize=13)
     for k in 1:K
-    df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on = :DATE, makeunique = true)
-    df_X = @chain df_12 begin
-        @subset(:RR .> 0, :RR_1 .> 0, :z .== k)
-        dropmissing
-        @aside cdf_ = ecdf(_.RR)
-        @aside cdf_1 = ecdf(_.RR_1)
-        @transform(:X = quantile(Normal(), cdf_(:RR)*length(:RR)/(1+length(:RR))), 
-                    :X_1 = quantile(Normal(), cdf_1(:RR_1)*length(:RR_1)/(1+length(:RR_1))))
-    end
-    X = hcat(df_X.X, df_X.X_1)
-    Σ⁻¹ = inv(cov(X))    
-    X2 = [(x' * Σ⁻¹ * x) for x in eachrow(X)] |> sort
-    ecdfX2 = ecdf(X2)(X2)*length(X2)/(length(X2)+1)
+        df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on=:DATE, makeunique=true)
+        df_X = @chain df_12 begin
+            @subset(:RR .> 0, :RR_1 .> 0, :z .== k)
+            dropmissing
+            @aside cdf_ = ecdf(_.RR)
+            @aside cdf_1 = ecdf(_.RR_1)
+            @transform(:X = quantile(Normal(), cdf_(:RR) * length(:RR) / (1 + length(:RR))),
+                :X_1 = quantile(Normal(), cdf_1(:RR_1) * length(:RR_1) / (1 + length(:RR_1))))
+        end
+        X = hcat(df_X.X, df_X.X_1)
+        Σ⁻¹ = inv(cov(X))
+        X2 = [(x' * Σ⁻¹ * x) for x in eachrow(X)] |> sort
+        ecdfX2 = ecdf(X2)(X2) * length(X2) / (length(X2) + 1)
 
-    plot!(quantile(Chisq(2),ecdfX2), X2, xlabel = L"$\chi^2(2)$-quantile",c = my_color(k, K), ylabel = "Observed squared Mahalanobis distance", label = L"Z = %$k ", legend = :topleft, lw = 2)
-end
+        plot!(quantile(Chisq(2), ecdfX2), X2, xlabel=L"$\chi^2(2)$-quantile", c=my_color(k, K), ylabel="Observed squared Mahalanobis distance", label=L"Z = %$k ", legend=:topleft, lw=2)
+    end
     title!("$(station_name[j1]) vs $(station_name[j2])")
-    xlims!(0,22)
-    ylims!(0,22)
+    xlims!(0, 22)
+    ylims!(0, 22)
 end
 
 #-
 savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
-
-using Hypothesis
-
