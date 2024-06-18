@@ -126,11 +126,11 @@ long_spell = [longuest_spell(y) for y in eachcol(Y)]
  59
  39
  32
- 38</code></pre><h2 id="Fit-the-seasonal-HMM"><a class="docs-heading-anchor" href="#Fit-the-seasonal-HMM">Fit the seasonal HMM</a><a id="Fit-the-seasonal-HMM-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-the-seasonal-HMM" title="Permalink"></a></h2><div class="admonition is-info"><header class="admonition-header">Hypothesis: Smooth parameter evolution</header><div class="admonition-body"><p>We assume all models e.g. HMM, rain mixture to have parameters evolving smoothly with periodicity <span>$T$</span> for <span>$t \in [1, T]$</span>. For example a Bernoulli parameter will write</p><p class="math-container">\[p(t) = \dfrac{1}{1 + e^{P(t)}} \in [0, 1],\]</p><p>with</p><p class="math-container">\[    P_c(t) = c_0 + \sum_{j=1}^\cDeg \left(c_{2j-1}\cos\left(\dfrac{2\pi}{T}j t\right) + c_{2j}\sin\left(\dfrac{2\pi}{T}j t\right)\right).\]</p></div></div><h3 id="Fit-slice:-naive-estimation"><a class="docs-heading-anchor" href="#Fit-slice:-naive-estimation">Fit slice: naive estimation</a><a id="Fit-slice:-naive-estimation-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-slice:-naive-estimation" title="Permalink"></a></h3><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>Before inferring the HMM parameters with the EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.</p></div></div><p>The reference station <code>ref_station</code> is used to sort the hidden states obtained via the slide initialization Here we choose <code>j=1</code> <span>$\to$</span> <code>STAID=32</code> <span>$\to$</span> <code>BOURGES</code> because it is a central station for France</p><pre><code class="language-julia hljs">ref_station = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>This generates a random Periodic HMM that we then fit slice by slice (day by day). See paper.</p><pre><code class="language-julia hljs">hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
+ 38</code></pre><h2 id="Fit-the-seasonal-HMM"><a class="docs-heading-anchor" href="#Fit-the-seasonal-HMM">Fit the seasonal HMM</a><a id="Fit-the-seasonal-HMM-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-the-seasonal-HMM" title="Permalink"></a></h2><div class="admonition is-info"><header class="admonition-header">Hypothesis: Smooth parameter evolution</header><div class="admonition-body"><p>We assume all models e.g. HMM, rain mixture to have parameters evolving smoothly with periodicity <span>$T$</span> for <span>$t \in [1, T]$</span>. For example a Bernoulli parameter will write</p><p class="math-container">\[p(t) = \dfrac{1}{1 + e^{P(t)}} \in [0, 1],\]</p><p>with</p><p class="math-container">\[    P_c(t) = c_0 + \sum_{j=1}^{\texttt{Deg}} \left(c_{2j-1}\cos\left(\dfrac{2\pi}{T}j t\right) + c_{2j}\sin\left(\dfrac{2\pi}{T}j t\right)\right).\]</p></div></div><h3 id="Fit-slice:-naive-estimation"><a class="docs-heading-anchor" href="#Fit-slice:-naive-estimation">Fit slice: naive estimation</a><a id="Fit-slice:-naive-estimation-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-slice:-naive-estimation" title="Permalink"></a></h3><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>Before inferring the HMM parameters with the EM (Baum-Welch) algorithm, we do a first naive inference that will be used as initial condition for the EM.</p></div></div><p>The reference station <code>ref_station</code> is used to sort the hidden states obtained via the slide initialization Here we choose <code>j=1</code> <span>$\to$</span> <code>STAID=32</code> <span>$\to$</span> <code>BOURGES</code> because it is a central station for France</p><pre><code class="language-julia hljs">ref_station = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>This generates a random Periodic HMM that we then fit slice by slice (day by day). See paper.</p><pre><code class="language-julia hljs">hmm_random = randhierarchicalPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
 
 @time &quot;FitMLE SHMM (Slice)&quot; hmm_slice = fit_mle_all_slices(hmm_random, Y, Y_past; n2t=n2t, robust=true, rand_ini=true, Dirichlet_α=0.8, history=false, n_random_ini=1, Yₜ_extanted=[-12, -7, 0, 6, 13]);
 
-θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FitMLE SHMM (Slice): 27.490735 seconds (194.97 M allocations: 30.019 GiB, 9.81% gc time, 21.40% compilation time)
+θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FitMLE SHMM (Slice): 25.241117 seconds (194.98 M allocations: 30.019 GiB, 9.38% gc time, 24.55% compilation time)
 
 ******************************************************************************
 This program contains Ipopt, a library for large-scale nonlinear optimization.
@@ -138,35 +138,35 @@ This program contains Ipopt, a library for large-scale nonlinear optimization.
          For more information visit https://github.com/coin-or/Ipopt
 ******************************************************************************</code></pre><h3 id="Fit-with-Baum-Welch-using-the-slice-estimate-as-a-starting-point"><a class="docs-heading-anchor" href="#Fit-with-Baum-Welch-using-the-slice-estimate-as-a-starting-point">Fit with Baum Welch using the slice estimate as a starting point</a><a id="Fit-with-Baum-Welch-using-the-slice-estimate-as-a-starting-point-1"></a><a class="docs-heading-anchor-permalink" href="#Fit-with-Baum-Welch-using-the-slice-estimate-as-a-starting-point" title="Permalink"></a></h3><p>With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!</p><pre><code class="language-julia hljs">@time &quot;FitMLE SHMM (Baum Welch)&quot; hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past,
     maxiter=10000, robust=true; display=:final, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">EM converged in 74 iterations, logtot = -116791.10200745627
-FitMLE SHMM (Baum Welch): 60.374810 seconds (188.68 M allocations: 33.083 GiB, 7.61% gc time, 12.84% compilation time)</code></pre><p>Uncomment to load previously computed hmm</p><pre><code class="language-julia hljs"># hmm_infos = load(&quot;save_tuto_path/hmm_fit.jld&quot;)
+FitMLE SHMM (Baum Welch): 59.970699 seconds (188.68 M allocations: 33.083 GiB, 6.96% gc time, 12.84% compilation time)</code></pre><p>Uncomment to load previously computed hmm</p><pre><code class="language-julia hljs"># hmm_infos = load(&quot;save_tuto_path/hmm_fit.jld&quot;)
 # hmm_fit = hmm_infos[&quot;hmm&quot;]
 # hist = hmm_infos[&quot;hist&quot;]
 # θq_fit = hmm_infos[&quot;Q_param&quot;]
 # θy_fit = hmm_infos[&quot;Y_param&quot;]</code></pre><h3 id="Visualization-of-the-HMM-parameters"><a class="docs-heading-anchor" href="#Visualization-of-the-HMM-parameters">Visualization of the HMM parameters</a><a id="Visualization-of-the-HMM-parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization-of-the-HMM-parameters" title="Permalink"></a></h3><h4 id="Transition-matrix"><a class="docs-heading-anchor" href="#Transition-matrix">Transition matrix</a><a id="Transition-matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Transition-matrix" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, yticksfontsize = 12) for k in 1:K]
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=16) for k in 1:K]
     for k in 1:K
-        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L&quot;Q_{%$(k)\to %$(l)}&quot;, legend=:topleft) for l in 1:K]
+        [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L&quot;Q_{%$(k)\to %$(l)}&quot;, legend=:top, lw=1.75) for l in 1:K]
         hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), &quot;&quot;), xlims=(0, 367), xtickfontsize=10, ylims=(0, 1))
+        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), &quot;&quot;), xlims=(0, 367), ylims=(0, 1))
     end
     pallA = plot(pA..., size=(1000, 500))
-end</code></pre><img src="85ecc90a.svg" alt="Example block output"/><h4 id="Rain-probabilities"><a class="docs-heading-anchor" href="#Rain-probabilities">Rain probabilities</a><a id="Rain-probabilities-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-probabilities" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
+end</code></pre><img src="a8b0ad03.svg" alt="Example block output"/><h4 id="Rain-probabilities"><a class="docs-heading-anchor" href="#Rain-probabilities">Rain probabilities</a><a id="Rain-probabilities-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-probabilities" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
     mm = 1
     jt = D
-    pB = [plot(legendfont=14, title=&quot;$(station_name[j])&quot;, titlefontsize=16) for j in 1:jt]
+    pB = [plot(legendfont=14, title=&quot;$(station_name[j])&quot;, titlefontsize=16, tickfont=12) for j in 1:jt]
     for j in 1:jt
-        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none) for k in 1:K]
+        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none, lw=2) for k in 1:K]
         hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
         xticks!(
             pB[j],
             vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
-            vcat(string.(monthabbr.(1:12)), &quot;&quot;), xtickfontsize=10
+            vcat(string.(first.(monthabbr.(1:12)))), xtickfontsize=10
         )
         xlims!(pB[j], (0, 367))
         ylims!(pB[j], (0, 1))
     end
-    pallB = plot(pB[staid_lat]..., size=(3000 / 1.25, 1000 / 1.25), layout=(2, 5))
-end</code></pre><img src="99cfd499.svg" alt="Example block output"/><h4 id="Spatial-Rain-probability"><a class="docs-heading-anchor" href="#Spatial-Rain-probability">Spatial Rain probability</a><a id="Spatial-Rain-probability-1"></a><a class="docs-heading-anchor-permalink" href="#Spatial-Rain-probability" title="Permalink"></a></h4><pre><code class="language-julia hljs">memory_past_cat = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>h = 1 (day before dry) or 2 (day before wet) <span>$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$</span> with <code>h = memory_past_cat</code></p><h3 id="Inference-of-the-historical-hidden-states"><a class="docs-heading-anchor" href="#Inference-of-the-historical-hidden-states">Inference of the historical hidden states</a><a id="Inference-of-the-historical-hidden-states-1"></a><a class="docs-heading-anchor-permalink" href="#Inference-of-the-historical-hidden-states" title="Permalink"></a></h3><h4 id="Viterbi-algorithm"><a class="docs-heading-anchor" href="#Viterbi-algorithm">Viterbi algorithm</a><a id="Viterbi-algorithm-1"></a><a class="docs-heading-anchor-permalink" href="#Viterbi-algorithm" title="Permalink"></a></h4><pre><code class="language-julia hljs">ẑ = viterbi(hmm_fit, Y, Y_past; n2t=n2t)
+    pallB = plot(pB[staid_lat]..., size=(3000 / 2, 1000 / 1), layout=(2, 5))
+end</code></pre><img src="dff11371.svg" alt="Example block output"/><h4 id="Spatial-Rain-probability"><a class="docs-heading-anchor" href="#Spatial-Rain-probability">Spatial Rain probability</a><a id="Spatial-Rain-probability-1"></a><a class="docs-heading-anchor-permalink" href="#Spatial-Rain-probability" title="Permalink"></a></h4><pre><code class="language-julia hljs">memory_past_cat = 1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1</code></pre><p>h = 1 (day before dry) or 2 (day before wet) <span>$\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$</span> with <code>h = memory_past_cat</code></p><h3 id="Inference-of-the-historical-hidden-states"><a class="docs-heading-anchor" href="#Inference-of-the-historical-hidden-states">Inference of the historical hidden states</a><a id="Inference-of-the-historical-hidden-states-1"></a><a class="docs-heading-anchor-permalink" href="#Inference-of-the-historical-hidden-states" title="Permalink"></a></h3><h4 id="Viterbi-algorithm"><a class="docs-heading-anchor" href="#Viterbi-algorithm">Viterbi algorithm</a><a id="Viterbi-algorithm-1"></a><a class="docs-heading-anchor-permalink" href="#Viterbi-algorithm" title="Permalink"></a></h4><pre><code class="language-julia hljs">ẑ = viterbi(hmm_fit, Y, Y_past; n2t=n2t)
 
 data_stations_z = map(data_stations) do df
     @transform(df, :z = [fill(missing, local_order); ẑ])
@@ -198,498 +198,8 @@ begin
     xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), &quot;&quot;), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
     hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
     ylims!(0.5, year_nb + 0.5)
-    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]))
-end</code></pre><img src="944d2825.svg" alt="Example block output"/><h2 id="Adding-Rain-amounts-to-the-model"><a class="docs-heading-anchor" href="#Adding-Rain-amounts-to-the-model">Adding Rain amounts to the model</a><a id="Adding-Rain-amounts-to-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-Rain-amounts-to-the-model" title="Permalink"></a></h2><h3 id="Marginal-distribution"><a class="docs-heading-anchor" href="#Marginal-distribution">Marginal distribution</a><a id="Marginal-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Marginal-distribution" title="Permalink"></a></h3><p>We fit the marginals of the rain amount <span>$R&gt;0$</span> at each station <span>$s$</span> and for each hidden state <span>$Z$</span> independently. We use a mixture of exponential functions</p><p class="math-container">\[g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-{\frac {r}{\vartheta_2}}}}{\vartheta_2}.\]</p><p>whose parameters <span>$w(t)$</span>, <span>$\vartheta_1(t)$</span> and <span>$\vartheta_2(t)$</span> are smooth periodic functions of the day of the year.</p><pre><code class="language-julia hljs">@time &quot;FitMLE RR&quot; mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{Matrix{Distributions.MixtureModel}}:
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1196): Distributions.Exponential{Float64}(θ=50.24384868767562)
-components[2] (prior = 0.8804): Distributions.Exponential{Float64}(θ=54.174898719508455)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1192): Distributions.Exponential{Float64}(θ=51.04660571388722)
-components[2] (prior = 0.8808): Distributions.Exponential{Float64}(θ=54.01558342183381)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1203): Distributions.Exponential{Float64}(θ=48.633419349837894)
-components[2] (prior = 0.8797): Distributions.Exponential{Float64}(θ=54.50184831306283)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1200): Distributions.Exponential{Float64}(θ=49.43920997394143)
-components[2] (prior = 0.8800): Distributions.Exponential{Float64}(θ=54.336995633445106)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4203): Distributions.Exponential{Float64}(θ=7.719742682095374)
-components[2] (prior = 0.5797): Distributions.Exponential{Float64}(θ=31.03739437991625)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4192): Distributions.Exponential{Float64}(θ=7.707200157352079)
-components[2] (prior = 0.5808): Distributions.Exponential{Float64}(θ=30.92098867005089)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4224): Distributions.Exponential{Float64}(θ=7.746155777922702)
-components[2] (prior = 0.5776): Distributions.Exponential{Float64}(θ=31.283290602255942)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4213): Distributions.Exponential{Float64}(θ=7.732728445564888)
-components[2] (prior = 0.5787): Distributions.Exponential{Float64}(θ=31.158157824255806)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4220): Distributions.Exponential{Float64}(θ=4.377284366014111)
-components[2] (prior = 0.5780): Distributions.Exponential{Float64}(θ=40.926507753944215)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4216): Distributions.Exponential{Float64}(θ=4.399901446894176)
-components[2] (prior = 0.5784): Distributions.Exponential{Float64}(θ=40.94584729506931)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4229): Distributions.Exponential{Float64}(θ=4.333984752943219)
-components[2] (prior = 0.5771): Distributions.Exponential{Float64}(θ=40.90088498844707)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4225): Distributions.Exponential{Float64}(θ=4.355312848308059)
-components[2] (prior = 0.5775): Distributions.Exponential{Float64}(θ=40.91152043864381)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9490): Distributions.Exponential{Float64}(θ=4.232547140876626)
-components[2] (prior = 0.0510): Distributions.Exponential{Float64}(θ=30.046722178744325)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9483): Distributions.Exponential{Float64}(θ=4.2232970230028615)
-components[2] (prior = 0.0517): Distributions.Exponential{Float64}(θ=29.673247370309824)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9504): Distributions.Exponential{Float64}(θ=4.25124588034941)
-components[2] (prior = 0.0496): Distributions.Exponential{Float64}(θ=30.822387030094614)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9497): Distributions.Exponential{Float64}(θ=4.241864227344231)
-components[2] (prior = 0.0503): Distributions.Exponential{Float64}(θ=30.429725817987116)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1333): Distributions.Exponential{Float64}(θ=11.62821069829446)
-components[2] (prior = 0.8667): Distributions.Exponential{Float64}(θ=51.59405293658048)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1319): Distributions.Exponential{Float64}(θ=11.59014596200204)
-components[2] (prior = 0.8681): Distributions.Exponential{Float64}(θ=51.47189767595204)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1361): Distributions.Exponential{Float64}(θ=11.7047512388297)
-components[2] (prior = 0.8639): Distributions.Exponential{Float64}(θ=51.84973666406562)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1347): Distributions.Exponential{Float64}(θ=11.666416040758147)
-components[2] (prior = 0.8653): Distributions.Exponential{Float64}(θ=51.72000289963748)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5408): Distributions.Exponential{Float64}(θ=6.596915946366361)
-components[2] (prior = 0.4592): Distributions.Exponential{Float64}(θ=33.34453614495038)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5413): Distributions.Exponential{Float64}(θ=6.626063450549642)
-components[2] (prior = 0.4587): Distributions.Exponential{Float64}(θ=33.34376548706748)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5399): Distributions.Exponential{Float64}(θ=6.539814995562672)
-components[2] (prior = 0.4601): Distributions.Exponential{Float64}(θ=33.35694590659001)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5404): Distributions.Exponential{Float64}(θ=6.568165012909493)
-components[2] (prior = 0.4596): Distributions.Exponential{Float64}(θ=33.348929572501596)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2852): Distributions.Exponential{Float64}(θ=5.425989245816374)
-components[2] (prior = 0.7148): Distributions.Exponential{Float64}(θ=48.570985834225)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2846): Distributions.Exponential{Float64}(θ=5.444966680055608)
-components[2] (prior = 0.7154): Distributions.Exponential{Float64}(θ=48.4356958617791)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2864): Distributions.Exponential{Float64}(θ=5.3910012018925)
-components[2] (prior = 0.7136): Distributions.Exponential{Float64}(θ=48.86217516492292)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2857): Distributions.Exponential{Float64}(θ=5.408002135098808)
-components[2] (prior = 0.7143): Distributions.Exponential{Float64}(θ=48.71314029323721)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6223): Distributions.Exponential{Float64}(θ=5.281407563509007)
-components[2] (prior = 0.3777): Distributions.Exponential{Float64}(θ=37.80998791178961)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6217): Distributions.Exponential{Float64}(θ=5.292218398085392)
-components[2] (prior = 0.3783): Distributions.Exponential{Float64}(θ=37.887827702581355)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6235): Distributions.Exponential{Float64}(θ=5.260672094700606)
-components[2] (prior = 0.3765): Distributions.Exponential{Float64}(θ=37.67233652094017)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6229): Distributions.Exponential{Float64}(θ=5.270891657351746)
-components[2] (prior = 0.3771): Distributions.Exponential{Float64}(θ=37.73816171054021)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4400): Distributions.Exponential{Float64}(θ=9.311872652346509)
-components[2] (prior = 0.5600): Distributions.Exponential{Float64}(θ=90.75519030224937)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4403): Distributions.Exponential{Float64}(θ=9.316224158978532)
-components[2] (prior = 0.5597): Distributions.Exponential{Float64}(θ=90.33636198703765)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4396): Distributions.Exponential{Float64}(θ=9.303754941468647)
-components[2] (prior = 0.5604): Distributions.Exponential{Float64}(θ=91.61465355688931)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4398): Distributions.Exponential{Float64}(θ=9.3077159247958)
-components[2] (prior = 0.5602): Distributions.Exponential{Float64}(θ=91.18130157022739)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5009): Distributions.Exponential{Float64}(θ=2.1287728974801077)
-components[2] (prior = 0.4991): Distributions.Exponential{Float64}(θ=28.80965714558947)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4970): Distributions.Exponential{Float64}(θ=2.1422651663296364)
-components[2] (prior = 0.5030): Distributions.Exponential{Float64}(θ=28.922143950292888)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5090): Distributions.Exponential{Float64}(θ=2.103134671211187)
-components[2] (prior = 0.4910): Distributions.Exponential{Float64}(θ=28.603184139733354)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5049): Distributions.Exponential{Float64}(θ=2.1157305436967135)
-components[2] (prior = 0.4951): Distributions.Exponential{Float64}(θ=28.703348571811155)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3353): Distributions.Exponential{Float64}(θ=9.256709581830089)
-components[2] (prior = 0.6647): Distributions.Exponential{Float64}(θ=115.91407483511374)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3347): Distributions.Exponential{Float64}(θ=9.284238278908118)
-components[2] (prior = 0.6653): Distributions.Exponential{Float64}(θ=115.43075058917218)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3366): Distributions.Exponential{Float64}(θ=9.201726104284523)
-components[2] (prior = 0.6634): Distributions.Exponential{Float64}(θ=116.88327900073836)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3360): Distributions.Exponential{Float64}(θ=9.22920273659902)
-components[2] (prior = 0.6640): Distributions.Exponential{Float64}(θ=116.39830070107868)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5025): Distributions.Exponential{Float64}(θ=4.850944708892347)
-components[2] (prior = 0.4975): Distributions.Exponential{Float64}(θ=66.64393312078198)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5028): Distributions.Exponential{Float64}(θ=4.854809499855531)
-components[2] (prior = 0.4972): Distributions.Exponential{Float64}(θ=66.78442269240396)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5021): Distributions.Exponential{Float64}(θ=4.8428281065984775)
-components[2] (prior = 0.4979): Distributions.Exponential{Float64}(θ=66.33868339159196)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5023): Distributions.Exponential{Float64}(θ=4.846950410902111)
-components[2] (prior = 0.4977): Distributions.Exponential{Float64}(θ=66.49532023916244)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0150): Distributions.Exponential{Float64}(θ=3.329196572483505)
-components[2] (prior = 0.9850): Distributions.Exponential{Float64}(θ=62.450292907080204)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0147): Distributions.Exponential{Float64}(θ=3.305957640275757)
-components[2] (prior = 0.9853): Distributions.Exponential{Float64}(θ=62.24006915108078)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0157): Distributions.Exponential{Float64}(θ=3.378026657656597)
-components[2] (prior = 0.9843): Distributions.Exponential{Float64}(θ=62.877941041665586)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0154): Distributions.Exponential{Float64}(θ=3.3532171203590035)
-components[2] (prior = 0.9846): Distributions.Exponential{Float64}(θ=62.66293126316419)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4246): Distributions.Exponential{Float64}(θ=14.748221520689263)
-components[2] (prior = 0.5754): Distributions.Exponential{Float64}(θ=48.03642354667887)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4245): Distributions.Exponential{Float64}(θ=14.76342022917431)
-components[2] (prior = 0.5755): Distributions.Exponential{Float64}(θ=47.89406371532254)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4249): Distributions.Exponential{Float64}(θ=14.716260998814633)
-components[2] (prior = 0.5751): Distributions.Exponential{Float64}(θ=48.32859011294345)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4248): Distributions.Exponential{Float64}(θ=14.732499666334443)
-components[2] (prior = 0.5752): Distributions.Exponential{Float64}(θ=48.181273322026215)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5513): Distributions.Exponential{Float64}(θ=7.773723737074667)
-components[2] (prior = 0.4487): Distributions.Exponential{Float64}(θ=34.763799111602985)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5513): Distributions.Exponential{Float64}(θ=7.802491465250842)
-components[2] (prior = 0.4487): Distributions.Exponential{Float64}(θ=34.761736452492656)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5512): Distributions.Exponential{Float64}(θ=7.7171210511383554)
-components[2] (prior = 0.4488): Distributions.Exponential{Float64}(θ=34.77947974192226)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5513): Distributions.Exponential{Float64}(θ=7.745265025329857)
-components[2] (prior = 0.4487): Distributions.Exponential{Float64}(θ=34.769713467335954)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7330): Distributions.Exponential{Float64}(θ=4.8626267078850125)
-components[2] (prior = 0.2670): Distributions.Exponential{Float64}(θ=18.84824037194143)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7322): Distributions.Exponential{Float64}(θ=4.858062746473615)
-components[2] (prior = 0.2678): Distributions.Exponential{Float64}(θ=18.769288786487998)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7346): Distributions.Exponential{Float64}(θ=4.873226583819624)
-components[2] (prior = 0.2654): Distributions.Exponential{Float64}(θ=19.018453090227155)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7338): Distributions.Exponential{Float64}(θ=4.867681310796543)
-components[2] (prior = 0.2662): Distributions.Exponential{Float64}(θ=18.931286311159695)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5811): Distributions.Exponential{Float64}(θ=48.97326614128777)
-components[2] (prior = 0.4189): Distributions.Exponential{Float64}(θ=46.940013951453565)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5797): Distributions.Exponential{Float64}(θ=48.97445982181628)
-components[2] (prior = 0.4203): Distributions.Exponential{Float64}(θ=46.72290592103818)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5837): Distributions.Exponential{Float64}(θ=48.95393198835228)
-components[2] (prior = 0.4163): Distributions.Exponential{Float64}(θ=47.38819693087104)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5824): Distributions.Exponential{Float64}(θ=48.96642206839713)
-components[2] (prior = 0.4176): Distributions.Exponential{Float64}(θ=47.161780756238066)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2419): Distributions.Exponential{Float64}(θ=8.299708084029723)
-components[2] (prior = 0.7581): Distributions.Exponential{Float64}(θ=37.460915165739465)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2416): Distributions.Exponential{Float64}(θ=8.31117473193728)
-components[2] (prior = 0.7584): Distributions.Exponential{Float64}(θ=37.350977870530755)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2425): Distributions.Exponential{Float64}(θ=8.276924451700433)
-components[2] (prior = 0.7575): Distributions.Exponential{Float64}(θ=37.68932512422762)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2422): Distributions.Exponential{Float64}(θ=8.288290257305965)
-components[2] (prior = 0.7578): Distributions.Exponential{Float64}(θ=37.57370079505199)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6501): Distributions.Exponential{Float64}(θ=6.46005035748746)
-components[2] (prior = 0.3499): Distributions.Exponential{Float64}(θ=34.65709984709743)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6495): Distributions.Exponential{Float64}(θ=6.4708925402777036)
-components[2] (prior = 0.3505): Distributions.Exponential{Float64}(θ=34.623650793045734)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6512): Distributions.Exponential{Float64}(θ=6.437571293473903)
-components[2] (prior = 0.3488): Distributions.Exponential{Float64}(θ=34.72951984546758)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6507): Distributions.Exponential{Float64}(θ=6.448941707516979)
-components[2] (prior = 0.3493): Distributions.Exponential{Float64}(θ=34.692391150088646)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8159): Distributions.Exponential{Float64}(θ=5.381077508862952)
-components[2] (prior = 0.1841): Distributions.Exponential{Float64}(θ=25.6008762046719)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8164): Distributions.Exponential{Float64}(θ=5.386425832841895)
-components[2] (prior = 0.1836): Distributions.Exponential{Float64}(θ=25.554672646162885)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8148): Distributions.Exponential{Float64}(θ=5.369585808161524)
-components[2] (prior = 0.1852): Distributions.Exponential{Float64}(θ=25.69505410809322)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8154): Distributions.Exponential{Float64}(θ=5.375463335537884)
-components[2] (prior = 0.1846): Distributions.Exponential{Float64}(θ=25.647673651907546)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1472): Distributions.Exponential{Float64}(θ=8.383042072332657)
-components[2] (prior = 0.8528): Distributions.Exponential{Float64}(θ=96.47718663483484)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1470): Distributions.Exponential{Float64}(θ=8.391071446488045)
-components[2] (prior = 0.8530): Distributions.Exponential{Float64}(θ=96.15172149081914)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1474): Distributions.Exponential{Float64}(θ=8.36592952169953)
-components[2] (prior = 0.8526): Distributions.Exponential{Float64}(θ=97.12622830203476)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.1473): Distributions.Exponential{Float64}(θ=8.374660250992171)
-components[2] (prior = 0.8527): Distributions.Exponential{Float64}(θ=96.80205877661663)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3565): Distributions.Exponential{Float64}(θ=5.280253351244361)
-components[2] (prior = 0.6435): Distributions.Exponential{Float64}(θ=37.48701316419005)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3568): Distributions.Exponential{Float64}(θ=5.286582062813677)
-components[2] (prior = 0.6432): Distributions.Exponential{Float64}(θ=37.4314595770631)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3559): Distributions.Exponential{Float64}(θ=5.268029137545534)
-components[2] (prior = 0.6441): Distributions.Exponential{Float64}(θ=37.60259058107799)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3562): Distributions.Exponential{Float64}(θ=5.274068599083313)
-components[2] (prior = 0.6438): Distributions.Exponential{Float64}(θ=37.54406026109794)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4524): Distributions.Exponential{Float64}(θ=12.194446511440606)
-components[2] (prior = 0.5476): Distributions.Exponential{Float64}(θ=95.50379810739243)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4510): Distributions.Exponential{Float64}(θ=12.129687996607796)
-components[2] (prior = 0.5490): Distributions.Exponential{Float64}(θ=95.20225738480089)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4552): Distributions.Exponential{Float64}(θ=12.323247661887606)
-components[2] (prior = 0.5448): Distributions.Exponential{Float64}(θ=96.0945182893818)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4538): Distributions.Exponential{Float64}(θ=12.258975219198614)
-components[2] (prior = 0.5462): Distributions.Exponential{Float64}(θ=95.80126242849563)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7091): Distributions.Exponential{Float64}(θ=6.694259698146954)
-components[2] (prior = 0.2909): Distributions.Exponential{Float64}(θ=44.34553061419343)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7100): Distributions.Exponential{Float64}(θ=6.709739912968383)
-components[2] (prior = 0.2900): Distributions.Exponential{Float64}(θ=44.16681257596539)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7072): Distributions.Exponential{Float64}(θ=6.663220814872879)
-components[2] (prior = 0.2928): Distributions.Exponential{Float64}(θ=44.708877036772535)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.7082): Distributions.Exponential{Float64}(θ=6.678751694346003)
-components[2] (prior = 0.2918): Distributions.Exponential{Float64}(θ=44.52623052352255)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6188): Distributions.Exponential{Float64}(θ=13.363864832078166)
-components[2] (prior = 0.3812): Distributions.Exponential{Float64}(θ=108.10302465673665)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6183): Distributions.Exponential{Float64}(θ=13.314797996060303)
-components[2] (prior = 0.3817): Distributions.Exponential{Float64}(θ=107.38843220900617)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6196): Distributions.Exponential{Float64}(θ=13.46036535898023)
-components[2] (prior = 0.3804): Distributions.Exponential{Float64}(θ=109.55376588805808)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6192): Distributions.Exponential{Float64}(θ=13.412394464731873)
-components[2] (prior = 0.3808): Distributions.Exponential{Float64}(θ=108.82484709813484)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4771): Distributions.Exponential{Float64}(θ=4.286353179027572)
-components[2] (prior = 0.5229): Distributions.Exponential{Float64}(θ=85.56325126803127)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4771): Distributions.Exponential{Float64}(θ=4.282559322697271)
-components[2] (prior = 0.5229): Distributions.Exponential{Float64}(θ=85.11941580928803)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4770): Distributions.Exponential{Float64}(θ=4.2937803028253585)
-components[2] (prior = 0.5230): Distributions.Exponential{Float64}(θ=86.46381150811709)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4770): Distributions.Exponential{Float64}(θ=4.2900939219777765)
-components[2] (prior = 0.5230): Distributions.Exponential{Float64}(θ=86.0114129793312)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4370): Distributions.Exponential{Float64}(θ=13.617778969990564)
-components[2] (prior = 0.5630): Distributions.Exponential{Float64}(θ=193.47645133369628)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4364): Distributions.Exponential{Float64}(θ=13.598746069520017)
-components[2] (prior = 0.5636): Distributions.Exponential{Float64}(θ=192.66977398288387)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4381): Distributions.Exponential{Float64}(θ=13.65300206136844)
-components[2] (prior = 0.5619): Distributions.Exponential{Float64}(θ=195.0759819836976)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4376): Distributions.Exponential{Float64}(θ=13.635867358476798)
-components[2] (prior = 0.5624): Distributions.Exponential{Float64}(θ=194.27862790668505)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3938): Distributions.Exponential{Float64}(θ=7.010268067536264)
-components[2] (prior = 0.6062): Distributions.Exponential{Float64}(θ=137.12875860563696)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3955): Distributions.Exponential{Float64}(θ=7.003503279334791)
-components[2] (prior = 0.6045): Distributions.Exponential{Float64}(θ=136.8543602044124)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3906): Distributions.Exponential{Float64}(θ=7.022881241216857)
-components[2] (prior = 0.6094): Distributions.Exponential{Float64}(θ=137.66348137891114)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3922): Distributions.Exponential{Float64}(θ=7.016728308204207)
-components[2] (prior = 0.6078): Distributions.Exponential{Float64}(θ=137.39850211032868)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2568): Distributions.Exponential{Float64}(θ=70.40717676754382)
-components[2] (prior = 0.7432): Distributions.Exponential{Float64}(θ=60.55892303191134)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2568): Distributions.Exponential{Float64}(θ=70.33898171541378)
-components[2] (prior = 0.7432): Distributions.Exponential{Float64}(θ=60.40551776195251)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2568): Distributions.Exponential{Float64}(θ=70.46335557155416)
-components[2] (prior = 0.7432): Distributions.Exponential{Float64}(θ=60.8659197450842)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2568): Distributions.Exponential{Float64}(θ=70.44865455456956)
-components[2] (prior = 0.7432): Distributions.Exponential{Float64}(θ=60.71240595504326)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2500): Distributions.Exponential{Float64}(θ=12.442605983087446)
-components[2] (prior = 0.7500): Distributions.Exponential{Float64}(θ=52.28035479225826)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2493): Distributions.Exponential{Float64}(θ=12.407452667641948)
-components[2] (prior = 0.7507): Distributions.Exponential{Float64}(θ=52.066600594760196)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2514): Distributions.Exponential{Float64}(θ=12.51096637654784)
-components[2] (prior = 0.7486): Distributions.Exponential{Float64}(θ=52.710557680436885)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2507): Distributions.Exponential{Float64}(θ=12.47711592330768)
-components[2] (prior = 0.7493): Distributions.Exponential{Float64}(θ=52.49502700538964)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3879): Distributions.Exponential{Float64}(θ=13.667188552038269)
-components[2] (prior = 0.6121): Distributions.Exponential{Float64}(θ=50.361634146418744)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3865): Distributions.Exponential{Float64}(θ=13.577211513747576)
-components[2] (prior = 0.6135): Distributions.Exponential{Float64}(θ=50.10412328984559)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3909): Distributions.Exponential{Float64}(θ=13.842287747883962)
-components[2] (prior = 0.6091): Distributions.Exponential{Float64}(θ=50.87891182183755)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3894): Distributions.Exponential{Float64}(θ=13.755568925471424)
-components[2] (prior = 0.6106): Distributions.Exponential{Float64}(θ=50.61992308832904)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5617): Distributions.Exponential{Float64}(θ=7.46867774183125)
-components[2] (prior = 0.4383): Distributions.Exponential{Float64}(θ=36.765964604256176)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5624): Distributions.Exponential{Float64}(θ=7.442304125814599)
-components[2] (prior = 0.4376): Distributions.Exponential{Float64}(θ=36.6998492722926)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5604): Distributions.Exponential{Float64}(θ=7.520116552836813)
-components[2] (prior = 0.4396): Distributions.Exponential{Float64}(θ=36.902983783529514)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.5610): Distributions.Exponential{Float64}(θ=7.494619493266611)
-components[2] (prior = 0.4390): Distributions.Exponential{Float64}(θ=36.833679979558255)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0070): Distributions.Exponential{Float64}(θ=7.1467321112526925)
-components[2] (prior = 0.9930): Distributions.Exponential{Float64}(θ=59.78786828125558)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0070): Distributions.Exponential{Float64}(θ=7.117252716630734)
-components[2] (prior = 0.9930): Distributions.Exponential{Float64}(θ=59.55441180249441)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0071): Distributions.Exponential{Float64}(θ=7.208655438959519)
-components[2] (prior = 0.9929): Distributions.Exponential{Float64}(θ=60.258639281546095)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.0071): Distributions.Exponential{Float64}(θ=7.177198840678682)
-components[2] (prior = 0.9929): Distributions.Exponential{Float64}(θ=60.02263123989197)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4249): Distributions.Exponential{Float64}(θ=10.585425052263684)
-components[2] (prior = 0.5751): Distributions.Exponential{Float64}(θ=44.91716615539683)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4245): Distributions.Exponential{Float64}(θ=10.56122255604874)
-components[2] (prior = 0.5755): Distributions.Exponential{Float64}(θ=44.6947372922694)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4259): Distributions.Exponential{Float64}(θ=10.63358466321222)
-components[2] (prior = 0.5741): Distributions.Exponential{Float64}(θ=45.37175963955083)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.4254): Distributions.Exponential{Float64}(θ=10.609548396888316)
-components[2] (prior = 0.5746): Distributions.Exponential{Float64}(θ=45.14284998061877)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2532): Distributions.Exponential{Float64}(θ=7.175865035778333)
-components[2] (prior = 0.7468): Distributions.Exponential{Float64}(θ=53.380145768163715)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2528): Distributions.Exponential{Float64}(θ=7.18999421086744)
-components[2] (prior = 0.7472): Distributions.Exponential{Float64}(θ=53.34459590961748)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2542): Distributions.Exponential{Float64}(θ=7.147858053549118)
-components[2] (prior = 0.7458): Distributions.Exponential{Float64}(θ=53.456977155605195)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2537): Distributions.Exponential{Float64}(θ=7.16181839958061)
-components[2] (prior = 0.7463): Distributions.Exponential{Float64}(θ=53.417608536509746)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6128): Distributions.Exponential{Float64}(θ=3.8955186754393267)
-components[2] (prior = 0.3872): Distributions.Exponential{Float64}(θ=30.232721628120515)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6132): Distributions.Exponential{Float64}(θ=3.8910449645911904)
-components[2] (prior = 0.3868): Distributions.Exponential{Float64}(θ=30.10665042675841)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6121): Distributions.Exponential{Float64}(θ=3.9049237462884734)
-components[2] (prior = 0.3879): Distributions.Exponential{Float64}(θ=30.49714874020616)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.6124): Distributions.Exponential{Float64}(θ=3.9001452139502257)
-components[2] (prior = 0.3876): Distributions.Exponential{Float64}(θ=30.362884523051456)
-]
- [MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3002): Distributions.Exponential{Float64}(θ=48.934026310021856)
-components[2] (prior = 0.6998): Distributions.Exponential{Float64}(θ=45.43017537631089)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3014): Distributions.Exponential{Float64}(θ=49.247626263233485)
-components[2] (prior = 0.6986): Distributions.Exponential{Float64}(θ=45.34279862258918)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2975): Distributions.Exponential{Float64}(θ=48.26305561676544)
-components[2] (prior = 0.7025): Distributions.Exponential{Float64}(θ=45.61370601888972)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.2988): Distributions.Exponential{Float64}(θ=48.60569618242541)
-components[2] (prior = 0.7012): Distributions.Exponential{Float64}(θ=45.520481144186135)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3781): Distributions.Exponential{Float64}(θ=7.227177302989157)
-components[2] (prior = 0.6219): Distributions.Exponential{Float64}(θ=31.067421257326554)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3764): Distributions.Exponential{Float64}(θ=7.224754470439434)
-components[2] (prior = 0.6236): Distributions.Exponential{Float64}(θ=30.91437914799332)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3816): Distributions.Exponential{Float64}(θ=7.232419232919053)
-components[2] (prior = 0.6184): Distributions.Exponential{Float64}(θ=31.384489839976165)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.3799): Distributions.Exponential{Float64}(θ=7.229732428380838)
-components[2] (prior = 0.6201): Distributions.Exponential{Float64}(θ=31.224124437987903)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8132): Distributions.Exponential{Float64}(θ=9.40204405561937)
-components[2] (prior = 0.1868): Distributions.Exponential{Float64}(θ=40.63807949672257)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8122): Distributions.Exponential{Float64}(θ=9.440293740989462)
-components[2] (prior = 0.1878): Distributions.Exponential{Float64}(θ=40.52930714289792)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8150): Distributions.Exponential{Float64}(θ=9.32455166747416)
-components[2] (prior = 0.1850): Distributions.Exponential{Float64}(θ=40.87017052324576)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.8141): Distributions.Exponential{Float64}(θ=9.363457789378508)
-components[2] (prior = 0.1859): Distributions.Exponential{Float64}(θ=40.751698836372924)
-; MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9603): Distributions.Exponential{Float64}(θ=3.6577181240574763)
-components[2] (prior = 0.0397): Distributions.Exponential{Float64}(θ=38.621179684348625)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9605): Distributions.Exponential{Float64}(θ=3.6647868738078615)
-components[2] (prior = 0.0395): Distributions.Exponential{Float64}(θ=38.76128030658338)
- … MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9599): Distributions.Exponential{Float64}(θ=3.6432049334433367)
-components[2] (prior = 0.0401): Distributions.Exponential{Float64}(θ=38.355781566773864)
- MixtureModel{Distributions.Exponential{Float64}}(K = 2)
-components[1] (prior = 0.9601): Distributions.Exponential{Float64}(θ=3.6505231729531413)
-components[2] (prior = 0.0399): Distributions.Exponential{Float64}(θ=38.486016345097134)
-]</code></pre><p>Thanks to <a href="https://github.com/JuliaStats/Distributions.jl/pull/1389">Distributions.jl PR #1389 (September 2nd, 2021)</a> and Julia multiple dispatch, the quantile function of Mixtures can be very efficiently computed.</p><h3 id="Rain-correlations"><a class="docs-heading-anchor" href="#Rain-correlations">Rain correlations</a><a id="Rain-correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-correlations" title="Permalink"></a></h3><p>We fit a Gaussian copula to each pair of stations for joint rainy days only.</p><p>!!! warning   For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are no simultaneous rain occurrences in a rain category <span>$Z = k$</span>.   In that case a <code>missing</code> coefficient is returned.</p><pre><code class="language-julia hljs">begin
+    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]), size=(1000, 600))
+end</code></pre><img src="acec4892.svg" alt="Example block output"/><h2 id="Adding-Rain-amounts-to-the-model"><a class="docs-heading-anchor" href="#Adding-Rain-amounts-to-the-model">Adding Rain amounts to the model</a><a id="Adding-Rain-amounts-to-the-model-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-Rain-amounts-to-the-model" title="Permalink"></a></h2><h3 id="Marginal-distribution"><a class="docs-heading-anchor" href="#Marginal-distribution">Marginal distribution</a><a id="Marginal-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Marginal-distribution" title="Permalink"></a></h3><p>We fit the marginals of the rain amount <span>$R&gt;0$</span> at each station <span>$s$</span> and for each hidden state <span>$Z$</span> independently. We use a mixture of exponential functions</p><p class="math-container">\[g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-{\frac {r}{\vartheta_2}}}}{\vartheta_2}.\]</p><p>whose parameters <span>$w(t)$</span>, <span>$\vartheta_1(t)$</span> and <span>$\vartheta_2(t)$</span> are smooth periodic functions of the day of the year.</p><pre><code class="language-julia hljs">@time &quot;FitMLE RR&quot; mix_allE = fit_mle_RR.(data_stations_z, K, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T));</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">FitMLE RR: 90.330290 seconds (335.87 M allocations: 47.641 GiB, 3.83% gc time, 4.82% compilation time)</code></pre><p>Thanks to <a href="https://github.com/JuliaStats/Distributions.jl/pull/1389">Distributions.jl PR #1389 (September 2nd, 2021)</a> and Julia multiple dispatch, the quantile function of Mixtures can be very efficiently computed.</p><h3 id="Rain-correlations"><a class="docs-heading-anchor" href="#Rain-correlations">Rain correlations</a><a id="Rain-correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-correlations" title="Permalink"></a></h3><p>We fit a Gaussian copula to each pair of stations for joint rainy days only.</p><p>!!! warning   For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are no simultaneous rain occurrences in a rain category <span>$Z = k$</span>.   In that case a <code>missing</code> coefficient is returned.</p><pre><code class="language-julia hljs">begin
     Σ²RR = cov_RR(data_stations_z, K)
     if K == 4
         Σ²RR[2][6, 3] = Σ²RR[4][6, 3]
@@ -703,18 +213,18 @@ if K == 4
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Warning: ΣS_k[2], CartesianIndex{2}[CartesianIndex(6, 3), CartesianIndex(3, 6)] are missing
 └ @ StochasticWeatherGenerators ~/work/StochasticWeatherGenerators.jl/StochasticWeatherGenerators.jl/src/rain/correlations.jl:80
 ┌ Warning: For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4
-└ @ Main tuto_paper.md:434</code></pre><h2 id="Simulation"><a class="docs-heading-anchor" href="#Simulation">Simulation</a><a id="Simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation" title="Permalink"></a></h2><p>Now we are ready to generate samples from the SWG model.</p><p><code>Nb</code> is the number of realization</p><pre><code class="language-julia hljs">Nb = 1000</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1000</code></pre><p>Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.</p><pre><code class="language-julia hljs">begin
+└ @ Main tuto_paper.md:435</code></pre><h2 id="Simulation"><a class="docs-heading-anchor" href="#Simulation">Simulation</a><a id="Simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation" title="Permalink"></a></h2><p>Now we are ready to generate samples from the SWG model.</p><p><code>Nb</code> is the number of realization</p><pre><code class="language-julia hljs">Nb = 1000</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1000</code></pre><p>Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.</p><pre><code class="language-julia hljs">begin
     zs = zeros(Int, N, Nb)
     ys = zeros(Bool, N, D, Nb)
     @time &quot;Simulations Z, Y&quot; for i in 1:Nb
         zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=Yall[1:local_order, :], z_ini=1, seq=true)
     end
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations Z, Y: 59.939381 seconds (328.74 M allocations: 32.194 GiB, 7.65% gc time, 1.35% compilation time)</code></pre><p>Given the hidden states and dry/wet, it generates the rain amounts at each station (correlated with a Gaussian Copula).</p><pre><code class="language-julia hljs">begin
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations Z, Y: 59.557418 seconds (328.74 M allocations: 32.194 GiB, 7.49% gc time, 1.38% compilation time)</code></pre><p>Given the hidden states and dry/wet, it generates the rain amounts at each station (correlated with a Gaussian Copula).</p><pre><code class="language-julia hljs">begin
     rs = zeros(D, N, Nb)
     @time &quot;Simulations RR&gt;0&quot; for i in 1:Nb
         rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]&#39;, Σ²RR)
     end
-end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations RR&gt;0: 231.588666 seconds (285.46 M allocations: 37.953 GiB, 1.25% gc time, 0.72% compilation time)</code></pre><h2 id="Results"><a class="docs-heading-anchor" href="#Results">Results</a><a id="Results-1"></a><a class="docs-heading-anchor-permalink" href="#Results" title="Permalink"></a></h2><h3 id="Spell-distribution"><a class="docs-heading-anchor" href="#Spell-distribution">Spell distribution</a><a id="Spell-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Spell-distribution" title="Permalink"></a></h3><p><code>select_month</code> to choose the month where to compute the spell distributions (summer month, winter, etc.) <code>select_month = 1:12</code> corresponds to all months.</p><pre><code class="language-julia hljs">select_month = 1:12
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulations RR&gt;0: 232.259424 seconds (285.46 M allocations: 37.954 GiB, 1.36% gc time, 0.71% compilation time)</code></pre><h2 id="Results"><a class="docs-heading-anchor" href="#Results">Results</a><a id="Results-1"></a><a class="docs-heading-anchor-permalink" href="#Results" title="Permalink"></a></h2><h3 id="Spell-distribution"><a class="docs-heading-anchor" href="#Spell-distribution">Spell distribution</a><a id="Spell-distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Spell-distribution" title="Permalink"></a></h3><p><code>select_month</code> to choose the month where to compute the spell distributions (summer month, winter, etc.) <code>select_month = 1:12</code> corresponds to all months.</p><pre><code class="language-julia hljs">select_month = 1:12
 
 idx_months = [findall(x -&gt; month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
 
@@ -723,45 +233,45 @@ idx_month_vcat = vcat(idx_months[select_month]...)
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_months];</code></pre><h5 id="Historic-spells"><a class="docs-heading-anchor" href="#Historic-spells">Historic spells</a><a id="Historic-spells-1"></a><a class="docs-heading-anchor-permalink" href="#Historic-spells" title="Permalink"></a></h5><pre><code class="language-julia hljs">len_spell_hist = [pmf_spell(Y[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];</code></pre><h5 id="Simulation-spells"><a class="docs-heading-anchor" href="#Simulation-spells">Simulation spells</a><a id="Simulation-spells-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation-spells" title="Permalink"></a></h5><pre><code class="language-julia hljs">len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];</code></pre><h4 id="Dry-spell"><a class="docs-heading-anchor" href="#Dry-spell">Dry spell</a><a id="Dry-spell-1"></a><a class="docs-heading-anchor-permalink" href="#Dry-spell" title="Permalink"></a></h4><pre><code class="language-julia hljs">make_range(y, step=1) = range(extrema(y)..., step=step)
 
 begin
-    dw_dry = 1 # dry
-    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10) for j = 1:D]
+    dry_or_wet = 1 # dry
+    p_spell_dry = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
-        all_spells = len_spell_simu[:, j, dw_dry]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        all_spells = len_spell_simu[:, j, dry_or_wet]
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
-        histo_spell = len_spell_hist[j, dw_dry]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype = :percentile)
+        histo_spell = len_spell_hist[j, dry_or_wet]
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
         xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
 
-    [xlabel!(p_spell_dry[j], &quot;Nb of days&quot;, xlabelfontsize=10) for j in staid_lat[6:10]]
-    [ylabel!(p_spell_dry[j], &quot;PMF&quot;, ylabelfontsize=10) for j in staid_lat[[1, 6]]]
+    [xlabel!(p_spell_dry[j], &quot;Nb of days&quot;, xlabelfontsize=12) for j in staid_lat[6:10]]
+    [ylabel!(p_spell_dry[j], &quot;PMF&quot;, ylabelfontsize=12) for j in staid_lat[[1, 6]]]
     [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5))
-end</code></pre><img src="9819ee2a.svg" alt="Example block output"/><h4 id="Wet-spell"><a class="docs-heading-anchor" href="#Wet-spell">Wet spell</a><a id="Wet-spell-1"></a><a class="docs-heading-anchor-permalink" href="#Wet-spell" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
-    dw_dry = 2 # wet
-    p_spell_dry = [plot(ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10, legendfontsize = 11) for j = 1:D]
+    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
+end</code></pre><img src="122239ab.svg" alt="Example block output"/><h4 id="Wet-spell"><a class="docs-heading-anchor" href="#Wet-spell">Wet spell</a><a id="Wet-spell-1"></a><a class="docs-heading-anchor-permalink" href="#Wet-spell" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
+    dry_or_wet = 2 # wet
+    p_spell_wet = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
-        all_spells = len_spell_simu[:, j, dw_dry]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        all_spells = len_spell_simu[:, j, dry_or_wet]
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:probability, bins=make_range(reduce(vcat,all_spells)), errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
-        histo_spell = len_spell_hist[j, dw_dry]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype = :percentile)
-        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
+        histo_spell = len_spell_hist[j, dry_or_wet]
+        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
+        xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
 
-    [xlabel!(p_spell_dry[j], &quot;Nb of days&quot;, xlabelfontsize=10) for j in staid_lat[6:10]]
-    [ylabel!(p_spell_dry[j], &quot;PMF&quot;, ylabelfontsize=10) for j in staid_lat[[1, 6]]]
-    [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5))
-end</code></pre><img src="1f55099b.svg" alt="Example block output"/><h3 id="Rain"><a class="docs-heading-anchor" href="#Rain">Rain</a><a id="Rain-1"></a><a class="docs-heading-anchor-permalink" href="#Rain" title="Permalink"></a></h3><h4 id="Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k."><a class="docs-heading-anchor" href="#Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k.">Interpretation: Mean Rain per weather regime <span>$R &gt; 0 \mid Z = k$</span>.</a><a id="Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k.-1"></a><a class="docs-heading-anchor-permalink" href="#Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k." title="Permalink"></a></h4><p>We plot the empirical (strictly) positive <strong>mean</strong> rain amounts per weather regime. The results are smoothed using a <code>cyclic_moving_average</code> with a time window of <span>$\pm 15$</span> days and the Epanechnikov kernel.</p><pre><code class="language-julia hljs">begin
-    p_rainpercat = [plot(ytickfontsize=12, xtickfontsize=12) for j = 1:D]
+    [xlabel!(p_spell_wet[j], &quot;Nb of days&quot;, xlabelfontsize=12) for j in staid_lat[6:10]]
+    [ylabel!(p_spell_wet[j], &quot;PMF&quot;, ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+    [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
+    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
+end</code></pre><img src="64d7e110.svg" alt="Example block output"/><h3 id="Rain"><a class="docs-heading-anchor" href="#Rain">Rain</a><a id="Rain-1"></a><a class="docs-heading-anchor-permalink" href="#Rain" title="Permalink"></a></h3><h4 id="Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k."><a class="docs-heading-anchor" href="#Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k.">Interpretation: Mean Rain per weather regime <span>$R &gt; 0 \mid Z = k$</span>.</a><a id="Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k.-1"></a><a class="docs-heading-anchor-permalink" href="#Interpretation:-Mean-Rain-per-weather-regime-R-0-\\mid-Z-k." title="Permalink"></a></h4><p>We plot the empirical (strictly) positive <strong>mean</strong> rain amounts per weather regime. The results are smoothed using a <code>cyclic_moving_average</code> with a time window of <span>$\pm 15$</span> days and the Epanechnikov kernel.</p><pre><code class="language-julia hljs">begin
+    p_rainpercat = [plot(tickfont=12, ylabelfontsize=14, titlefontsize=14, legendfontsize=13) for j = 1:D]
     for j = 1:D
         df_j = @chain data_stations_z[j] begin
             dropmissing
@@ -773,38 +283,38 @@ end</code></pre><img src="1f55099b.svg" alt="Example block output"/><h3 id="Rain
         # Uncomment to see how the double exponential mixtures compare to the empirical data.
         # [plot!(p_rainpercat[j], 1:T, t -&gt; conversion_factor * mean(mix_allE[j][k, t]), label=:none, c=my_color(k, K), lw=1.5, legend = :topleft) for k in 1:K]
         for k in 1:K
-            cycle_avg = replace(cyclic_moving_average(df_j[k].MEAN_RR, df_j[k].day, T,  15), 0=&gt;missing)
-            @df df_j[k] plot!(p_rainpercat[j], 1:T, conversion_factor * cycle_avg, c=my_color(k, K), alpha = 1, label=islabel(j, staid_lat[[4]], L&quot;Z = %$k&quot;), lw=1.5)
+            cycle_avg = replace(cyclic_moving_average(df_j[k].MEAN_RR, df_j[k].day, T, 15), 0 =&gt; missing)
+            @df df_j[k] plot!(p_rainpercat[j], 1:T, conversion_factor * cycle_avg, c=my_color(k, K), alpha=1, label=islabel(j, staid_lat[[4]], L&quot;Z = %$k&quot;), lw=1.5)
         end
         ylims!(p_rainpercat[j], 0, Inf)
     end
-    [ylabel!(p_rainpercat[j], L&quot;Rain ($\mathrm{mm/m}^2$)&quot;, ylabelfontsize=14) for j in staid_lat[[1, 6]]]
+    [ylabel!(p_rainpercat[j], L&quot;Rain (mm/m$^2$)&quot;) for j in staid_lat[[1, 6]]]
     [xticks!(
         p_rainpercat[j],
         vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
-        vcat(string.(first.(string.(monthabbr.(1:12))))), xtickfontsize=10
+        vcat(string.(first.(string.(monthabbr.(1:12)))))
     ) for j in 1:D]
-    [title!(p_rainpercat[j], station_name[j], titlefontsize=14) for j = 1:D]
-    plt_rain_cat_mix = plot(p_rainpercat[staid_lat]..., size=(3000 / 2.05, 1000 / 1.85), layout=(2, 5), left_margin = 20px)
-end</code></pre><img src="14288719.svg" alt="Example block output"/><h4 id="Univariate-Rain-distributions"><a class="docs-heading-anchor" href="#Univariate-Rain-distributions">Univariate Rain distributions</a><a id="Univariate-Rain-distributions-1"></a><a class="docs-heading-anchor-permalink" href="#Univariate-Rain-distributions" title="Permalink"></a></h4><p>Historical vs Nb simulations distribution</p><pre><code class="language-julia hljs">begin
-    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), ytickfontsize=9, xtickfontsize=10, legendfontsize = 11) for j = 1:D]
+    [title!(p_rainpercat[j], station_name[j]) for j = 1:D]
+    plt_rain_cat_mix = plot(p_rainpercat[staid_lat]..., size=(3000 / 2.2, 1000 / 1.5), layout=(2, 5), left_margin=25px)
+end</code></pre><img src="ca62468e.svg" alt="Example block output"/><h4 id="Univariate-Rain-distributions"><a class="docs-heading-anchor" href="#Univariate-Rain-distributions">Univariate Rain distributions</a><a id="Univariate-Rain-distributions-1"></a><a class="docs-heading-anchor-permalink" href="#Univariate-Rain-distributions" title="Permalink"></a></h4><p>Historical vs Nb simulations distribution</p><pre><code class="language-julia hljs">begin
+    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13, titlefontsize=13) for j = 1:D]
     for j = 1:D
         dists_RR_positive_j = conversion_factor * [filter(!iszero, rs[j, :, i]) for i in 1:Nb]
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend = :topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:pdf, errortype = :percentile, percentiles = [0,100], fillalpha = 0.4, centertype = :median)
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{0,100}$&quot;), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:pdf, errortype = :percentile, percentiles = [25,75], fillalpha = 0.5, centertype = :median)
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L&quot;Simu $q_{25,75}$&quot;), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
-        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:pdf, errortype = :percentile)
+        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
 
         xlims!(p_uniR[j], 0.0, Inf)
     end
-    [plot!(p_uniR[j], xlabel=L&quot;Rain (mm/m$^2$)&quot;, xlabelfontsize=10) for j in staid_lat[6:10]]
-    [plot!(p_uniR[j], ylabel=&quot;PDF&quot;, ylabelfontsize=10) for j in staid_lat[[1, 6]]]
+    [plot!(p_uniR[j], xlabel=L&quot;Rain (mm/m$^2$)&quot;) for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], ylabel=&quot;PDF&quot;) for j in staid_lat[[1, 6]]]
 
-    [title!(p_uniR[j], station_name[j], titlefontsize=13) for j = 1:D]
+    [title!(p_uniR[j], station_name[j]) for j = 1:D]
 
-    pall_R = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin = 3px)
-end</code></pre><img src="5835deb3.svg" alt="Example block output"/><h4 id="Monthly-quantile-amount"><a class="docs-heading-anchor" href="#Monthly-quantile-amount">Monthly quantile amount</a><a id="Monthly-quantile-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Monthly-quantile-amount" title="Permalink"></a></h4><pre><code class="language-julia hljs">rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
+    pall_R = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin=11px, left_margin=15px)
+end</code></pre><img src="c0061812.svg" alt="Example block output"/><h4 id="Monthly-quantile-amount"><a class="docs-heading-anchor" href="#Monthly-quantile-amount">Monthly quantile amount</a><a id="Monthly-quantile-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Monthly-quantile-amount" title="Permalink"></a></h4><pre><code class="language-julia hljs">rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
 
 month_rain_simu = [cum_monthly(rs[j, :, i], idx_all) for j in 1:D, i in 1:Nb];
 
@@ -813,7 +323,7 @@ month_rain_histo = [cum_monthly(rh[:, j], idx_all) for j in 1:D]
 qs = [0.9, 0.5, 0.1]
 
 @time &quot;Plot monthly quantile&quot; begin
-    p_month_RR = [scatter(ytickfontsize=11) for j = 1:D]
+    p_month_RR = [scatter(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12) for j = 1:D]
     for j = 1:D
         for (α, per) in enumerate([[0, 100], [25, 75]])
             for (cc, q) in enumerate(qs)
@@ -821,28 +331,28 @@ qs = [0.9, 0.5, 0.1]
             end
         end
         for q in qs
-            scatter!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, ms=2, c=:blue)
-            plot!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue)
+            scatter!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, ms=2.5, c=:blue)
+            plot!(p_month_RR[j], m -&gt; quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue, lw=1.75)
         end
-        xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))), xtickfontsize=8)
+        xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))))
     end
-    [ylabel!(p_month_RR[j], &quot;Rain (mm/month)&quot;, ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+    [ylabel!(p_month_RR[j], L&quot;Rain (mm/m$^2$)&quot;) for j in staid_lat[[1, 6]]]
 
     [title!(p_month_RR[j], station_name[j], titlefontsize=12) for j = 1:D]
-    pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1190, 500), layout=(2, 5))
-end</code></pre><img src="5902fe33.svg" alt="Example block output"/><h3 id="Correlations"><a class="docs-heading-anchor" href="#Correlations">Correlations</a><a id="Correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Correlations" title="Permalink"></a></h3><h5 id="Rain-event-dry/wet"><a class="docs-heading-anchor" href="#Rain-event-dry/wet">Rain event dry/wet</a><a id="Rain-event-dry/wet-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-event-dry/wet" title="Permalink"></a></h5><pre><code class="language-julia hljs">cor_bin_hist = cor(reduce(hcat, [df.bin for df in data_stations]));
+    pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1190, 500), layout=(2, 5), left_margin=19px)
+end</code></pre><img src="13d8ee1d.svg" alt="Example block output"/><h3 id="Correlations"><a class="docs-heading-anchor" href="#Correlations">Correlations</a><a id="Correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Correlations" title="Permalink"></a></h3><h5 id="Rain-event-dry/wet"><a class="docs-heading-anchor" href="#Rain-event-dry/wet">Rain event dry/wet</a><a id="Rain-event-dry/wet-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-event-dry/wet" title="Permalink"></a></h5><pre><code class="language-julia hljs">cor_bin_hist = cor(reduce(hcat, [df.bin for df in data_stations]));
 
 cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
 
 
 begin
-    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, xtickfontsize=10, ytickfontsize=10) for _ in 1:1]
+    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:1]
     scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu), label=&quot;Correlations&quot;, xlabel=&quot;Observations&quot;, ylabel=&quot;Simulations&quot;, c=2)
     [xlims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
     [ylims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
     annotate!(0.2, 0.7, &quot;MSE ≃ $(round(mean(abs2, vec_triu(cor_bin_hist) - vec_triu(cor_bin_mean_simu)), digits = 4))&quot;)
     plot_cor_bin = plot(plots_cor_bin...)
-end</code></pre><img src="c3d52da3.svg" alt="Example block output"/><p>The largest pair correlation error for rain occurence comes from the pair</p><pre><code class="language-julia hljs">println(&quot;$(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][1]]) and $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][2]])&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">CHASSIRON and LA HAGUE</code></pre><h5 id="Rain-amount"><a class="docs-heading-anchor" href="#Rain-amount">Rain amount</a><a id="Rain-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-amount" title="Permalink"></a></h5><pre><code class="language-julia hljs">cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));
+end</code></pre><img src="678d5b23.svg" alt="Example block output"/><p>The largest pair correlation error for rain occurence comes from the pair</p><pre><code class="language-julia hljs">println(&quot;$(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][1]]) and $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][2]])&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">CHASSIRON and LA HAGUE</code></pre><h5 id="Rain-amount"><a class="docs-heading-anchor" href="#Rain-amount">Rain amount</a><a id="Rain-amount-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-amount" title="Permalink"></a></h5><pre><code class="language-julia hljs">cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));
 
 corT_hist = corTail(reduce(hcat, [df.RR for df in data_stations]));
 
@@ -851,7 +361,7 @@ cor_mean_simu = mean(cor(rs[:, :, i]&#39;) for i in 1:Nb);
 corT_mean_simu = mean(corTail(rs[:, :, i]&#39;) for i in 1:Nb);
 
 begin
-    plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, xtickfontsize=10, ytickfontsize=10) for _ in 1:2]
+    plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:2]
     scatter!(plots_cor[1], vec_triu(cor_hist), vec_triu(cor_mean_simu), label=&quot;Correlations&quot;, xlabel=&quot;Observations&quot;, ylabel=&quot;Simulations&quot;, c=2)
     annotate!(plots_cor[1], 0.3, 0.7, &quot;MSE ≃ $(round(mean(abs2, vec_triu(cor_hist) - vec_triu(cor_mean_simu)), digits = 4))&quot;)
 
@@ -860,29 +370,29 @@ begin
 
     [xlims!(plots_cor[i], -0.1, 1) for i in 1:2]
     [ylims!(plots_cor[i], -0.1, 1) for i in 1:2]
-    plot(plots_cor...)
-end</code></pre><img src="1775e778.svg" alt="Example block output"/><p>The largest pair correlation error for rain (zero and non zero amounts) comes from the pair</p><pre><code class="language-julia hljs">println(&quot;$(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_name[findmax(cor_hist - cor_mean_simu)[2][2]])&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">EMBRUN and MARIGNANE</code></pre><h5 id="Gaussian-copula-hypothesis"><a class="docs-heading-anchor" href="#Gaussian-copula-hypothesis">Gaussian copula hypothesis</a><a id="Gaussian-copula-hypothesis-1"></a><a class="docs-heading-anchor-permalink" href="#Gaussian-copula-hypothesis" title="Permalink"></a></h5><p>For a pair of stations, we transform the marginal <span>$R_s&gt;0$</span> to <span>$\mathcal{N}(0,1)$</span>. We compare the obtained bi-variate Normal distribution to the theoretical <span>$\chi(2)$</span>-distriubtion.</p><pre><code class="language-julia hljs">begin
+    plot(plots_cor..., size=(800, 400), left_margin=15px)
+end</code></pre><img src="3c1c6dd3.svg" alt="Example block output"/><p>The largest pair correlation error for rain (zero and non zero amounts) comes from the pair</p><pre><code class="language-julia hljs">println(&quot;$(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_name[findmax(cor_hist - cor_mean_simu)[2][2]])&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">EMBRUN and MARIGNANE</code></pre><h5 id="Gaussian-copula-hypothesis"><a class="docs-heading-anchor" href="#Gaussian-copula-hypothesis">Gaussian copula hypothesis</a><a id="Gaussian-copula-hypothesis-1"></a><a class="docs-heading-anchor-permalink" href="#Gaussian-copula-hypothesis" title="Permalink"></a></h5><p>For a pair of stations, we transform the marginal <span>$R_s&gt;0$</span> to <span>$\mathcal{N}(0,1)$</span>. We compare the obtained bi-variate Normal distribution with the Mahalanobis distance to the theoretical <span>$\chi^2(2)$</span>-distriubtion.</p><pre><code class="language-julia hljs">begin
     j1 = 1
-    j2 = 5
-    plt_qqp_copula = plot(0:5, 0:5, aspect_ratio = :equal, legendfontsize = 14, c=:black)
+    j2 = 3
+    plt_qqp_copula = plot(0:25, 0:25, aspect_ratio=:equal, legendfontsize=14, c=:black, label=:none, tickfont=12, ylabelfontsize=13, xlabelfontsize=13)
     for k in 1:K
-    df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on = :DATE, makeunique = true)
-    df_X = @chain df_12 begin
-        @subset(:RR .&gt; 0, :RR_1 .&gt; 0, :z .== k)
-        dropmissing
-        @aside cdf_ = ecdf(_.RR)
-        @aside cdf_1 = ecdf(_.RR_1)
-        @transform(:X = quantile(Normal(), cdf_(:RR)*length(:RR)/(1+length(:RR))),
-                    :X_1 = quantile(Normal(), cdf_1(:RR_1)*length(:RR_1)/(1+length(:RR_1))))
-    end
-    X = hcat(df_X.X, df_X.X_1)
-    Σ⁻¹ = inv(cov(X))
-    X2 = [sqrt(x&#39; * Σ⁻¹ * x) for x in eachrow(X)] |&gt; sort
-    ecdfX2 = ecdf(X2)(X2)*length(X2)/(length(X2)+1)
+        df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on=:DATE, makeunique=true)
+        df_X = @chain df_12 begin
+            @subset(:RR .&gt; 0, :RR_1 .&gt; 0, :z .== k)
+            dropmissing
+            @aside cdf_ = ecdf(_.RR)
+            @aside cdf_1 = ecdf(_.RR_1)
+            @transform(:X = quantile(Normal(), cdf_(:RR) * length(:RR) / (1 + length(:RR))),
+                :X_1 = quantile(Normal(), cdf_1(:RR_1) * length(:RR_1) / (1 + length(:RR_1))))
+        end
+        X = hcat(df_X.X, df_X.X_1)
+        Σ⁻¹ = inv(cov(X))
+        X2 = [(x&#39; * Σ⁻¹ * x) for x in eachrow(X)] |&gt; sort
+        ecdfX2 = ecdf(X2)(X2) * length(X2) / (length(X2) + 1)
 
-    plot!(quantile(Chi(2),ecdfX2), X2, xlabel = L&quot;$\chi (2)$-quantile&quot;,c = my_color(k, K), ylabel = &quot;Observed Mahalanobis distance&quot;, label = L&quot;Z = %$k &quot;, legend = :topleft, lw = 2)
-end
+        plot!(quantile(Chisq(2), ecdfX2), X2, xlabel=L&quot;$\chi^2(2)$-quantile&quot;, c=my_color(k, K), ylabel=&quot;Observed squared Mahalanobis distance&quot;, label=L&quot;Z = %$k &quot;, legend=:topleft, lw=2)
+    end
     title!(&quot;$(station_name[j1]) vs $(station_name[j2])&quot;)
-    xlims!(0,4.5)
-    ylims!(0,4.5)
-end</code></pre><img src="c2db85d3.svg" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« StochasticWeatherGenerators.jl</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Monday 17 June 2024 14:22">Monday 17 June 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+    xlims!(0, 22)
+    ylims!(0, 22)
+end</code></pre><img src="0bcb7537.svg" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« StochasticWeatherGenerators.jl</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.4.1 on <span class="colophon-date" title="Tuesday 18 June 2024 12:59">Tuesday 18 June 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
