@@ -35,8 +35,8 @@ They can be either `add`ed through [my local Julia registry](https://github.com/
 Or directly on the master branch with `add`ed via url i.e.
 ```julia
 import Pkg
-Pkg.add("https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
-Pkg.add("https://github.com/dmetivie/StochasticWeatherGenerators.jl")
+Pkg.add(url = "https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
+Pkg.add(url = "https://github.com/dmetivie/StochasticWeatherGenerators.jl")
 ```
 """
 
@@ -331,7 +331,7 @@ md"""
 
 
 begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=16) for k in 1:K]
+    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=4, tickfont=12, legendfontsize=16) for k in 1:K]
     for k in 1:K
         [plot!(pA[k], hmm_fit.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:top, lw=1.75) for l in 1:K]
         hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
@@ -341,7 +341,7 @@ begin
 end
 
 #-
-savefig(pallA, joinpath(save_tuto_path, "Q_transition_memo_1_K_4_d_2_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pallA, joinpath(save_tuto_path, "Q_transition_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Rain probabilities
@@ -350,14 +350,14 @@ md"""
 begin
     mm = 1
     jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=16, tickfont=12) for j in 1:jt]
+    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=17, tickfont=14, legendfontsize = 14) for j in 1:jt]
     for j in 1:jt
-        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=:none, lw=2) for k in 1:K]
+        [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=islabel(j, 3, L"\mathbb{P}(Y = \textrm{wet}\mid Z = %$k, H = \textrm{dry})"), lw=2) for k in 1:K]
         hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
         xticks!(
             pB[j],
             vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
-            vcat(string.(first.(monthabbr.(1:12)))), xtickfontsize=10
+            vcat(string.(first.(monthabbr.(1:12))))
         )
         xlims!(pB[j], (0, 367))
         ylims!(pB[j], (0, 1))
@@ -366,7 +366,7 @@ begin
 end
 
 #-
-savefig(pallB, joinpath(save_tuto_path, "proba_rain_all_station_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pallB, joinpath(save_tuto_path, "proba_rain_all_station_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Spatial Rain probability 
@@ -668,7 +668,7 @@ begin
 end
 
 #-
-savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
 #### Monthly quantile amount
@@ -683,18 +683,19 @@ month_rain_histo = [cum_monthly(rh[:, j], idx_all) for j in 1:D]
 qs = [0.9, 0.5, 0.1]
 
 @time "Plot monthly quantile" begin
-    p_month_RR = [scatter(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12) for j = 1:D]
+    p_month_RR = [scatter(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12, legendfontsize = 12, foreground_color_legend=nothing) for j = 1:D]
     for j = 1:D
         for (α, per) in enumerate([[0, 100], [25, 75]])
             for (cc, q) in enumerate(qs)
-                errorline!(p_month_RR[j], [quantile(month_rain_simu[j, i][:, m], q) * conversion_factor for m in 1:12, i in 1:Nb], label=:none, fillalpha=0.18 * α^2, centertype=:median, errortype=:percentile, percentiles=per, groupcolor=my_palette(length(qs))[cc])
+                errorline!(p_month_RR[j], [quantile(month_rain_simu[j, i][:, m], q) * conversion_factor for m in 1:12, i in 1:Nb], label=(α == 1 ? islabel(j, 9,L"Simu  $q_{%$(Int(q*100))}$") : :none), fillalpha=0.18 * α^2, centertype=:median, errortype=:percentile, percentiles=per, groupcolor=my_palette(length(qs))[cc])
             end
         end
         for q in qs
-            scatter!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, ms=2.5, c=:blue)
+            scatter!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=(q == qs[1] ? islabel(j, 3,"Obs") : :none), legend = :topleft, ms=2.5, c=:blue)
             plot!(p_month_RR[j], m -> quantile(month_rain_histo[j][:, m], q) * conversion_factor, 1:12, label=:none, c=:blue, lw=1.75)
         end
         xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))))
+        ylims!(p_month_RR[j], 0, Inf)
     end
     [ylabel!(p_month_RR[j], L"Rain (mm/m$^2$)") for j in staid_lat[[1, 6]]]
 
@@ -778,7 +779,7 @@ For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$.
 """
 
 begin
-    j1 = 1
+    j1 = 10
     j2 = 3
     plt_qqp_copula = plot(0:25, 0:25, aspect_ratio=:equal, legendfontsize=14, c=:black, label=:none, tickfont=12, ylabelfontsize=13, xlabelfontsize=13)
     for k in 1:K
@@ -786,6 +787,7 @@ begin
         df_X = @chain df_12 begin
             @subset(:RR .> 0, :RR_1 .> 0, :z .== k)
             dropmissing
+            @transform(:RR = :RR - rand(length(:RR)), :RR_1 = :RR_1 - rand(length(:RR_1))) # to remove ties coming from discrete rain measures
             @aside cdf_ = ecdf(_.RR)
             @aside cdf_1 = ecdf(_.RR_1)
             @transform(:X = quantile(Normal(), cdf_(:RR) * length(:RR) / (1 + length(:RR))),
