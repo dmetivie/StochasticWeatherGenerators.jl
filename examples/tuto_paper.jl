@@ -6,7 +6,7 @@ md"""
 """
 
 md"""
-This tutorial describes the Stochastic Weather Generator described in the *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generator in France* paper by Emmanuel Gobet, David Métivier and Sylvie Parey.
+This tutorial describes the Stochastic Weather Generator described in the *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France* paper by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
 It provides a step-by-step construction of the Seasonal Hidden Markov Model (SHMM), the interpretation of the hidden states as Weather regimes over France and eventually the validation of the model with simulations.
 """
 
@@ -17,6 +17,13 @@ md"""
 md"""
 ### Package and functions
 """
+
+#!nb # !!! note "For Julia new user"
+#!nb #     There are several ways to `add` a package before `using`, one way is for this tutorial to copy-paste (it might take a while):
+#!nb #     ```julia
+#!nb #     import Pkg
+#!nb #     Pkg.add(["CSV", "JLD", "DelimitedFiles", "DataFrames", "DataFramesMeta", "StatsBase", "Random", "Distributions"])
+#!nb #     ```
 
 using CSV, JLD, DelimitedFiles # File Read/Load/Save
 
@@ -31,8 +38,17 @@ using Distributions
 
 md"""
 The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
-They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package (or url).
+They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package i.e. 
+```julia
+using LocalRegistry
+using Pkg
+pkg"registry add https://github.com/dmetivie/LocalRegistry"
+Pkg.add("SmoothPeriodicStatsModels")
+Pkg.add("StochasticWeatherGenerators")
+```
+
 Or directly on the master branch with `add`ed via url i.e.
+
 ```julia
 import Pkg
 Pkg.add(url = "https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
@@ -777,24 +793,24 @@ md"""
 
 For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution with the Mahalanobis distance to the theoretical $\chi^2(2)$-distriubtion.
 """
-
+corΣ = cov2cor.(Σ²RR)
 begin
     j1 = 10
-    j2 = 3
+    j2 = 8
     plt_qqp_copula = plot(0:25, 0:25, aspect_ratio=:equal, legendfontsize=14, c=:black, label=:none, tickfont=12, ylabelfontsize=13, xlabelfontsize=13)
+    df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on=:DATE, makeunique=true)
+    @subset!(df_12, :RR .> 0, :RR_1 .> 0)
     for k in 1:K
-        df_12 = leftjoin(data_stations_z[j1], data_stations_z[j2], on=:DATE, makeunique=true)
         df_X = @chain df_12 begin
-            @subset(:RR .> 0, :RR_1 .> 0, :z .== k)
+            @subset(:z .== k)
             dropmissing
-            @transform(:RR = :RR - rand(length(:RR)), :RR_1 = :RR_1 - rand(length(:RR_1))) # to remove ties coming from discrete rain measures
-            @aside cdf_ = ecdf(_.RR)
-            @aside cdf_1 = ecdf(_.RR_1)
-            @transform(:X = quantile(Normal(), cdf_(:RR) * length(:RR) / (1 + length(:RR))),
-                :X_1 = quantile(Normal(), cdf_1(:RR_1) * length(:RR_1) / (1 + length(:RR_1))))
+            @aside u = StochasticWeatherGenerators.Copulas.pseudos(permutedims(hcat(_.RR, _.RR_1)))
+            @transform(:X = quantile(Normal(), u[1,:]), :X_1 = quantile(Normal(), u[2,:]))
         end
         X = hcat(df_X.X, df_X.X_1)
-        Σ⁻¹ = inv(cov(X))
+        cor_sigma = [1 corΣ[k][j1,j2]; corΣ[k][j1,j2] 1]
+        Σ⁻¹ = inv(cor_sigma)
+
         X2 = [(x' * Σ⁻¹ * x) for x in eachrow(X)] |> sort
         ecdfX2 = ecdf(X2)(X2) * length(X2) / (length(X2) + 1)
 
