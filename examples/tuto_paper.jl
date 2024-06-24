@@ -6,8 +6,9 @@ md"""
 """
 
 md"""
-This tutorial describes the Stochastic Weather Generator described in the *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France* paper by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
+This tutorial describes the Stochastic Weather Generator described in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://github.com/dmetivie/StochasticWeatherGenerator.jl/blob/master/assets/tuto_1/paper_swg.pdf) paper by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
 It provides a step-by-step construction of the Seasonal Hidden Markov Model (SHMM), the interpretation of the hidden states as Weather regimes over France and eventually the validation of the model with simulations.
+![Schematic of the Seasonal Hidden Markov Model](https://github.com/dmetivie/StochasticWeatherGenerator.jl/blob/master/assets/tuto_1/m1_model.svg)
 """
 
 md"""
@@ -22,7 +23,7 @@ md"""
 #!nb #     There are several ways to `add` a package before `using`, one way is for this tutorial to copy-paste (it might take a while):
 #!nb #     ```julia
 #!nb #     import Pkg
-#!nb #     Pkg.add(["CSV", "JLD", "DelimitedFiles", "DataFrames", "DataFramesMeta", "StatsBase", "Random", "Distributions"])
+#!nb #     Pkg.add(["CSV", "JLD", "DelimitedFiles", "DataFrames", "DataFramesMeta", "StatsBase", "Random", "Distributions", "StatsPlots", "LaTeXStrings"])
 #!nb #     ```
 
 using CSV, JLD, DelimitedFiles # File Read/Load/Save
@@ -91,6 +92,9 @@ For the following code to work you will need to add the following packages
 import Pkg
 Pkg.add("HTTP", "JSON3", "GeoMakie", "CairoMakie")
 ```
+
+!!! warning 
+    Since a very recent update there is a bug in the map plot. TODO: Fix it
 """
 
 file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") # download file from a GitHub repo
@@ -187,7 +191,7 @@ selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILL
 
 #!nb # !!! note "Hypothesis: Conditional Independence of Rain Occurrences"
 #!nb #     You can change the selected stations. However, keep in mind that for the model to work, the **conditional independence hypothesis** must hold between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
-#!nb #     Hence stations must be sufficiently far apart.
+#!nb #     Hence stations must be sufficiently far apart. Check out this [MNIST example](https://dmetivie.github.io/ExpectationMaximization.jl/dev/examples/#MNIST-dataset:-Bernoulli-Mixture) to see Bernoulli mixtures in action!
 
 
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
