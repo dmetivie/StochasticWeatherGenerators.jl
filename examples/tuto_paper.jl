@@ -6,9 +6,10 @@ md"""
 """
 
 md"""
-This tutorial describes the Stochastic Weather Generator described in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://github.com/dmetivie/StochasticWeatherGenerator.jl/blob/master/assets/tuto_1/paper_swg.pdf) paper by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
+This tutorial describes the Stochastic Weather Generator described in the paper *Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France* by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
+The paper is **available** on [HAL at this link](https://hal.inrae.fr/hal-04621349).
 It provides a step-by-step construction of the Seasonal Hidden Markov Model (SHMM), the interpretation of the hidden states as Weather regimes over France and eventually the validation of the model with simulations.
-![Schematic of the Seasonal Hidden Markov Model](https://github.com/dmetivie/StochasticWeatherGenerator.jl/blob/master/assets/tuto_1/m1_model.svg)
+![Schematic of the Seasonal Hidden Markov Model](https://github.com/dmetivie/StochasticWeatherGenerators.jl/assets/46794064/5fe1d677-877d-4fd5-83ac-29d30f728ca5)
 """
 
 md"""
