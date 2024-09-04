@@ -2,7 +2,7 @@
 
 """
     joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r = 0)
-Select all the rows of `M` with values for (two) colums above some value `r`.
+Select all the rows of `M` with values for (two) columns above some value `r`.
 """
 joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r=0) = M[(M[:, j1].>r).&(M[:, j2].>r), [j1, j2]]
 
@@ -37,7 +37,7 @@ end
 """
     corTail(x::AbstractMatrix, q = 0.95)
 Compute the (symmetric averaged) tail index matrix `M` of a vector x, i.e. M[i, j] = (ℙ(x[:,j] > Fxⱼ(q) ∣ x[:,i] > Fxᵢ(q)) + ℙ(x[:,i] > Fxᵢ(q) ∣ x[:,j] > Fxⱼ(q)))/2 where Fx(q) is the CDF of x.
-Note it uses the same convention as `cor` function i.e. observations in rows and features in colums.
+Note it uses the same convention as `cor` function i.e. observations in rows and features in column.
 """
 function corTail(x, q=0.95)
     n, k = size(x)
@@ -56,7 +56,7 @@ end
     cov_RR(dfs::AbstractArray{<:DataFrame}, K)
 Each df must have :DATE, :RR, :z (same :z for each df)
 ```julia
-Σ²RR = cov_rain(data_stations, K)
+Σ²RR = cov_RR(data_stations, K)
 ```
 """
 function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson)

@@ -20,13 +20,13 @@ Distance in km between two stations.
 function distance_x_to_y(station_x, station_y)
     coord_station_x = LLA(station_x.LAT, station_y.LON, 0.0)
     coord_station_y = LLA(station_y.LAT, station_y.LON, 0)
-    return distance(coord_station_x, coord_station_y) / 1000 # distance in km
+    return Geodesy.distance(coord_station_x, coord_station_y) / 1000 # distance in km
 end
 
 function distance_x_to_all_stations(central_row, station)
     coord_central = LLA(central_row.LAT, central_row.LON, 0.0)
     coord_stations = [LLA(station[i, :].LAT, station[i, :].LON, 0) for i in 1:nrow(station)]
-    return [distance(coord_central, pos) for pos in coord_stations] / 1000 # distance in km
+    return [Geodesy.distance(coord_central, pos) for pos in coord_stations] / 1000 # distance in km
 end
 
 # * Plots * #
