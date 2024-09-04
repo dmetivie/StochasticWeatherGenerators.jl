@@ -85,17 +85,14 @@ file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/S
 include(file_for_plot_utilities)
 
 md"""
-To plot maps, we use `GeoMakie.jl` + a hack with `NaturalEarth.jl`. This is still experimental.
+To plot maps, we use `GeoMakie.jl` + `NaturalEarth.jl`. 
 Note that using `cartopy` with `PyCall.jl` also works very well.
 
 For the following code to work you will need to add the following packages
 ```julia
 import Pkg
-Pkg.add("HTTP", "JSON3", "GeoMakie", "CairoMakie")
+Pkg.add("NaturalEarth", "GeoMakie", "CairoMakie")
 ```
-
-!!! warning 
-    Since a very recent update there is a bug in the map plot. TODO: Fix it
 """
 
 file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") # download file from a GitHub repo
@@ -194,7 +191,6 @@ selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILL
 #!nb #     You can change the selected stations. However, keep in mind that for the model to work, the **conditional independence hypothesis** must hold between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
 #!nb #     Hence stations must be sufficiently far apart. Check out this [MNIST example](https://dmetivie.github.io/ExpectationMaximization.jl/dev/examples/#MNIST-dataset:-Bernoulli-Mixture) to see Bernoulli mixtures in action!
 
-
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
 
 STAID = station.STAID #[32, 33, 39, 203, 737, 755, 758, 793, 11244, 11249]; 
@@ -278,7 +274,11 @@ LON_idx = dms_to_dd.(station.LON)
 
 long_spell = [longuest_spell(y) for y in eachcol(Y)]
 
-## map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
+FR_map_spell = map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true)
+
+#-
+## savefigcrop(FR_map_spell, joinpath(save_tuto_path, "FR_longest_dry_spell_$(D)_station_histo")); #src # does not work on Windows without admin
+savefigcrop(FR_map_spell, "FR_longest_dry_spell_$(D)_station_histo", save_tuto_path); #src # this version works because it cd into the fig directory and then cd out
 
 md"""
 ## Fit the seasonal HMM
@@ -371,7 +371,7 @@ md"""
 begin
     mm = 1
     jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=17, tickfont=14, legendfontsize = 14) for j in 1:jt]
+    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=17, tickfont=14, legendfontsize = 16) for j in 1:jt]
     for j in 1:jt
         [plot!(pB[j], succprob.(hmm_fit.B[k, :, j, mm]), c=my_color(k, K), label=islabel(j, 3, L"\mathbb{P}(Y = \textrm{wet}\mid Z = %$k, H = \textrm{dry})"), lw=2) for k in 1:K]
         hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
@@ -398,9 +398,14 @@ memory_past_cat = 1
 md"""
 h = 1 (day before dry) or 2 (day before wet)
 $\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with `h = memory_past_cat`
+
+For now there are some scale rendering issues due to an [GeoMakie.jl issue](https://github.com/MakieOrg/GeoMakie.jl/issues/268) so it might be tiny.
 """
 
-#src p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true)
+p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true, colorbar_title = L"\mathbb{P}(Y = \text{Rain}\mid Z = k, H = 1)")
+
+#-
+savefigcrop(p_FR_map_mean_prob, "FR_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)_mean_proba_cat_1", save_tuto_path); #src # this version works because it cd into the fig directory and then cd out
 
 md"""
 ### Inference of the historical hidden states
@@ -725,7 +730,7 @@ qs = [0.9, 0.5, 0.1]
 end
 
 #-
-savefigcrop(pall_month_RR, joinpath(save_tuto_path, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
+savefigcrop(pall_month_RR, "EDF_like_$(Nb)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
 ### Correlations
@@ -750,7 +755,7 @@ begin
 end
 
 #-
-savefigcrop(plot_cor_bin, joinpath(save_tuto_path, "full_cor_binary_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
+savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
 
 md"""
 The largest pair correlation error for rain occurence comes from the pair 
@@ -784,8 +789,8 @@ begin
 end
 
 #-
-savefigcrop(plots_cor[1], joinpath(save_tuto_path, "full_cor_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
-savefigcrop(plots_cor[2], joinpath(save_tuto_path, "full_corT_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
+savefigcrop(plots_cor[1], "full_cor_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
+savefigcrop(plots_cor[2], "full_corT_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
 
 md"""
 The largest pair correlation error for rain (zero and non zero amounts) comes from the pair 
@@ -827,4 +832,4 @@ begin
 end
 
 #-
-savefigcrop(plt_qqp_copula, joinpath(save_tuto_path, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)")); #src
+savefigcrop(plt_qqp_copula, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src

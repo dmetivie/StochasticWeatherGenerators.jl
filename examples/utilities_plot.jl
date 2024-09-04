@@ -99,6 +99,13 @@ end
 
 savefigcrop(save_name) = savefigcrop(nothing, save_name)
 
+function savefigcrop(plt, save_name, path)
+    current = pwd()
+    cd(path)
+    savefigcrop(plt, save_name)
+    cd(current)
+end
+
 ker(u) = 3 / 4 * (1 - abs(u)^2)
 
 """
