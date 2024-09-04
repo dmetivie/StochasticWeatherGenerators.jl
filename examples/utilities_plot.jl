@@ -99,6 +99,10 @@ end
 
 savefigcrop(save_name) = savefigcrop(nothing, save_name)
 
+"""
+    savefigcrop(plt, save_name, path)
+When on Windows there are admin issues because the fig is in another folder, this version works because it `cd` into the fig directory and then `cd` out.
+"""
 function savefigcrop(plt, save_name, path)
     current = pwd()
     cd(path)
