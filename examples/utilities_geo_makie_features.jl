@@ -25,7 +25,7 @@ function map_with_stations(LON_idx, LAT_idx, value=:coral; station_name=nothing,
 
     borders_ne = naturalearth("admin_0_boundary_lines_land", precision_scale)
     coastlines_ne = naturalearth("coastline", precision_scale)
-    rivers_ne = naturalearth("rivers_lake_centerlines_scale_rank", 10)
+    rivers_ne = naturalearth("rivers_lake_centerlines_scale_rank", precision_scale)
     ocean_ne = naturalearth("ocean", precision_scale)
 
     fig = GeoMakie.with_theme(GeoMakie.theme_latexfonts(), fontsize=fontsize) do
@@ -84,11 +84,11 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
 
     borders_ne = naturalearth("admin_0_boundary_lines_land", precision_scale)
     coastlines_ne = naturalearth("coastline", precision_scale)
-    rivers_ne = naturalearth("rivers_lake_centerlines_scale_rank", 10)
+    rivers_ne = naturalearth("rivers_lake_centerlines_scale_rank", precision_scale)
     ocean_ne = naturalearth("ocean", precision_scale)
 
     fig = GeoMakie.with_theme(GeoMakie.theme_latexfonts(), fontsize=fontsize) do
-        fig = GeoMakie.Figure()
+        fig = GeoMakie.Figure(size=(800,250))
         ax = [GeoMakie.GeoAxis(fig[1:3, k], dest="+proj=merc", xgridvisible=false, ygridvisible=false, xticklabelsvisible=true, yticklabelsvisible=true, xticksvisible=false, yticksvisible=false, title = L"Z = %$k") for k in 1:K]
         for k in 1:K
             GeoMakie.xlims!(ax[k], LON_min, LON_max)
@@ -98,7 +98,7 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
             GeoMakie.lines!(ax[k], GeoMakie.to_multilinestring.(coastlines_ne.geometry); color=:gray, linewidth=0.75)
             GeoMakie.lines!(ax[k], GeoMakie.to_multilinestring.(rivers_ne.geometry); linewidth=0.5)
 
-            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=10, colormap=GeoMakie.Reverse(:plasma), colorrange=(0, 1))
+            sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=11, colormap=GeoMakie.Reverse(:plasma), colorrange=(0, 1))
             if show_value == true
                 for i in eachindex(station_name)
                     if i == 7
@@ -123,7 +123,7 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
                 end
             end
             if colorbar_show == true && k == K
-                GeoMakie.Colorbar(fig[:, K+1], sc, height=GeoMakie.Relative(0.33), label = colorbar_title)
+                GeoMakie.Colorbar(fig[:, K+1], sc, height=GeoMakie.Relative(1), label = colorbar_title)
                 GeoMakie.colgap!(fig.layout, -7)
             end
             k > 1 && GeoMakie.hideydecorations!(ax[k], ticks = false)
