@@ -15,7 +15,7 @@ This SWG relies on some "Seasonal Hidden Markov Models" currently implemented in
 
 Go check the [documentation](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/) and the fully [reproducible tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/) associated with the paper.
 
-!!! note Stochastics Weather Generators
+!!! note "Stochastics Weather Generators"
     Stochastics Weather Generators are probabilistic weather models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
     They can be used to study climate variability.
 
