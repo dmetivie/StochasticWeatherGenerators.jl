@@ -49,7 +49,6 @@ md"""
 The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
 They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package i.e. 
 ```julia
-using LocalRegistry
 using Pkg
 pkg"registry add https://github.com/dmetivie/LocalRegistry"
 Pkg.add("SmoothPeriodicStatsModels")
@@ -161,7 +160,7 @@ Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z
 local_order = 1
 
 #!nb # !!! note
-#!nb #     The `local_order` could be a vector/matrix of size `D` and different for each station, and also different depending on wet or dry past. Not yet implemented.
+#!nb #     The `local_order` and/or `𝐃𝐞𝐠` could be a vector/matrix of size `D` and different for each station, and also different depending on wet or dry past. Not yet implemented.
 
 size_order = 2^local_order
 
@@ -330,6 +329,15 @@ md"""
 With the Slice estimate as a good starting point for the full (seasonal) Baum Welch EM algorithm we fit the model!
 """
 
+#!nb # !!! tip
+#!nb #     To accelerate the fitting procedure (especially for larger models or when testing various model hyperparameters), one can do
+#!nb #     ```julia
+#!nb #     using Distributed
+#!nb #     addprocs(10) # number of worker to add
+#!nb #     @everywhere SmoothPeriodicStatsModels # load the pkg on each worker
+#!nb #     ```
+#!nb #     Then the fitting loop inside `fit_mle` will be distributed. See the [official Julia doc](https://docs.julialang.org/en/v1/stdlib/Distributed/#man-distributed) for more info.
+#!nb #     On smaller models it does not worth it since adding workers add some compilation and communication time.
 @time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past,
     maxiter=10000, robust=true; display=:final, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
 
