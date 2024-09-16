@@ -334,7 +334,7 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 #!nb #     ```julia
 #!nb #     using Distributed
 #!nb #     addprocs(10) # number of worker to add
-#!nb #     @everywhere SmoothPeriodicStatsModels # load the pkg on each worker
+#!nb #     @everywhere using SmoothPeriodicStatsModels # load the pkg on each worker
 #!nb #     ```
 #!nb #     Then the fitting loop inside `fit_mle` will be distributed. See the [official Julia doc](https://docs.julialang.org/en/v1/stdlib/Distributed/#man-distributed) for more info.
 #!nb #     On smaller models it does not worth it since adding workers add some compilation and communication time.
