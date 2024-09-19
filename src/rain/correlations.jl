@@ -53,13 +53,13 @@ function corTail(x, q=0.95)
 end
 
 """
-    cov_RR(dfs::AbstractArray{<:DataFrame}, K)
+    cor_RR(dfs::AbstractArray{<:DataFrame}, K)
 Each df must have :DATE, :RR, :z (same :z for each df)
 ```julia
 Σ²RR = cov_RR(data_stations, K)
 ```
 """
-function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson)
+function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
     D = length(dfs)
     ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerators.I for k in 1:K]
     for j1 in 2:D
@@ -73,6 +73,9 @@ function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
     end
     if all([all((!ismissing).(S)) for S in ΣS_k]) # are they no missing?
         ΣS_k = convert.(Matrix{Float64}, ΣS_k)
+        if force_PosDef
+            ΣS_k = sqrt.(ΣS_k.^2)
+        end
     else
         for k in 1:K
             aremissing = findall(ismissing, ΣS_k[k])
@@ -81,5 +84,17 @@ function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
             end
         end
     end
+    return ΣS_k
+end
+
+"""
+    cov_RR(dfs::AbstractArray{<:DataFrame}, K)
+Each df must have :DATE, :RR, :z (same :z for each df)
+```julia
+Σ²RR = cov_RR(data_stations, K)
+```
+"""
+function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+    ΣS_k = cor_RR(dfs, K; cor_method=cor_method, force_PosDef = force_PosDef)
     return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
 end
