@@ -69,8 +69,6 @@ using SmoothPeriodicStatsModels # Name might change. Small collection of smooth 
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
 
 #-
-save_tuto_path = "../../assets/tuto_1" #src
-
 Random.seed!(1234)
 
 md"""
@@ -151,7 +149,7 @@ Degree `𝐃𝐞𝐠` of the trigonometric expansion
 It could be an array different for each station and variable. Not implemented yet though.
 """
 
-𝐃𝐞𝐠 = 2
+𝐃𝐞𝐠 = 1
 
 md"""
 Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1:n-\texttt{local memory}}^{(j)} = y_{n-1:n-\texttt{local memory}}^{(j)})$
@@ -169,6 +167,7 @@ println("K = $K, ", "local_order = $local_order, ", "degree = $𝐃𝐞𝐠")
 md"""
 ## Data
 """
+save_tuto_path = "../../assets/tuto_1/tuto_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)" #src
 
 md"""
 ### Select relevant stations from the `station.txt` file
