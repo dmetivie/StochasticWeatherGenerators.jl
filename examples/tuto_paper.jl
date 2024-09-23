@@ -346,7 +346,7 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 save(joinpath(save_tuto_path, "hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit); #src
 
 md"""
-Uncomment to load previously computed hmm
+Uncomment to load a previously computed hmm
 ```julia
 # hmm_infos = load("save_tuto_path/hmm_fit.jld")
 # hmm_fit = hmm_infos["hmm"]
@@ -503,18 +503,7 @@ We fit a Gaussian copula to each pair of stations for joint rainy days only.
 #!nb #     For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are not enough simultaneous rain occurrences in a rain category $Z = k$ to estimate a correlation coefficient.
 #!nb #     In that case a `missing` coefficient is returned by `cov_RR`.
 
-begin
-    Σ²RR = cov_RR(data_stations_z, K)
-    if K == 4
-        Σ²RR[2][6, 3] = Σ²RR[4][6, 3]
-        Σ²RR[2][3, 6] = Σ²RR[4][6, 3]
-    end
-    Σ²RR = convert.(Matrix{Float64}, Σ²RR)
-end
-
-if K == 4
-    @warn "For Embrun j=6 and Marignane j=3 the hidden state Z=2 and Z=4 are pretty similar (dry), so we replace the `missing` coefficient of Z=2 with the one of Z = 4"
-end
+Σ²RR = cov_RR(data_stations_z, K)
 
 md"""
 ## Simulation
@@ -768,7 +757,7 @@ begin
 end
 
 #-
-savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
+savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
 The largest pair correlation error for rain occurence comes from the pair 
@@ -798,12 +787,13 @@ begin
 
     [xlims!(plots_cor[i], -0.1, 1) for i in 1:2]
     [ylims!(plots_cor[i], -0.1, 1) for i in 1:2]
-    plot(plots_cor..., size=(800, 400), left_margin=15px)
+    plot_cor_all = plot(plots_cor..., size=(800, 400), left_margin=15px, right_margin = 8px)
 end
 
 #-
-savefigcrop(plots_cor[1], "full_cor_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
-savefigcrop(plots_cor[2], "full_corT_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
+savefigcrop(plots_cor[1], "full_cor_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plots_cor[2], "full_corT_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plot_cor_all, "full_cor_both_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
 The largest pair correlation error for rain (zero and non zero amounts) comes from the pair 
@@ -845,4 +835,4 @@ begin
 end
 
 #-
-savefigcrop(plt_qqp_copula, "qq_copula_$(station_name[j1])_$(station_name[j2])_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", plot_cor_bin); #src
+savefigcrop(plt_qqp_copula, "qq_copula_$(station_name[j1])_$(ifelse(j2 == 8, "LA_HAGUE", station_name[j2]))_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
