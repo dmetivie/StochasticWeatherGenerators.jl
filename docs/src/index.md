@@ -62,6 +62,7 @@ cov_ar1
 #### For rain
 
 ```@docs
+cor_RR
 cov_RR
 Σ_Spearman2Pearson
 Σ_Kendall2Pearson

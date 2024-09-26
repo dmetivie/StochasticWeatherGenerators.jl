@@ -52,14 +52,26 @@ function corTail(x, q=0.95)
     return (c + c') / 2
 end
 
+#TODO: a version without K
 """
-    cor_RR(dfs::AbstractArray{<:DataFrame}, K)
-Each df must have :DATE, :RR, :z (same :z for each df)
+    cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+Compute the (strictly positive) rain pair correlations `cor(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
+
+Input: a array `dfs` of `df::DataFrame` of length `S` (number of station) where each `df` have :DATE, :RR, :z (same :z for each df).
+
+Output: `K` correlation matrix of size `S×S`
+
+Options:
+
+- `force_PosDef` will enforce Positive Definite matrix with `sqrt.(ΣS_k.^2)`.
+- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
+- `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
+
 ```julia
-Σ²RR = cov_RR(data_stations, K)
+ΣRR = cor_RR(data_stations, K)
 ```
 """
-function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
     D = length(dfs)
     ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerators.I for k in 1:K]
     for j1 in 2:D
@@ -67,14 +79,14 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
             for k in 1:K
                 R1R2_k = @subset(R1R2, :z .== k)[!, [:RR, :RR_1]] |> Matrix
-                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = cor_method(R1R2_k)[1, 2]
+                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2_k, 1) < 1, impute_missing, cor_method(R1R2_k)[1, 2])
             end
         end
     end
     if all([all((!ismissing).(S)) for S in ΣS_k]) # are they no missing?
         ΣS_k = convert.(Matrix{Float64}, ΣS_k)
         if force_PosDef
-            ΣS_k = sqrt.(ΣS_k.^2)
+            ΣS_k = sqrt.(ΣS_k .^ 2)
         end
     else
         for k in 1:K
@@ -88,13 +100,53 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
 end
 
 """
-    cov_RR(dfs::AbstractArray{<:DataFrame}, K)
-Each df must have :DATE, :RR, :z (same :z for each df)
+    cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+Compute the (strictly positive) rain pair covariance `cov(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
+
+Input: a array `dfs` of `df::DataFrame` of length `S` (number of station) where each `df` have :DATE, :RR, :z (same :z for each df).
+
+Output: `K` covariance matrix of size `S×S`
+
+Options:
+
+- `force_PosDef` will enforce Positive Definite matrix with `sqrt.(ΣS_k.^2)`.
+- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
+- `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
+
 ```julia
-Σ²RR = cov_RR(data_stations, K)
+ΣRR = cov_RR(data_stations, K)
 ```
 """
-function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
-    ΣS_k = cor_RR(dfs, K; cor_method=cor_method, force_PosDef = force_PosDef)
+function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+    ΣS_k = cor_RR(dfs, K; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
     return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
+end
+
+function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+    D = length(dfs)
+    ΣS = zeros(D, D) + StochasticWeatherGenerators.I
+    for j1 in 2:D
+        for j2 in 1:j1-1
+            R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
+            R1R2 = R1R2[!, [:RR, :RR_1]] |> Matrix
+            ΣS[j1, j2] = ΣS[j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2, 1) < 1, impute_missing, cor_method(R1R2)[1, 2])
+        end
+    end
+    if all((!ismissing).(ΣS)) # are they no missing?
+        ΣS = convert(Matrix{Float64}, ΣS)
+        if force_PosDef
+            ΣS = sqrt(ΣS^2)
+        end
+    else
+        aremissing = findall(ismissing, ΣS)
+        if length(aremissing) > 0
+            @warn "ΣS, $(aremissing) are missing"
+        end
+    end
+    return ΣS
+end
+
+function cov_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+    ΣS = cor_RR(dfs; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
+    return cor2cov(ΣS, [std(@subset(df, :RR .> 0).RR) for df in dfs])
 end
