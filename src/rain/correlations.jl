@@ -52,9 +52,9 @@ function corTail(x, q=0.95)
     return (c + c') / 2
 end
 
-#TODO: a version without K
+#TODO: is NearestCorrelationMatrix.jl the best way to enforce positivity? Uncertainty in estimation could be interesting (coefficients we trust or not).
 """
-    cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+    cor_RR(dfs::AbstractArray{<:DataFrame}[, K]; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
 Compute the (strictly positive) rain pair correlations `cor(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
 
 Input: a array `dfs` of `df::DataFrame` of length `S` (number of station) where each `df` have :DATE, :RR, :z (same :z for each df).
@@ -63,7 +63,7 @@ Output: `K` correlation matrix of size `S×S`
 
 Options:
 
-- `force_PosDef` will enforce Positive Definite matrix with `sqrt.(ΣS_k.^2)`.
+- `force_PosDef` will enforce Positive Definite matrix with [NearestCorrelationMatrix.jl](https://github.com/adknudson/NearestCorrelationMatrix.jl).
 - `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
 - `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
 
@@ -86,7 +86,7 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
     if all([all((!ismissing).(S)) for S in ΣS_k]) # are they no missing?
         ΣS_k = convert.(Matrix{Float64}, ΣS_k)
         if force_PosDef
-            ΣS_k = sqrt.(ΣS_k .^ 2)
+            ΣS_k = nearest_cor!.(ΣS_k)
         end
     else
         for k in 1:K
@@ -100,7 +100,7 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
 end
 
 """
-    cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+    cov_RR(dfs::AbstractArray{<:DataFrame}[, K]; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
 Compute the (strictly positive) rain pair covariance `cov(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
 
 Input: a array `dfs` of `df::DataFrame` of length `S` (number of station) where each `df` have :DATE, :RR, :z (same :z for each df).
@@ -109,7 +109,7 @@ Output: `K` covariance matrix of size `S×S`
 
 Options:
 
-- `force_PosDef` will enforce Positive Definite matrix with `sqrt.(ΣS_k.^2)`.
+- `force_PosDef` will enforce Positive Definite matrix with [NearestCorrelationMatrix.jl](https://github.com/adknudson/NearestCorrelationMatrix.jl).
 - `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
 - `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
 
@@ -135,7 +135,7 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson,
     if all((!ismissing).(ΣS)) # are they no missing?
         ΣS = convert(Matrix{Float64}, ΣS)
         if force_PosDef
-            ΣS = sqrt(ΣS^2)
+            nearest_cor!(ΣS)
         end
     else
         aremissing = findall(ismissing, ΣS)

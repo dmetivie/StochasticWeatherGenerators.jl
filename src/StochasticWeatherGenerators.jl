@@ -7,6 +7,7 @@ using DataFrames, DataFramesMeta, Dates
 using CSV, Printf # File Read/Load
 using LinearAlgebra: tril, I
 using Copulas # for correlated generation
+using NearestCorrelationMatrix: nearest_cor!
 using RollingFunctions # rollmean for climate indices
 using SmoothPeriodicStatsModels: αₜ, σₜ, μₜ, ρₜ
 using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_optimize!
@@ -40,7 +41,7 @@ include("temperature/correlations.jl")
 include("climate_indices.jl")
 
 # ## Rain
-export rand_RR, fit_mle_RR, cov_RR, fit_mle_stations
+export rand_RR, fit_mle_RR, cov_RR, cor_RR, fit_mle_stations
 export joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail
 
 # ## AR1

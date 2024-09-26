@@ -500,7 +500,8 @@ We fit a Gaussian copula to each pair of stations for joint rainy days only.
 """
 #!nb # !!! warning
 #!nb #     For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are not enough simultaneous rain occurrences in a rain category $Z = k$ to estimate a correlation coefficient.
-#!nb #     In that case a `missing` coefficient is returned by `cov_RR`.
+#!nb #     In that case a `missing` coefficient is returned by `cov_RR` or it returns the value `impute_missing` if specified (to avoid missing).
+#!nb #     The option `force_PosDef` (enabled by default) ensures having positive definite matrix. This is necessary to use gaussian copula.
 
 Σ²RR = cov_RR(data_stations_z, K)
 
