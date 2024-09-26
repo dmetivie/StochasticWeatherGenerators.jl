@@ -60,7 +60,7 @@ export whole_year, dayofyear_Leap
 
 # ## Climate 
 export longuest_spell, pmf_spell#, cartopy_map_with_stations, 
-export VCX3, cum_monthly
+export VCX3, monthly_agg
 
 # ### Plot
 

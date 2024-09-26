@@ -703,9 +703,9 @@ md"""
 
 rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
 
-month_rain_simu = [cum_monthly(rs[j, :, i], idx_all) for j in 1:D, i in 1:Nb];
+month_rain_simu = [monthly_agg(rs[j, :, i], idx_all) for j in 1:D, i in 1:Nb];
 
-month_rain_histo = [cum_monthly(rh[:, j], idx_all) for j in 1:D]
+month_rain_histo = [monthly_agg(rh[:, j], idx_all) for j in 1:D]
 
 qs = [0.9, 0.5, 0.1]
 
@@ -828,7 +828,7 @@ begin
 
         plot!(quantile(Chisq(2), ecdfX2), X2, xlabel=L"$\chi^2(2)$-quantile", c=my_color(k, K), ylabel="Observed squared Mahalanobis distance", label=L"Z = %$k ", legend=:topleft, lw=2)
     end
-    title!("$(station_name[j1]) vs $(station_name[j2])")
+    title!("$(station_name[j1])-$(station_name[j2]) $(ifelse(j1 == 10 && j2 == 8, "(334 km)", ""))")
     xlims!(0, 22)
     ylims!(0, 22)
 end

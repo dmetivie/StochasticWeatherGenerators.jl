@@ -35,7 +35,7 @@ fit_AR1
 
 ```@docs
 VCX3
-cum_monthly
+monthly_agg
 corTail
 longuest_spell
 pmf_spell

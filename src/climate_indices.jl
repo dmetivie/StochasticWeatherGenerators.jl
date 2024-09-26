@@ -64,7 +64,7 @@ VCX3(y::AbstractVector, idxs, nb = 3) = [maximum(rollmean(y[idx], nb)) for idx i
 # VC(y::AbstractArray, idxs, nb = 3, outer_op = maximum, inner_op = rollmean(x, nb)) = [outer_op(inner_op(y[idx], nb)) for idx in idxs]
 
 """
-    cum_monthly(y::AbstractArray, idxs)
+    monthly_agg(y::AbstractArray, idxs)
 ```julia
 using DataFrames, Dates, RollingFunctions
 time_range = Date(1956):Day(1):Date(2019,12,31)
@@ -73,12 +73,12 @@ df = DataFrame(:DATE => time_range, :Temperature => 20 .+ 5*randn(length(time_ra
 idx_year = [findall(x-> year.(x) == m, df[:, :DATE]) for m in year_range]
 idx_month = [findall(x-> month.(x) == m, df[:, :DATE]) for m in 1:12]
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
-cum_monthly(y, idx_all)
+monthly_agg(y, idx_all)
 ```
 """
-cum_monthly(y::AbstractArray, idxs, func = sum) = [func(y[idx]) for idx in idxs]
+monthly_agg(y::AbstractArray, idxs, func = sum) = [func(y[idx]) for idx in idxs]
 
-function cum_monthly(df, args...; y_col = findfirst(eltype.(eachcol(df)) .!= Date)) 
+function monthly_agg(df::DataFrame, args...; y_col = findfirst(eltype.(eachcol(df)) .!= Date)) 
     types = eltype.(eachcol(df))
     if count(types .== Date) > 1
      @warn "More than one `Date` column. The first one is used"
@@ -88,7 +88,7 @@ function cum_monthly(df, args...; y_col = findfirst(eltype.(eachcol(df)) .!= Dat
     idx_year = [findall(x-> year.(x) == m, df[:, idx_date_col]) for m in year_range]
     idx_month = [findall(x-> month.(x) == m, df[:, :DATE]) for m in 1:12]
     idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
-    cum_monthly(df[:,y_col], idx_all, args...)
+    monthly_agg(df[:,y_col], idx_all, args...)
 end
 
 
