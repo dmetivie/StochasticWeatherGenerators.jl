@@ -13,7 +13,7 @@ using SmoothPeriodicStatsModels: αₜ, σₜ, μₜ, ρₜ
 using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_optimize!
 using SmoothPeriodicStatsModels: fit_loss_optim
 using Geodesy
-import SmoothPeriodicStatsModels: fit_mle_stations
+import SmoothPeriodicStatsModels: fit_mle_RO
 
 # missings
 using Impute: Interpolate, impute!
@@ -41,7 +41,7 @@ include("temperature/correlations.jl")
 include("climate_indices.jl")
 
 # ## Rain
-export rand_RR, fit_mle_RR, cov_RR, cor_RR, fit_mle_stations
+export rand_RR, fit_mle_RR, cov_RR, cor_RR, fit_mle_RO
 export joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail
 
 # ## AR1

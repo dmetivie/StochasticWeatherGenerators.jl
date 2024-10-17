@@ -25,7 +25,7 @@ Go check the [documentation](https://dmetivie.github.io/StochasticWeatherGenerat
 ### Fit function
 
 ```@docs
-fit_mle_stations
+fit_mle_RO
 fit_mle_RR
 fit_TN
 fit_AR1

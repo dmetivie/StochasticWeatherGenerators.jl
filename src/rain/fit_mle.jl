@@ -4,11 +4,11 @@
 #* Rain occurrences (Bernoulli)
 
 """
-    fit_mle_stations(df::DataFrame, K, T, degree, local_order)
+    fit_mle_RO(df::DataFrame, K, T, degree, local_order)
 Given a DataFrame `df` with known hidden states column `z ∈ 1:K`. The rain occurrences of the new station are fitted conditionally to the hidden state.
 For `local_order>0` the model is also autoregressive with its past.
 """
-function fit_mle_stations(df::DataFrame, K, T, degree, local_order)
+function fit_mle_RO(df::DataFrame, local_order, degree, K = length(unique(df.z)), T = length(unique(dayofyear_Leap.(df.DATE))), kwargs...)
     z = df.z[1+local_order:end]
     n2t = dayofyear_Leap.(df.DATE)[1+local_order:end]
     N = length(n2t)
@@ -18,13 +18,12 @@ function fit_mle_stations(df::DataFrame, K, T, degree, local_order)
     𝐘_past = BitMatrix(𝐘all[1:local_order, :]) # rand(Bool, local_order, D)
     𝐘 = 𝐘all[1+local_order:end, :]
 
-    B, θ = fit_mle_stations(𝐘, 𝐘_past, z, n2t, K, T, degree)
-    return B, θ
+    return fit_mle_RO(𝐘, 𝐘_past, z, n2t, degree, K, T; kwargs...)
 end
 
-function fit_mle_stations(df::DataFrame, df_z::DataFrame, K, T, degree, local_order)
+function fit_mle_RO(df::DataFrame, df_z::DataFrame, local_order, degree, K = length(unique(df.z)), T = length(unique(dayofyear_Leap.(df.DATE))), kwargs...)
     df_f = innerjoin(df, df_z, on=:DATE)
-    return fit_mle_stations(df_f, K, T, degree, local_order)
+    return fit_mle_RO(df_f, local_order, degree, K, T; kwargs...)
 end
 
 #* Rain amount
