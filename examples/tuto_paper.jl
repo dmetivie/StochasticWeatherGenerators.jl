@@ -242,13 +242,13 @@ md"""
 
 md"""
 Load into a `DataFrame` the (ECA) RR files (rain). It filters by date and valid data.
-It also adds a column `:bin` for rain events (0: dry, 1: wet).
+It also adds a column `:RO` for rain occurrences (0: dry, 1: wet).
 """
 
 begin
     data_stations = collect_data_ECA.(STAID, date_start_w_memory, date_end, "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header=21, url=true)
     for i = eachindex(data_stations)
-        @transform!(data_stations[i], :bin = onefy.(:RR))
+        @transform!(data_stations[i], :RO = onefy.(:RR))
     end
 end
 
@@ -257,7 +257,7 @@ md"""
 Binary matrix version of the rain event at the `D` stations.
 """
 
-Yall = BitMatrix(reduce(hcat, [data_stations[j].bin for j = 1:D]))
+Yall = BitMatrix(reduce(hcat, [data_stations[j].RO for j = 1:D]))
 
 Y_past = BitMatrix(Yall[1:local_order, :]) # rand(Bool, local_order, D)
 
@@ -742,7 +742,7 @@ md"""
 ##### Rain event dry/wet
 """
 
-cor_bin_hist = cor(reduce(hcat, [df.bin for df in data_stations]));
+cor_bin_hist = cor(reduce(hcat, [df.RO for df in data_stations]));
 
 cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
 

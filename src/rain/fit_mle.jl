@@ -14,7 +14,7 @@ function fit_mle_RO(df::DataFrame, local_order, degree, K = length(unique(df.z))
     N = length(n2t)
 
     𝐘all = BitArray(undef, N + 1, 1)
-    𝐘all[:, 1] = df.bin
+    𝐘all[:, 1] = df.RO
     𝐘_past = BitMatrix(𝐘all[1:local_order, :]) # rand(Bool, local_order, D)
     𝐘 = 𝐘all[1+local_order:end, :]
 
