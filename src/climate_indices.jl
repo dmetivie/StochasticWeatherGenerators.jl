@@ -66,30 +66,32 @@ VCX3(y::AbstractVector, idxs, nb = 3) = [maximum(rollmean(y[idx], nb)) for idx i
 """
     monthly_agg(y::AbstractArray, idxs)
 ```julia
-using DataFrames, Dates, RollingFunctions
+using DataFrames, Dates
 time_range = Date(1956):Day(1):Date(2019,12,31)
 year_range = unique(year.(time_range))
 df = DataFrame(:DATE => time_range, :Temperature => 20 .+ 5*randn(length(time_range)))
+monthly_agg(df, :Temperature) 
+monthly_agg(df, :Temperature, mean) 
+# or
 idx_year = [findall(x-> year.(x) == m, df[:, :DATE]) for m in year_range]
 idx_month = [findall(x-> month.(x) == m, df[:, :DATE]) for m in 1:12]
 idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
-monthly_agg(y, idx_all)
+monthly_agg(df.Temperature, idx_all)
 ```
 """
 monthly_agg(y::AbstractArray, idxs, func = sum) = [func(y[idx]) for idx in idxs]
 
-function monthly_agg(df::DataFrame, args...; y_col = findfirst(eltype.(eachcol(df)) .!= Date)) 
-    types = eltype.(eachcol(df))
-    if count(types .== Date) > 1
-     @warn "More than one `Date` column. The first one is used"
+
+function monthly_agg(df::DataFrame, y_col, aggfunc = sum; maxtrixform = true) 
+    dfs_agg = @chain df begin 
+        @transform(:MONTH = month.(:DATE), :YEAR = year.(:DATE))
+        @by([:MONTH, :YEAR], :agg = aggfunc($y_col))
+        groupby(:MONTH)
     end
-    idx_date_col = findfirst(types .== Date)
-    year_range = unique(year.(df[:,idx_date_col]))
-    idx_year = [findall(x-> year.(x) == m, df[:, idx_date_col]) for m in year_range]
-    idx_month = [findall(x-> month.(x) == m, df[:, :DATE]) for m in 1:12]
-    idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
-    monthly_agg(df[:,y_col], idx_all, args...)
+    if maxtrixform == true
+        
+        return reduce(hcat, [df_agg.agg for df_agg in dfs_agg])
+    else 
+        return [df_agg.agg for df_agg in dfs_agg]
+    end
 end
-
-
-# base_func(y::AbstractVector, idxs; overall) = [overall_stat(inner_stat(y[idx])) for idx in idxs]
