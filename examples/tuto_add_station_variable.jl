@@ -48,6 +48,7 @@ md"""
 
 To get many weather variables we use station provided by a the French research institute for agronomy and environment (INRAE).
 Monitoring data from the INRAE CLIMATIK platform[^climatik] ([https://agroclim.inrae.fr/climatik/](https://agroclim.inrae.fr/climatik/), in French) managed by the AgroClim laboratory of Avignon, France.
+Unfortunately, these data are not public (they should be soon) so the download link might not always work.
 
 [^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 """
