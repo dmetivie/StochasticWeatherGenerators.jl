@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Add weather variables · StochasticWeatherGenerators</title><meta name="title" content="Add weather variables · StochasticWeatherGenerators"/><meta property="og:title" content="Add weather variables · StochasticWeatherGenerators"/><meta property="twitter:title" content="Add weather variables · StochasticWeatherGenerators"/><meta name="description" content="Documentation for StochasticWeatherGenerators."/><meta property="og:description" content="Documentation for StochasticWeatherGenerators."/><meta property="twitter:description" content="Documentation for StochasticWeatherGenerators."/><meta property="og:url" content="https://dmetivie.github.io/StochasticWeatherGenerators.jl/examples/tuto_add_station_variable/"/><meta property="twitter:url" content="https://dmetivie.github.io/StochasticWeatherGenerators.jl/examples/tuto_add_station_variable/"/><link rel="canonical" href="https://dmetivie.github.io/StochasticWeatherGenerators.jl/examples/tuto_add_station_variable/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="StochasticWeatherGenerators logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">StochasticWeatherGenerators</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../api/">API</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../tuto_paper/">Paper</a></li><li class="is-active"><a class="tocitem" href>Add weather variables</a><ul class="internal"><li><a class="tocitem" href="#Set-up"><span>Set up</span></a></li><li><a class="tocitem" href="#Data-extraction-and-settings"><span>Data extraction and settings</span></a></li><li><a class="tocitem" href="#Fitting"><span>Fitting</span></a></li><li><a class="tocitem" href="#Simulation"><span>Simulation</span></a></li><li><a class="tocitem" href="#Plots"><span>Plots</span></a></li><li><a class="tocitem" href="#Reproducibility"><span>Reproducibility</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Add weather variables</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Add weather variables</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/dmetivie/StochasticWeatherGenerators.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/dmetivie/StochasticWeatherGenerators.jl/blob/master/examples/tuto_add_station_variable.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Adding-stations-and-weather-variables"><a class="docs-heading-anchor" href="#Adding-stations-and-weather-variables">Adding stations and weather variables</a><a id="Adding-stations-and-weather-variables-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-stations-and-weather-variables" title="Permalink"></a></h1><p>This short tutorial shows how to easily add weather stations given the hidden states sequence <code>z</code> obtained in the <a href="https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/">previous tutorial</a>. We will also explore how to add (very simplistic) mutlisite models for other weather variables such as daily Temperature minimum <code>TN</code>, maximum <code>TX</code>, solar irradiance <code>QQ</code> and evapotranspiration <code>ETPP</code>. These new models will be trained with respect to the given hidden states and their parameters will be periodic and vary smoothly during a calendar year. For now models will be trained at each site and correlated spatially with Gaussian Copulas.</p><p>It shows how the hidden states and the seasonality correlates the weather variables without extra codependency between simulated variables.</p><h2 id="Set-up"><a class="docs-heading-anchor" href="#Set-up">Set up</a><a id="Set-up-1"></a><a class="docs-heading-anchor-permalink" href="#Set-up" title="Permalink"></a></h2><h3 id="Package-and-functions"><a class="docs-heading-anchor" href="#Package-and-functions">Package and functions</a><a id="Package-and-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Package-and-functions" title="Permalink"></a></h3><pre><code class="language-julia hljs">using CSV, DelimitedFiles, JLD# File Read/Load/Save/dwl
+import Downloads
+using DataFrames, DataFramesMeta # DataFrames
+using Dates
+using Random, Distributions</code></pre><p>The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. They can be either <code>add</code>ed through <a href="https://github.com/dmetivie/LocalRegistry">my local Julia registry</a> with the <a href="https://github.com/GunnarFarneback/LocalRegistry.jl">LocalRegistry.jl</a> package i.e.</p><pre><code class="language-julia hljs">using Pkg
+pkg&quot;registry add https://github.com/dmetivie/LocalRegistry&quot;
+Pkg.add(&quot;SmoothPeriodicStatsModels&quot;)
+Pkg.add(&quot;StochasticWeatherGenerators&quot;)</code></pre><pre><code class="language-julia hljs">using SmoothPeriodicStatsModels
+using StochasticWeatherGenerators</code></pre><h2 id="Data-extraction-and-settings"><a class="docs-heading-anchor" href="#Data-extraction-and-settings">Data extraction and settings</a><a id="Data-extraction-and-settings-1"></a><a class="docs-heading-anchor-permalink" href="#Data-extraction-and-settings" title="Permalink"></a></h2><p>To get many weather variables we use station provided by a the French research institute for agronomy and environment (INRAE). Monitoring data from the INRAE CLIMATIK platform<sup class="footnote-reference"><a id="citeref-climatik" href="#footnote-climatik">[climatik]</a></sup> (<a href="https://agroclim.inrae.fr/climatik/">https://agroclim.inrae.fr/climatik/</a>, in French) managed by the AgroClim laboratory of Avignon, France. Unfortunately, these data are not public (they should be soon) so the download link might not always work.</p><pre><code class="language-julia hljs">local_order = 1
+memory_order = 2^local_order
+K = 4
+degree = 1
+T = 366</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">366</code></pre><h3 id="Weather-stations"><a class="docs-heading-anchor" href="#Weather-stations">Weather stations</a><a id="Weather-stations-1"></a><a class="docs-heading-anchor-permalink" href="#Weather-stations" title="Permalink"></a></h3><p>Station French department number.</p><pre><code class="language-julia hljs">station_dep = [49, 80, 40, 63]
+station_name = [&quot;Montreuil-Bellay&quot;, &quot;Mons-en-Chaussée&quot;, &quot;Saint-Martin-de-Hinx&quot;, &quot;Saint-Gènes-Champanelle&quot;]
+
+station_path = string.(&quot;https://forgemia.inra.fr/david.metivier/weather_data_mistea/-/raw/main/INRAE_stations/INRAE_STATION_&quot;,[49215002, 80557001, 40272002, 63345002],&quot;.csv&quot;) .|&gt; download
+
+station_ndep = string.(station_name, &quot; (&quot;, station_dep, &quot;)&quot;)
+
+D = length(station_name)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4</code></pre><h3 id="Load"><a class="docs-heading-anchor" href="#Load">Load</a><a id="Load-1"></a><a class="docs-heading-anchor-permalink" href="#Load" title="Permalink"></a></h3><p>Load the AutoRegressive Seasonal HMM computed in this <a href="https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/">tutorial</a>.</p><pre><code class="language-julia hljs">file_hmm = download(&quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/hmm_fit_K_4_d_1_m_1.jld&quot;)
+begin
+    hmm_infos = load(file_hmm)
+    hmm_fit_full = hmm_infos[&quot;hmm&quot;]
+    hist = hmm_infos[&quot;hist&quot;]
+    θq_fit = hmm_infos[&quot;Q_param&quot;]
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4×3×3 Array{Float64, 3}:
+[:, :, 1] =
+  2.27287    1.61791    1.09247
+  0.047264   0.845656  -1.02341
+ -0.352188  -0.537942   0.725081
+ -2.86711   -1.38575   -2.01317
+
+[:, :, 2] =
+ 0.239175  -0.214254    0.200498
+ 0.408978   0.148962    0.203501
+ 0.377251   0.148114    0.28492
+ 0.164178   0.0208895  -0.13681
+
+[:, :, 3] =
+  0.283683    0.0230918  0.107845
+  0.0602381  -0.01249    0.103605
+ -0.0774946  -0.145427   0.0673092
+  0.315783    0.0398954  0.0329445</code></pre><p>Load the sequence of estimated hidden states for the historical sequence.</p><pre><code class="language-julia hljs">file_df_z = download(&quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/z_hat_K_4_d_1_m_1.csv&quot;)
+df_z = CSV.File(file_df_z) |&gt; DataFrame
+df_z[1:10,:] # Show the first lines of the dataframes</code></pre><div><div style = "float: left;"><span>10×2 DataFrame</span></div><div style = "clear: both;"></div></div><div class = "data-frame" style = "overflow-x: scroll;"><table class = "data-frame" style = "margin-bottom: 6px;"><thead><tr class = "header"><th class = "rowNumber" style = "font-weight: bold; text-align: right;">Row</th><th style = "text-align: left;">DATE</th><th style = "text-align: left;">z</th></tr><tr class = "subheader headerLastRow"><th class = "rowNumber" style = "font-weight: bold; text-align: right;"></th><th title = "Dates.Date" style = "text-align: left;">Date</th><th title = "Int64" style = "text-align: left;">Int64</th></tr></thead><tbody><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">1</td><td style = "text-align: left;">1956-01-01</td><td style = "text-align: right;">1</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">2</td><td style = "text-align: left;">1956-01-02</td><td style = "text-align: right;">2</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">3</td><td style = "text-align: left;">1956-01-03</td><td style = "text-align: right;">4</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">4</td><td style = "text-align: left;">1956-01-04</td><td style = "text-align: right;">4</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">5</td><td style = "text-align: left;">1956-01-05</td><td style = "text-align: right;">4</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">6</td><td style = "text-align: left;">1956-01-06</td><td style = "text-align: right;">3</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">7</td><td style = "text-align: left;">1956-01-07</td><td style = "text-align: right;">1</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">8</td><td style = "text-align: left;">1956-01-08</td><td style = "text-align: right;">1</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">9</td><td style = "text-align: left;">1956-01-09</td><td style = "text-align: right;">3</td></tr><tr><td class = "rowNumber" style = "font-weight: bold; text-align: right;">10</td><td style = "text-align: left;">1956-01-10</td><td style = "text-align: right;">2</td></tr></tbody></table></div><p>Filter by date and valid data. There are a few missing values that we impute using <code>Impute.Interpolate</code>.</p><pre><code class="language-julia hljs">begin
+    data_stations_full = collect_data_INRAE.(station_path; show_warning=[:RR, :TX], impute_missing=[:RR, :TX])
+    for df in data_stations_full
+        @transform!(df, :RO = onefy.(:RR))
+    end
+end
+
+data_stations = [innerjoin(df, df_z; on=:DATE) for df in data_stations_full]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{DataFrames.DataFrame}:
+ <span class="sgr1">12418×10 DataFrame
+   Row │ STAID     DATE        TN        TX       QQ        ETPP       RR      ⋯
+       │<span class="sgr90"> Int64     Date        Float64?  Float64  Float64?  Float64?   Float64 ⋯
+───────┼────────────────────────────────────────────────────────────────────────
+     1 │ 49215002  1986-01-01      -5.7      8.7      2.0         0.9     13.6 ⋯
+     2 │ 49215002  1986-01-02       3.5      8.8      3.0         0.1     14.1
+     3 │ 49215002  1986-01-03       5.4      7.6      2.0         0.5      1.0
+     4 │ 49215002  1986-01-04      -2.9      6.8      6.1         0.0      6.0
+     5 │ 49215002  1986-01-05       2.6      7.5      3.4         1.4     14.0 ⋯
+     6 │ 49215002  1986-01-06       2.2      8.1      6.0         0.4      5.0
+     7 │ 49215002  1986-01-07       3.4      7.6      1.9         0.0      8.0
+     8 │ 49215002  1986-01-08       4.6     10.8      5.7         0.0      0.0
+   ⋮   │    ⋮          ⋮          ⋮         ⋮        ⋮          ⋮         ⋮    ⋱
+ 12412 │ 49215002  2019-12-25       6.4      8.3      2.0         0.1      0.0 ⋯
+ 12413 │ 49215002  2019-12-26       4.6     13.6      3.76        0.1      0.0
+ 12414 │ 49215002  2019-12-27      10.3     13.6      2.0         0.5      1.0
+ 12415 │ 49215002  2019-12-28       5.6     11.0      5.01        0.0      0.5
+ 12416 │ 49215002  2019-12-29       0.1      8.4      4.5         0.0      0.0 ⋯
+ 12417 │ 49215002  2019-12-30      -1.8      8.2      6.71        0.0      0.0
+ 12418 │ 49215002  2019-12-31      -2.4      6.6      3.02        0.0      0.5
+</span><span class="sgr36">                                                3 columns and 12403 rows omitted
+ 12449×10 DataFrame
+   Row │ STAID     DATE        TN        TX       QQ        ETPP      RR       ⋯
+       │</span><span class="sgr90"> Int64     Date        Float64?  Float64  Float64?  Float64?  Float64  ⋯
+───────┼────────────────────────────────────────────────────────────────────────
+     1 │ 80557001  1985-12-01       7.5     13.5      4.1        0.2      0.0  ⋯
+     2 │ 80557001  1985-12-02       8.1     13.1      2.1        0.5      0.0
+     3 │ 80557001  1985-12-03      10.0     12.0      0.7        0.1      2.0
+     4 │ 80557001  1985-12-04      10.0     13.7      2.7        0.2      0.5
+     5 │ 80557001  1985-12-05       9.1     14.6      3.1        0.7      0.5  ⋯
+     6 │ 80557001  1985-12-06       5.5     10.6      3.6        0.4      2.5
+     7 │ 80557001  1985-12-07       8.2     11.6      1.3        0.4      1.5
+     8 │ 80557001  1985-12-08       2.9      8.6      1.4        0.4      1.5
+   ⋮   │    ⋮          ⋮          ⋮         ⋮        ⋮         ⋮         ⋮     ⋱
+ 12443 │ 80557001  2019-12-25       5.6      9.1      3.29       0.1      0.0  ⋯
+ 12444 │ 80557001  2019-12-26       1.9     10.1      1.2        0.3     10.0
+ 12445 │ 80557001  2019-12-27       7.3      8.5      1.07       0.2      0.0
+ 12446 │ 80557001  2019-12-28       3.3      7.4      3.07       0.0      0.0
+ 12447 │ 80557001  2019-12-29      -0.7      4.2      4.6        0.0      0.0  ⋯
+ 12448 │ 80557001  2019-12-30      -1.0      5.7      5.24       0.0      0.0
+ 12449 │ 80557001  2019-12-31      -1.3      3.9      4.76       0.0      0.0
+</span><span class="sgr36">                                                3 columns and 12434 rows omitted
+ 9845×10 DataFrame
+  Row │ STAID     DATE        TN        TX       QQ        ETPP      RR        ⋯
+      │</span><span class="sgr90"> Int64     Date        Float64?  Float64  Float64?  Float64?  Float64   ⋯
+──────┼─────────────────────────────────────────────────────────────────────────
+    1 │ 40272002  1993-01-17      19.0     20.6      0.0        0.5      0.0   ⋯
+    2 │ 40272002  1993-01-18      16.7     19.4      0.0        0.5      0.0
+    3 │ 40272002  1993-01-19       7.9     16.0      0.7        0.5     15.0
+    4 │ 40272002  1993-01-20      -0.9     16.7      7.4        0.5      0.0
+    5 │ 40272002  1993-01-21      -0.6     15.9      7.7        0.5      0.0   ⋯
+    6 │ 40272002  1993-01-22      -1.2     17.7      7.8        0.5      0.0
+    7 │ 40272002  1993-01-23       0.2     16.0      6.3        0.6      0.0
+    8 │ 40272002  1993-01-24      -0.7     13.6      6.1        0.4      0.5
+  ⋮   │    ⋮          ⋮          ⋮         ⋮        ⋮         ⋮         ⋮      ⋱
+ 9839 │ 40272002  2019-12-25       6.7     19.3      6.46       0.1      0.0   ⋯
+ 9840 │ 40272002  2019-12-26       7.3     15.7      5.29       0.3      0.0
+ 9841 │ 40272002  2019-12-27       0.6     14.2      6.65       0.0      0.5
+ 9842 │ 40272002  2019-12-28       5.3     10.7      2.32       0.2      0.0
+ 9843 │ 40272002  2019-12-29       4.0      6.4      2.64       0.1      0.0   ⋯
+ 9844 │ 40272002  2019-12-30       1.6     13.4      6.65       0.1      0.0
+ 9845 │ 40272002  2019-12-31      -0.4     11.7      2.15       0.2      0.5
+</span><span class="sgr36">                                                 3 columns and 9830 rows omitted
+ 12449×10 DataFrame
+   Row │ STAID     DATE        TN        TX       QQ        ETPP      RR       ⋯
+       │</span><span class="sgr90"> Int64     Date        Float64?  Float64  Float64?  Float64?  Float64  ⋯
+───────┼────────────────────────────────────────────────────────────────────────
+     1 │ 63345002  1985-12-01       2.9     13.5      6.9        0.1      0.0  ⋯
+     2 │ 63345002  1985-12-02       4.5     16.7      6.5        0.3      0.0
+     3 │ 63345002  1985-12-03       6.6     21.1      5.6        1.4      0.0
+     4 │ 63345002  1985-12-04       7.8     15.8      4.4        1.1      0.0
+     5 │ 63345002  1985-12-05       3.8     12.2      6.6        0.7      0.0  ⋯
+     6 │ 63345002  1985-12-06       4.1      6.4      3.9        0.4      0.0
+     7 │ 63345002  1985-12-07       3.3      7.9      1.8        0.3      0.0
+     8 │ 63345002  1985-12-08       3.1      8.1      2.4        0.4      0.0
+   ⋮   │    ⋮          ⋮          ⋮         ⋮        ⋮         ⋮         ⋮     ⋱
+ 12443 │ 63345002  2019-12-25      -0.1     10.0      6.54       0.0      0.0  ⋯
+ 12444 │ 63345002  2019-12-26      -1.7     10.2      4.13       0.7      0.0
+ 12445 │ 63345002  2019-12-27       4.4      7.9      2.72       0.5      8.5
+ 12446 │ 63345002  2019-12-28       2.0      4.5      3.07       0.1      0.0
+ 12447 │ 63345002  2019-12-29      -2.6     12.2      7.01       0.2      0.0  ⋯
+ 12448 │ 63345002  2019-12-30       0.4     14.3      6.73       0.4      0.0
+ 12449 │ 63345002  2019-12-31      -0.7     12.9      6.53       0.2      0.0
+</span><span class="sgr36">                                                3 columns and 12434 rows omitted</span></span></code></pre><h2 id="Fitting"><a class="docs-heading-anchor" href="#Fitting">Fitting</a><a id="Fitting-1"></a><a class="docs-heading-anchor-permalink" href="#Fitting" title="Permalink"></a></h2><p>We now fit the observed weather variables to seasonal models w.r.t. the hidden variables i.e. the models we fit depend continuously on the day of the year <span>$t\in [1,366]$</span> and on the provided hidden state <span>$Z \in [1,K]$</span>.</p><h3 id="Rain-Occurrences"><a class="docs-heading-anchor" href="#Rain-Occurrences">Rain Occurrences</a><a id="Rain-Occurrences-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-Occurrences" title="Permalink"></a></h3><p>Fit the Rain Occurrences of INRAE stations with respect to the given hidden states sequence. These distributions are then cast into the HMM emission distribution. The pre-trained transitons matrices Qₜ are kept the same. We could have added these new emission distributions to the existing one, however here we focus only on these four stations.</p><pre><code class="language-julia hljs">θ = zeros(K, D, memory_order, 2degree + 1)
+B = Array{Bernoulli}(undef, K, T, D, memory_order)
+@time &quot;Fit RO&quot; for (j, df) in enumerate(data_stations)
+    B[:, :, j, :], θ[:, j, :, :] = fit_mle_RO(df, local_order, degree)
+end
+θy_fit = θ # hmm_infos[&quot;Y_param&quot;] for old stations
+a = zeros(K)
+a[data_stations[1].z[1]] = 1.0 # Initial state of the HMM
+hmm_fit = ARPeriodicHMM(a, hmm_fit_full.A, B)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">SmoothPeriodicStatsModels.ARPeriodicHMM{Distributions.Univariate, Float64}([1.0, 0.0, 0.0, 0.0], [0.5868668408509812 0.1928671335564493 0.1728993870030119 0.04736663858955861; 0.2759747892671464 0.47223401924815467 0.07708716933222808 0.17470402215247183; 0.187948329462601 0.12398289094198754 0.5045183073052163 0.18355047229019597; 0.04680120291057109 0.17755340771993994 0.08096831926778915 0.6946770701017008;;; 0.5877868257054009 0.192346082428482 0.17265160721034872 0.047215484655769316; 0.27614582817519057 0.47199154006639293 0.07719938382773726 0.1746632479306802; 0.18768201944730117 0.12367549023220752 0.5050775685942597 0.18356492172623254; 0.04703227662607278 0.17759850455797724 0.08098486902169834 0.6943843497942526;;; 0.588687334110266 0.19184574757091322 0.1724003270670773 0.04706659125174435; 0.27629965819803287 0.4717560982602373 0.07731156187483461 0.1746326816668962; 0.18740794640599145 0.12337190380144439 0.505628497003659 0.18359165278890618; 0.04726201156082907 0.17764228564631737 0.08100458503703693 0.6940911177558174;;; … ;;; 0.5839921989904202 0.19455414319423273 0.17362038371320762 0.047833274102140395; 0.27535913873142914 0.47300281386360016 0.07675060216888376 0.17488744523608782; 0.188699535805957 0.12492728775469049 0.5027923864386505 0.1835807900007029; 0.04610091658231205 0.17741031767869334 0.0809376713266969 0.6955510944122987;;; 0.5849693064578099 0.19397121054366476 0.17338390952214508 0.04767557347638104; 0.2755813657879408 0.47273974707664584 0.0768627494996778 0.1748161376357365; 0.18845719968619065 0.12460886060789388 0.5033755292708652 0.18355841043505128; 0.04633542670923726 0.17745930425127265 0.08094472055041403 0.695260548489077;;; 0.5859275947419507 0.19340885803908928 0.1731435325048414 0.04752001471411957; 0.2757866100161351 0.472483451196788 0.07697494813874503 0.17475499064833283; 0.1882067606501394 0.12429403773349128 0.5039508986927349 0.18354830292363522; 0.04656888744404105 0.1775070043635047 0.08095493640348844 0.6949691717889667], Distributions.Bernoulli[Distributions.Bernoulli{Float64}(p=0.9114349905656545) Distributions.Bernoulli{Float64}(p=0.9112922227762373) … Distributions.Bernoulli{Float64}(p=0.9116527083444091) Distributions.Bernoulli{Float64}(p=0.9115551366640436); Distributions.Bernoulli{Float64}(p=0.5303550953788534) Distributions.Bernoulli{Float64}(p=0.5297718795388718) … Distributions.Bernoulli{Float64}(p=0.531453610503336) Distributions.Bernoulli{Float64}(p=0.5309157247945008); Distributions.Bernoulli{Float64}(p=0.3759328543838933) Distributions.Bernoulli{Float64}(p=0.3752646381095858) … Distributions.Bernoulli{Float64}(p=0.37715296876738574) Distributions.Bernoulli{Float64}(p=0.3765623864448382); Distributions.Bernoulli{Float64}(p=0.15100146048415572) Distributions.Bernoulli{Float64}(p=0.1505457512469645) … Distributions.Bernoulli{Float64}(p=0.15182716935111723) Distributions.Bernoulli{Float64}(p=0.1514287102290464);;; Distributions.Bernoulli{Float64}(p=0.7800442659210688) Distributions.Bernoulli{Float64}(p=0.7797646619945506) … Distributions.Bernoulli{Float64}(p=0.7805789168842295) Distributions.Bernoulli{Float64}(p=0.7803157038345774); Distributions.Bernoulli{Float64}(p=0.6790258003793276) Distributions.Bernoulli{Float64}(p=0.678877149512602) … Distributions.Bernoulli{Float64}(p=0.679280530240206) Distributions.Bernoulli{Float64}(p=0.6791602707062911); Distributions.Bernoulli{Float64}(p=0.1304367921685503) Distributions.Bernoulli{Float64}(p=0.12967758806682217) … Distributions.Bernoulli{Float64}(p=0.13196995314982773) Distributions.Bernoulli{Float64}(p=0.13120097985325627); Distributions.Bernoulli{Float64}(p=0.12576150835485392) Distributions.Bernoulli{Float64}(p=0.12452859087713151) … Distributions.Bernoulli{Float64}(p=0.12822440436803237) Distributions.Bernoulli{Float64}(p=0.1269936446145172);;; Distributions.Bernoulli{Float64}(p=0.7726526902118604) Distributions.Bernoulli{Float64}(p=0.7730694552252773) … Distributions.Bernoulli{Float64}(p=0.7717979836228935) Distributions.Bernoulli{Float64}(p=0.7722288331823005); Distributions.Bernoulli{Float64}(p=0.30703958620094723) Distributions.Bernoulli{Float64}(p=0.30616316971985086) … Distributions.Bernoulli{Float64}(p=0.30881795687334856) Distributions.Bernoulli{Float64}(p=0.30792459231123015); Distributions.Bernoulli{Float64}(p=0.5580165648042019) Distributions.Bernoulli{Float64}(p=0.558503754086631) … Distributions.Bernoulli{Float64}(p=0.5569999337015598) Distributions.Bernoulli{Float64}(p=0.5575152450375114); Distributions.Bernoulli{Float64}(p=0.18581502417222773) Distributions.Bernoulli{Float64}(p=0.18515837773862875) … Distributions.Bernoulli{Float64}(p=0.1871290801233476) Distributions.Bernoulli{Float64}(p=0.1864719933970075);;; Distributions.Bernoulli{Float64}(p=0.6991690180326523) Distributions.Bernoulli{Float64}(p=0.6994675898266853) … Distributions.Bernoulli{Float64}(p=0.6987069677180473) Distributions.Bernoulli{Float64}(p=0.698915430708985); Distributions.Bernoulli{Float64}(p=0.36109654815637093) Distributions.Bernoulli{Float64}(p=0.3611277721431516) … Distributions.Bernoulli{Float64}(p=0.36108008370248895) Distributions.Bernoulli{Float64}(p=0.36108065074119566); Distributions.Bernoulli{Float64}(p=0.3181915765477496) Distributions.Bernoulli{Float64}(p=0.3189970961118282) … Distributions.Bernoulli{Float64}(p=0.3166809462714016) Distributions.Bernoulli{Float64}(p=0.31741949192055735); Distributions.Bernoulli{Float64}(p=0.07318304065257011) Distributions.Bernoulli{Float64}(p=0.07275954854020077) … Distributions.Bernoulli{Float64}(p=0.07406022588364866) Distributions.Bernoulli{Float64}(p=0.07361659694920993);;;; Distributions.Bernoulli{Float64}(p=0.8749201681312516) Distributions.Bernoulli{Float64}(p=0.8751807114132103) … Distributions.Bernoulli{Float64}(p=0.8743658445953179) Distributions.Bernoulli{Float64}(p=0.8746485390124702); Distributions.Bernoulli{Float64}(p=0.6318069097739621) Distributions.Bernoulli{Float64}(p=0.6316468839407342) … Distributions.Bernoulli{Float64}(p=0.63209218401333) Distributions.Bernoulli{Float64}(p=0.6319553557741113); Distributions.Bernoulli{Float64}(p=0.47614525021227294) Distributions.Bernoulli{Float64}(p=0.47655165249760256) … Distributions.Bernoulli{Float64}(p=0.4752788885564046) Distributions.Bernoulli{Float64}(p=0.47572095221794075); Distributions.Bernoulli{Float64}(p=0.2138403985769788) Distributions.Bernoulli{Float64}(p=0.21349321209196448) … Distributions.Bernoulli{Float64}(p=0.21449754193357112) Distributions.Bernoulli{Float64}(p=0.2141752226754711);;; Distributions.Bernoulli{Float64}(p=0.8855381689637662) Distributions.Bernoulli{Float64}(p=0.8855994326828246) … Distributions.Bernoulli{Float64}(p=0.8853789246502635) Distributions.Bernoulli{Float64}(p=0.8854646658878261); Distributions.Bernoulli{Float64}(p=0.7262791925442851) Distributions.Bernoulli{Float64}(p=0.7262049366779089) … Distributions.Bernoulli{Float64}(p=0.7264231979776209) Distributions.Bernoulli{Float64}(p=0.7263519532117009); Distributions.Bernoulli{Float64}(p=0.2813410920433409) Distributions.Bernoulli{Float64}(p=0.2817276962593952) … Distributions.Bernoulli{Float64}(p=0.2805729977664643) Distributions.Bernoulli{Float64}(p=0.28095615580149214); Distributions.Bernoulli{Float64}(p=0.21281685123594582) Distributions.Bernoulli{Float64}(p=0.21226880534077966) … Distributions.Bernoulli{Float64}(p=0.21391349246218255) Distributions.Bernoulli{Float64}(p=0.21336513578697588);;; Distributions.Bernoulli{Float64}(p=0.870567218510227) Distributions.Bernoulli{Float64}(p=0.8708100922012092) … Distributions.Bernoulli{Float64}(p=0.8700674604087172) Distributions.Bernoulli{Float64}(p=0.8703196573151201); Distributions.Bernoulli{Float64}(p=0.6167401331750285) Distributions.Bernoulli{Float64}(p=0.6169445406220616) … Distributions.Bernoulli{Float64}(p=0.6163013392463161) Distributions.Bernoulli{Float64}(p=0.6165257137308044); Distributions.Bernoulli{Float64}(p=0.7507401976118325) Distributions.Bernoulli{Float64}(p=0.7517108100822073) … Distributions.Bernoulli{Float64}(p=0.7487418021915991) Distributions.Bernoulli{Float64}(p=0.749750473330656); Distributions.Bernoulli{Float64}(p=0.3351287130156477) Distributions.Bernoulli{Float64}(p=0.3357203475273395) … Distributions.Bernoulli{Float64}(p=0.3339011660201009) Distributions.Bernoulli{Float64}(p=0.3345222453661863);;; Distributions.Bernoulli{Float64}(p=0.8953214479977459) Distributions.Bernoulli{Float64}(p=0.8955404277662539) … Distributions.Bernoulli{Float64}(p=0.8948863178617229) Distributions.Bernoulli{Float64}(p=0.8951033876229403); Distributions.Bernoulli{Float64}(p=0.5917565119637603) Distributions.Bernoulli{Float64}(p=0.591876379493273) … Distributions.Bernoulli{Float64}(p=0.5915356844996875) Distributions.Bernoulli{Float64}(p=0.5916429352602304); Distributions.Bernoulli{Float64}(p=0.6153019573600416) Distributions.Bernoulli{Float64}(p=0.6157963173846315) … Distributions.Bernoulli{Float64}(p=0.6143520886637719) Distributions.Bernoulli{Float64}(p=0.6148204940328377); Distributions.Bernoulli{Float64}(p=0.3562513096573049) Distributions.Bernoulli{Float64}(p=0.3555951583400004) … Distributions.Bernoulli{Float64}(p=0.3575286519958104) Distributions.Bernoulli{Float64}(p=0.35689588133965017)])</code></pre><h3 id="Rain-Amounts"><a class="docs-heading-anchor" href="#Rain-Amounts">Rain Amounts</a><a id="Rain-Amounts-1"></a><a class="docs-heading-anchor-permalink" href="#Rain-Amounts" title="Permalink"></a></h3><p>Here for simplicity we select the double exponential model for the rain amount. We aim for a generic interface where one could easily change this choice to other univariate distribution e.g. <code>mix₀ = MixtureModel([Exponential(1), Gamma(1,2)], [1/2,1/2])</code> or <code>mix₀ = Pareto(1)</code>. For now this is not supported (because of the seasonal fit).</p><pre><code class="language-julia hljs">@time &quot;Fit Rain amounts&quot; mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Fit Rain amounts: 49.681852 seconds (249.07 M allocations: 22.931 GiB, 6.32% gc time, 12.18% compilation time: &lt;1% of which was recompilation)</code></pre><p>The Gaussian copula covariance matrices are then estimated.</p><pre><code class="language-julia hljs">Σ²RR = cov_RR(data_stations, K)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Matrix{Float64}}:
+ [31.76415957843173 6.844726152914493 5.566374230877233 5.894147720497379; 6.844726152914493 30.671740091699586 1.6051317713619329 4.122138695924489; 5.566374230877233 1.6051317713619329 133.83512052388917 11.38371098788533; 5.894147720497379 4.122138695924489 11.38371098788533 60.84843886399006]
+ [18.814522481337494 4.499677821682111 3.218040160985254 3.6981648899561517; 4.499677821682111 21.924109242248473 -0.5112451865357651 3.29411091932108; 3.218040160985254 -0.5112451865357651 57.20484223034485 7.0741224740724675; 3.6981648899561517 3.29411091932108 7.0741224740724675 28.4748198971268]
+ [22.526397523231637 0.11751293460188918 3.8806035837705375 6.103057015755162; 0.11751293460188918 10.383559603648603 -0.03334966631737586 -1.2943160782297487; 3.8806035837705375 -0.03334966631737586 125.2955119008292 9.147986986520573; 6.103057015755162 -1.2943160782297487 9.147986986520573 47.19469913508749]
+ [17.71913430653424 1.3398724527144155 9.253376683896645 5.046150952980411; 1.3398724527144155 14.265975889201796 -0.3526574216776574 1.162605150714381; 9.253376683896645 -0.3526574216776574 42.60506798496414 3.0376039948202553; 5.046150952980411 1.162605150714381 3.0376039948202553 21.463744546532258]</code></pre><h3 id="Temperature"><a class="docs-heading-anchor" href="#Temperature">Temperature</a><a id="Temperature-1"></a><a class="docs-heading-anchor-permalink" href="#Temperature" title="Permalink"></a></h3><p>We first fit the daily maximal temperature (we could have started with minimal temperatures). We use the same principle as for <code>RR</code> i.e. first fit each univariate distribution and then the copula.</p><h4 id="Temperature-Max"><a class="docs-heading-anchor" href="#Temperature-Max">Temperature Max</a><a id="Temperature-Max-1"></a><a class="docs-heading-anchor-permalink" href="#Temperature-Max" title="Permalink"></a></h4><pre><code class="language-julia hljs">@time &quot;Fit TX&quot; ar1sTX = fit_AR1.(data_stations, :TX, degree)
+Σ²TX = cov_ar1(data_stations, ar1sTX, :TX)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Matrix{Float64}}:
+ [0.9734492960626859 0.9088263527797048 0.7512396297213331 0.736871432126974; 0.9088263527797048 0.933801684912108 0.661682831481654 0.7133204422045198; 0.7512396297213331 0.661682831481654 0.606779453845207 0.5543809286933857; 0.736871432126974 0.7133204422045198 0.5543809286933857 0.5747770257017922]
+ [0.9681534836532066 0.9255394453442793 0.7682632586198843 0.6966057633142798; 0.9255394453442793 0.9073092315973019 0.7078278148395432 0.6856275091055775; 0.7682632586198843 0.7078278148395432 0.6494675049440323 0.5330859233911215; 0.6966057633142798 0.6856275091055775 0.5330859233911215 0.5251315387620278]
+ [0.991656860471339 1.0286449977971168 0.8380972089080905 0.7554770426011381; 1.0286449977971168 1.0795832666032297 0.870028075571526 0.7842843563337052; 0.8380972089080905 0.870028075571526 0.8405559690908149 0.7146659734476936; 0.7554770426011381 0.7842843563337052 0.7146659734476936 0.6294793610747098]
+ [1.0010212957320863 1.003583031214807 0.7917838135602174 0.7596658530140675; 1.003583031214807 1.0209045986058716 0.808431211641072 0.767719911807825; 0.7917838135602174 0.808431211641072 0.6624416461850272 0.6171847440192805; 0.7596658530140675 0.767719911807825 0.6171847440192805 0.6196734998261336]</code></pre><h4 id="Minimal-Temperature"><a class="docs-heading-anchor" href="#Minimal-Temperature">Minimal Temperature</a><a id="Minimal-Temperature-1"></a><a class="docs-heading-anchor-permalink" href="#Minimal-Temperature" title="Permalink"></a></h4><p>To directly fit the <code>TN</code> one could do the following</p><pre><code class="language-julia hljs">ar1sTN = fit_AR1.(data_stations, :TN, degree)
+Σ²TN = cov_ar1(dropmissing.(data_stations), ar1sTN, :TN)</code></pre><p>However this produce <code>TN</code> independantly of <code>TX</code> (and we can have <code>TN&gt;TX</code>). To prevent that we fit the positive difference <code>ΔT = TX-TN</code> with a Gamma distribution. We will then simulate the <code>TN</code> conditionally to the <code>TX</code></p><pre><code class="language-julia hljs">@time &quot;Fit TN residuals&quot; θ_ΔT = fit_TN.(data_stations, 1, T; print_level=0) # 1 is the degree
+θ_cor = cor_groupbyTXTN.(data_stations, T)
+f(θ) = Gamma(θ[1], θ[2]) # other options e.g. MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
+f(t, θ) = f([σₜ(t, θ[1:(2+1)]), σₜ(t, θ[(2+2):end])])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">f (generic function with 2 methods)</code></pre><h3 id="Solar-Irradiance-(QQ)"><a class="docs-heading-anchor" href="#Solar-Irradiance-(QQ)">Solar Irradiance (QQ)</a><a id="Solar-Irradiance-(QQ)-1"></a><a class="docs-heading-anchor-permalink" href="#Solar-Irradiance-(QQ)" title="Permalink"></a></h3><p><code>QQ</code> must be positive, we will truncate at simulation time negative instances.</p><pre><code class="language-julia hljs">@time &quot;Fit QQ&quot; ar1sQQ = fit_AR1.(data_stations, :QQ, degree)
+Σ²QQ = cov_ar1(dropmissing.(data_stations), ar1sQQ, :QQ)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Matrix{Float64}}:
+ [0.9735613898067461 1.1029355193846306 0.814648884912151 0.9025672376967814; 1.1029355193846306 1.305225934873927 0.9060038459791245 1.0074785955906629; 0.814648884912151 0.9060038459791245 0.7008343359057471 0.7752971343567613; 0.9025672376967814 1.0074785955906629 0.7752971343567613 0.8858298601200435]
+ [0.981504445223468 1.073677113167918 0.8687252007004189 0.9197330221334017; 1.073677113167918 1.218351425886187 0.9141419674317055 0.9807740739861867; 0.8687252007004189 0.9141419674317055 0.8095775631892538 0.8488618691933953; 0.9197330221334017 0.9807740739861867 0.8488618691933953 0.9000030967163165]
+ [0.9738802939529032 1.1130761587867382 0.8789283476900667 0.8893323206430374; 1.1130761587867382 1.3140896483701416 0.982708443862374 1.0100904237182031; 0.8789283476900667 0.982708443862374 0.8830876567737447 0.8806116916739374; 0.8893323206430374 1.0100904237182031 0.8806116916739374 0.894197436332702]
+ [0.9671506438805116 0.9364348356078387 0.8157114299248541 0.7802365615724078; 0.9364348356078387 0.9407785777896013 0.7911515784805272 0.7683093116416554; 0.8157114299248541 0.7911515784805272 0.7736155734508874 0.7083813255465897; 0.7802365615724078 0.7683093116416554 0.7083813255465897 0.670721249798178]</code></pre><h3 id="Evapotranspiration-Penman-(ETPP)"><a class="docs-heading-anchor" href="#Evapotranspiration-Penman-(ETPP)">Evapotranspiration Penman (ETPP)</a><a id="Evapotranspiration-Penman-(ETPP)-1"></a><a class="docs-heading-anchor-permalink" href="#Evapotranspiration-Penman-(ETPP)" title="Permalink"></a></h3><p><code>ETPP</code> must be positive, we will truncate at simulation time negative instances.</p><pre><code class="language-julia hljs">@time &quot;Fit ETPP&quot; ar1sETPP = fit_AR1.(data_stations, :ETPP, degree)
+Σ²ETPP = cov_ar1(dropmissing.(data_stations), ar1sETPP, :ETPP)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Matrix{Float64}}:
+ [0.9478427476558838 0.9447369158652795 0.8427423734682039 0.8692905240091324; 0.9447369158652795 0.9728115210519872 0.8310547639257787 0.8603216721396257; 0.8427423734682039 0.8310547639257787 0.80096586386207 0.8165236524118246; 0.8692905240091324 0.8603216721396257 0.8165236524118246 0.8456995674372729]
+ [0.9740984494523715 0.8545353116107742 0.9809628778627023 0.9211740262500745; 0.8545353116107742 0.7827166998025054 0.8654739483361198 0.8457217575730882; 0.9809628778627023 0.8654739483361198 1.0223346266051496 0.9409708482499695; 0.9211740262500745 0.8457217575730882 0.9409708482499695 0.9323982375888193]
+ [0.9833026543073872 0.9477149584375228 0.8672595548121652 0.920012070035954; 0.9477149584375228 0.9576105459162413 0.84112815349153 0.9089411028313419; 0.8672595548121652 0.84112815349153 1.0062338409833154 0.9806980180951468; 0.920012070035954 0.9089411028313419 0.9806980180951468 1.0077467983137338]
+ [1.000683353043992 0.9207526012694283 0.8873198655981687 0.9379518232084835; 0.9207526012694283 0.8565900281404355 0.827276194246968 0.8759653645923384; 0.8873198655981687 0.827276194246968 0.9685438651404111 0.9152931194494438; 0.9379518232084835 0.8759653645923384 0.9152931194494438 0.9335307717402674]</code></pre><h2 id="Simulation"><a class="docs-heading-anchor" href="#Simulation">Simulation</a><a id="Simulation-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation" title="Permalink"></a></h2><h3 id="Initial-conditions"><a class="docs-heading-anchor" href="#Initial-conditions">Initial conditions</a><a id="Initial-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-conditions" title="Permalink"></a></h3><pre><code class="language-julia hljs">y_ini = [@subset(df, :DATE .== Date(2000) - Day(1)).RO[1] for df in data_stations]&#39;
+tx_ini = [@subset(df, :DATE .== Date(2000)).TX[1] for df in data_stations]
+z_ini = @subset(data_stations[1], :DATE .== Date(2000)).z[1]
+
+tn_ini = [@subset(df, :DATE .== Date(2000)).TN[1] for df in data_stations]
+qq_ini = [@subset(df, :DATE .== Date(2000)).QQ[1] for df in data_stations]
+et_ini = [@subset(df, :DATE .== Date(2000)).ETPP[1] for df in data_stations]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Float64}:
+ 0.1
+ 0.0
+ 0.3
+ 0.0</code></pre><h3 id="Generation"><a class="docs-heading-anchor" href="#Generation">Generation</a><a id="Generation-1"></a><a class="docs-heading-anchor-permalink" href="#Generation" title="Permalink"></a></h3><pre><code class="language-julia hljs">indicatrix(x) = x &gt; zero(x) ? x : zero(x) # used to manually suppress negative `QQ` and `ETPP`
+
+Random.seed!(50000)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Random.TaskLocalRNG()</code></pre><pre><code class="language-julia hljs">NSIMU = 1000
+NYEAR = 34
+
+year_start = 1986
+date_range = Date(year_start):Day(1):Date(year_start + NYEAR - 1, 12, 31)
+n2t = dayofyear_Leap.(date_range)
+years = unique(year.(date_range))
+N = length(n2t)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">12418</code></pre><pre><code class="language-julia hljs">@time &quot;Total simulation $NSIMU of $NYEAR years&quot; begin
+    zs = zeros(Int, N, NSIMU)
+    ys = zeros(Bool, N, D, NSIMU)
+    rs = zeros(D, N, NSIMU)
+    txs = zeros(D, N, NSIMU)
+    ϵ_TX = zeros(D, N, NSIMU)
+    ΔTs = zeros(D, N, NSIMU)
+    qqs = zeros(D, N, NSIMU)
+    ets = zeros(D, N, NSIMU)
+
+    @time &quot;HMM&quot; for i in 1:NSIMU
+        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=y_ini, z_ini=z_ini, seq=true)
+    end
+    @time &quot;Rain&quot; for i in 1:NSIMU
+        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]&#39;, Σ²RR)
+    end
+    @time &quot;T_max&quot; for i in 1:NSIMU
+        txs[:, :, i], ϵ_TX[:, :, i] = rand(ar1sTX, n2t, zs[:, i], Σ²TX; y₁=tx_ini, output_ϵ=true)
+    end
+
+    @time &quot;T_min&quot; for i in 1:NSIMU
+        ΔTs[:, :, i] = reduce(hcat, [rand_cond(ϵ_TX[j, :, i], zs[:, i], θ_ΔT[j], θ_cor[j], n2t, T) for j in 1:D]) |&gt; permutedims
+    end
+    tns = txs - ΔTs #rand(ar1sTN, n2t, zs, Σ²TN; y₁=tn_ini)
+    @time &quot;Solar Radiation&quot; for i in 1:NSIMU
+        qqs[:, :, i] = indicatrix.(rand(ar1sQQ, n2t, zs[:, i], Σ²QQ; y₁=qq_ini))
+    end
+    @time &quot;Evapotranspiration&quot; for i in 1:NSIMU
+        ets[:, :, i] = indicatrix.(rand(ar1sETPP, n2t, zs[:, i], Σ²ETPP, y₁=et_ini))
+    end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">HMM: 51.818765 seconds (500.34 M allocations: 19.194 GiB, 5.18% gc time, 2.09% compilation time)
+Rain: 49.341410 seconds (198.09 M allocations: 9.429 GiB, 2.02% gc time, 2.84% compilation time)
+T_max: 9.423351 seconds (51.66 M allocations: 5.843 GiB, 4.91% gc time, 10.48% compilation time)
+T_min: 88.477112 seconds (1.01 G allocations: 52.604 GiB, 6.29% gc time, 0.75% compilation time)
+Solar Radiation: 8.592806 seconds (49.95 M allocations: 6.126 GiB, 4.85% gc time, 0.73% compilation time)
+Evapotranspiration: 8.525698 seconds (49.79 M allocations: 6.117 GiB, 4.55% gc time)
+Total simulation 1000 of 34 years: 217.478331 seconds (1.86 G allocations: 102.067 GiB, 5.09% gc time, 2.09% compilation time)</code></pre><h3 id="Results"><a class="docs-heading-anchor" href="#Results">Results</a><a id="Results-1"></a><a class="docs-heading-anchor-permalink" href="#Results" title="Permalink"></a></h3><p>Cast the results into <code>NSIMU = 1000</code> <span>$\times$</span> <code>D=4</code> <code>DataFrame</code>s of <code>NYEAR = 34</code> years each, with columns <code>[:DATE, :RR, :RN, :TX, :QQ, :ETPP, :STAID]</code> where <code>STAID</code> is the unique station identifier. Also cast everything into a <code>Dict</code> for convenience.</p><pre><code class="language-julia hljs">dicts_simu = Dict(:RR =&gt; rs, :TN =&gt; tns, :TX =&gt; txs, :QQ =&gt; qqs, :ETPP =&gt; ets)
+dfs_simu = [[DataFrame(:DATE =&gt; date_range, :RR =&gt; rs[j, :, i], :TN =&gt; tns[j, :, i], :TX =&gt; txs[j, :, i], :QQ =&gt; qqs[j, :, i], :ETPP =&gt; ets[j, :, i], :STAID =&gt; fill(data_stations[j].STAID[1], length(n2t))) for j in 1:D] for i in 1:NSIMU];</code></pre><p>To save the data frames you can do something like</p><pre><code class="language-julia hljs">map(enumerate(station_dep)) do (i,dep)
+    CSV.write(joinpath(save_tuto_path,&quot;swg_simu_station_dep_$(dep)_years_$(length(years)).csv&quot;), dfs_simu[i])
+end</code></pre><h2 id="Plots"><a class="docs-heading-anchor" href="#Plots">Plots</a><a id="Plots-1"></a><a class="docs-heading-anchor-permalink" href="#Plots" title="Permalink"></a></h2><h3 id="Settings-for-plotting"><a class="docs-heading-anchor" href="#Settings-for-plotting">Settings for plotting</a><a id="Settings-for-plotting-1"></a><a class="docs-heading-anchor-permalink" href="#Settings-for-plotting" title="Permalink"></a></h3><p>Some settings and packages to have nice plots.</p><pre><code class="language-julia hljs">using StatsPlots, LaTeXStrings
+using StatsPlots.PlotMeasures # To play with margin in Plots
+
+gr() # plotly() # for interactive plots
+default(fontfamily=&quot;Computer Modern&quot;)
+cur_colors = get_color_palette(:auto, 100);
+my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
+
+file_for_plot_utilities = download(&quot;https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_plot.jl&quot;)
+include(file_for_plot_utilities)
+vars = [:RR, :TN, :TX, :QQ, :ETPP]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">5-element Vector{Symbol}:
+ :RR
+ :TN
+ :TX
+ :QQ
+ :ETPP</code></pre><h3 id="Plot-correlations"><a class="docs-heading-anchor" href="#Plot-correlations">Plot correlations</a><a id="Plot-correlations-1"></a><a class="docs-heading-anchor-permalink" href="#Plot-correlations" title="Permalink"></a></h3><h4 id="Multisite-Correlation-for-each-variables"><a class="docs-heading-anchor" href="#Multisite-Correlation-for-each-variables">Multisite Correlation for each variables</a><a id="Multisite-Correlation-for-each-variables-1"></a><a class="docs-heading-anchor-permalink" href="#Multisite-Correlation-for-each-variables" title="Permalink"></a></h4><pre><code class="language-julia hljs">@time begin
+    plt_cor_mutlisite = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16) for i in 1:length(vars)]
+    for (i, vari) in enumerate(vars)
+        annotate!(plt_cor_mutlisite[i], 0.5, 1.15, (&quot;$(string(vari))&quot;, 16))
+        X = dicts_simu[vari]
+        for station_1 in 1:D-1
+            @views X₁ = X[station_1, :, :]
+            for station_2 in station_1+1:D
+                df1 = dropmissing(innerjoin(data_stations[station_1], data_stations[station_2], on=:DATE, makeunique=true))
+                @views X₂ = X[station_2, :, :]
+                @views mean_cor = mean(cor(X₁[:, r], X₂[:, r]) for r in 1:NSIMU)
+                arr = ([cor(df1[:, vari], df1[:, Symbol(string(vari, &quot;_1&quot;))])], [mean_cor])
+                scatter!(plt_cor_mutlisite[i], arr, label=ifelse(i == 2, &quot;$(station_dep[station_1]) vs $(station_dep[station_2])&quot;, :none), markersize=6)
+            end
+        end
+        xlabel!(&quot;Observation&quot;)
+        i ∈ [1, 4] ? ylabel!(&quot;Simulation&quot;) : nothing
+    end
+    plt_cor_mutlisites = plot(plt_cor_mutlisite..., size=(1000, 1000), layout=(3, 3), top_margin=7px)
+end</code></pre><img src="269ed3f5.svg" alt="Example block output"/><h4 id="Correlations-between-weather-variables-at-each-sites."><a class="docs-heading-anchor" href="#Correlations-between-weather-variables-at-each-sites.">Correlations between weather variables at each sites.</a><a id="Correlations-between-weather-variables-at-each-sites.-1"></a><a class="docs-heading-anchor-permalink" href="#Correlations-between-weather-variables-at-each-sites." title="Permalink"></a></h4><pre><code class="language-julia hljs">markers = filter((m -&gt; begin
+        m in Plots.supported_markers()
+    end), Plots._shape_keys)
+
+begin
+    plt_var = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=1, tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16) for j in 1:D]
+    for station_1 in 1:D
+        title!(plt_var[station_1], &quot;$(station_ndep[station_1])&quot;)
+        for (i, var_1) in enumerate(vars)
+            for j in (i+1):length(vars)
+                var_2 = vars[j]
+                df1 = dropmissing(data_stations[station_1])
+                @views mean_cor = mean(cor(dicts_simu[var_1][station_1, :, r], dicts_simu[var_2][station_1, :, r]) for r in 1:NSIMU)
+                scatter!(plt_var[station_1], [cor(df1[:, var_1], df1[:, var_2])], [mean_cor], label=ifelse(station_1 == 1, &quot;$var_1 vs $var_2&quot;, :none), m=markers[i], ms=8)
+            end
+        end
+    end
+    plt_vars = plot(plt_var..., size=(1000, 1000))
+end</code></pre><img src="6284c820.svg" alt="Example block output"/><h3 id="Univariate-distributions"><a class="docs-heading-anchor" href="#Univariate-distributions">Univariate distributions</a><a id="Univariate-distributions-1"></a><a class="docs-heading-anchor-permalink" href="#Univariate-distributions" title="Permalink"></a></h3><h4 id="Marginal-Distributions"><a class="docs-heading-anchor" href="#Marginal-Distributions">Marginal Distributions</a><a id="Marginal-Distributions-1"></a><a class="docs-heading-anchor-permalink" href="#Marginal-Distributions" title="Permalink"></a></h4><pre><code class="language-julia hljs">begin
+    plt_dist_univ = Dict()
+    plts_dist_univ = Dict()
+    xlabel_string = Dict(:RR =&gt; L&quot;Rain ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)&quot;, :TX =&gt; L&quot;$T_{\mathrm{max}}$ (°C)&quot;, :TN =&gt; L&quot;$T_{\mathrm{min}}$ (°C)&quot;, :QQ =&gt; L&quot;Solar irradiance (MJ/$\mathrm{m}^2$)&quot;, :ETPP =&gt; L&quot;Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)&quot;)
+    for XX in vars
+        plt_dist_univ[XX] = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16) for j = 1:D]
+        for (j, df) in enumerate(data_stations)
+            dist_j = XX == :RR ? [filter(!iszero, x) for x in eachcol(dicts_simu[XX][j, :, :])] : [x for x in eachcol(dicts_simu[XX][j, :, :])] # RR&gt;0
+
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L&quot;Simu $q_{0,100}$&quot;), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
+
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L&quot;Simu $q_{25,75}$&quot;), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+
+            dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR&gt;0
+
+            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], &quot;Obs&quot;), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
+            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis = :log10) : nothing
+            XX == :RR &amp;&amp; j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis = :log10) : nothing # some simulated RR are super extreme and messing with the xaxis
+        end
+        [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
+        [ylabel!(plt_dist_univ[XX][j], &quot;PDF&quot;) for j in [1, 3]]
+station_ndep
+        [title!(plt_dist_univ[XX][j], station_ndep[j]) for j = 1:D]
+
+        plts_dist_univ[XX] = plot(plt_dist_univ[XX]..., size=(1000, 700), bottom_margin=11px, left_margin=15px)
+    end
+end</code></pre><h5 id="Rainfall-RR"><a class="docs-heading-anchor" href="#Rainfall-RR">Rainfall <code>RR</code></a><a id="Rainfall-RR-1"></a><a class="docs-heading-anchor-permalink" href="#Rainfall-RR" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_dist_univ[:RR]</code></pre><img src="9eee8b71.svg" alt="Example block output"/><h5 id="Temperature-max-TX"><a class="docs-heading-anchor" href="#Temperature-max-TX">Temperature max <code>TX</code></a><a id="Temperature-max-TX-1"></a><a class="docs-heading-anchor-permalink" href="#Temperature-max-TX" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_dist_univ[:TX]</code></pre><img src="5d9fb16a.svg" alt="Example block output"/><h5 id="Temperature-min-TN"><a class="docs-heading-anchor" href="#Temperature-min-TN">Temperature min <code>TN</code></a><a id="Temperature-min-TN-1"></a><a class="docs-heading-anchor-permalink" href="#Temperature-min-TN" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_dist_univ[:TN]</code></pre><img src="e627009e.svg" alt="Example block output"/><h5 id="Solar-irradiance-QQ"><a class="docs-heading-anchor" href="#Solar-irradiance-QQ">Solar irradiance <code>QQ</code></a><a id="Solar-irradiance-QQ-1"></a><a class="docs-heading-anchor-permalink" href="#Solar-irradiance-QQ" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_dist_univ[:QQ]</code></pre><img src="b7d34da9.svg" alt="Example block output"/><h5 id="Evapotranspiration-ETPP"><a class="docs-heading-anchor" href="#Evapotranspiration-ETPP">Evapotranspiration <code>ETPP</code></a><a id="Evapotranspiration-ETPP-1"></a><a class="docs-heading-anchor-permalink" href="#Evapotranspiration-ETPP" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_dist_univ[:ETPP]</code></pre><img src="2a02bda8.svg" alt="Example block output"/><h4 id="Monthly-statistics"><a class="docs-heading-anchor" href="#Monthly-statistics">Monthly statistics</a><a id="Monthly-statistics-1"></a><a class="docs-heading-anchor-permalink" href="#Monthly-statistics" title="Permalink"></a></h4><pre><code class="language-julia hljs">year_range = unique(year.(date_range))
+idx_year = [findall(x -&gt; year.(x) == m, date_range) for m in year_range]
+idx_month = [findall(x -&gt; month.(x) == m, date_range) for m in 1:12]
+idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
+agg_fun(XX) = ifelse(XX == :RR, sum, mean)
+month_rain_simu = Dict(key =&gt; [monthly_agg(xx[j, :, i], idx_all, agg_fun(key)) for j in 1:D, i in 1:NSIMU] for (key, xx) in dicts_simu)
+month_rain_histo = Dict(key =&gt; [monthly_agg(@subset(df, :DATE .≥ Date(1986)), key, agg_fun(key)) for df in data_stations] for key in vars)
+
+qs = [0.9, 0.5, 0.1]
+
+@time &quot;Plot monthly quantile&quot; begin
+    plt_month = Dict()
+    plts_month = Dict()
+    ylabel_string = Dict(:RR =&gt; L&quot;Cumulated Rain ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)&quot;, :TX =&gt; L&quot;$T_{\mathrm{max}}$ (°C)&quot;, :TN =&gt; L&quot;$T_{\mathrm{min}}$ (°C)&quot;, :QQ =&gt; L&quot;Solar irradiance (MJ/$\mathrm{m}^2$)&quot;, :ETPP =&gt; L&quot;Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)&quot;)
+    for XX in vars
+        plt_month[XX] = [plot(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12, legendfontsize=12, titlefontsize=12, foreground_color_legend=nothing) for j = 1:D]
+        for j = 1:D
+            for (α, per) in enumerate([[0, 100], [25, 75]])
+                for (cc, q) in enumerate(qs)
+                    errorline!(plt_month[XX][j], [quantile(month_rain_simu[XX][j, i][:, m], q) for m in 1:12, i in 1:NSIMU], label=(α == 1 ? islabel(j, 4, L&quot;Simu  $q_{%$(Int(q*100))}$&quot;) : :none), fillalpha=0.18 * α^2, centertype=:median, errortype=:percentile, percentiles=per, groupcolor=my_palette(length(qs))[cc])
+                end
+            end
+            for q in qs
+                scatter!(plt_month[XX][j], m -&gt; quantile(skipmissing(month_rain_histo[XX][j][:, m]), q), 1:12, label=(q == qs[1] ? islabel(j, 3, &quot;Obs&quot;) : :none), legend=:topleft, ms=2.5, c=:blue)
+                plot!(plt_month[XX][j], m -&gt; quantile(skipmissing(month_rain_histo[XX][j][:, m]), q), 1:12, label=:none, c=:blue, lw=1.75)
+            end
+            xticks!(plt_month[XX][j], 1:12, string.(first.(monthabbr.(1:12))))
+            XX == :RR ? ylims!(plt_month[XX][j], 0, Inf) : nothing
+        end
+        [ylabel!(plt_month[XX][j], ylabel_string[XX]) for j in [1, 3]]
+
+        [title!(plt_month[XX][j], station_ndep[j]) for j = 1:D]
+        plts_month[XX] = plot(plt_month[XX]..., size=(1000, 700), left_margin=19px)
+    end
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Plot monthly quantile: 3.645182 seconds (13.35 M allocations: 1.187 GiB, 4.43% gc time, 39.76% compilation time)</code></pre><h5 id="Rainfall-RR-2"><a class="docs-heading-anchor" href="#Rainfall-RR-2">Rainfall <code>RR</code></a><a class="docs-heading-anchor-permalink" href="#Rainfall-RR-2" title="Permalink"></a></h5><pre><code class="language-julia hljs">plot(plts_month[:RR])</code></pre><img src="96cd9b6b.svg" alt="Example block output"/><h5 id="Temperature-max-TX-2"><a class="docs-heading-anchor" href="#Temperature-max-TX-2">Temperature max <code>TX</code></a><a class="docs-heading-anchor-permalink" href="#Temperature-max-TX-2" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_month[:TX]</code></pre><img src="8184e32b.svg" alt="Example block output"/><h5 id="Temperature-min-TN-2"><a class="docs-heading-anchor" href="#Temperature-min-TN-2">Temperature min <code>TN</code></a><a class="docs-heading-anchor-permalink" href="#Temperature-min-TN-2" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_month[:TN]</code></pre><img src="758c6d39.svg" alt="Example block output"/><h5 id="Solar-irradiance-QQ-2"><a class="docs-heading-anchor" href="#Solar-irradiance-QQ-2">Solar irradiance <code>QQ</code></a><a class="docs-heading-anchor-permalink" href="#Solar-irradiance-QQ-2" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_month[:QQ]</code></pre><img src="57dc7507.svg" alt="Example block output"/><h5 id="Evapotranspiration-ETPP-2"><a class="docs-heading-anchor" href="#Evapotranspiration-ETPP-2">Evapotranspiration <code>ETPP</code></a><a class="docs-heading-anchor-permalink" href="#Evapotranspiration-ETPP-2" title="Permalink"></a></h5><pre><code class="language-julia hljs">plts_month[:ETPP]</code></pre><img src="924dbbbc.svg" alt="Example block output"/><h2 id="Reproducibility"><a class="docs-heading-anchor" href="#Reproducibility">Reproducibility</a><a id="Reproducibility-1"></a><a class="docs-heading-anchor-permalink" href="#Reproducibility" title="Permalink"></a></h2><pre><code class="language-julia hljs">using InteractiveUtils
+InteractiveUtils.versioninfo()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Julia Version 1.11.1
+Commit 8f5b7ca12ad (2024-10-16 10:53 UTC)
+Build Info:
+  Official https://julialang.org/ release
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 4 × AMD EPYC 7763 64-Core Processor
+  WORD_SIZE: 64
+  LLVM: libLLVM-16.0.6 (ORCJIT, znver3)
+Threads: 1 default, 0 interactive, 1 GC (on 4 virtual cores)</code></pre><p>Package list and version</p><pre><code class="language-julia hljs">import Pkg; Pkg.status()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Status `~/work/StochasticWeatherGenerators.jl/StochasticWeatherGenerators.jl/docs/Project.toml`
+  [336ed68f] CSV v0.10.15
+  [13f3f980] CairoMakie v0.12.14
+  [a93c6f00] DataFrames v1.7.0
+  [1313f7d8] DataFramesMeta v0.15.3
+  [8bb1440f] DelimitedFiles v1.9.1
+  [31c24e10] Distributions v0.25.112
+  [e30172f5] Documenter v1.7.0
+  [db073c08] GeoMakie v0.7.5
+  [4138dd39] JLD v0.13.5
+  [b964fa9f] LaTeXStrings v1.4.0
+  [98b081ad] Literate v2.20.1
+  [436b0209] NaturalEarth v0.1.0
+  [3d8e1505] SmoothPeriodicStatsModels v2.0.0-DEV
+  [2913bbd2] StatsBase v0.34.3
+  [f3b207a7] StatsPlots v0.15.7
+  [3eadb0b9] StochasticWeatherGenerators v1.2.0-DEV `~/work/StochasticWeatherGenerators.jl/StochasticWeatherGenerators.jl`
+  [ade2ca70] Dates v1.11.0
+  [b77e0a4c] InteractiveUtils v1.11.0
+  [9a3f8284] Random v1.11.0</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-climatik"><a class="tag is-link" href="#citeref-climatik">climatik</a>Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, <a href="https://doi.org/10.57745/AJNXEN">https://doi.org/10.57745/AJNXEN</a>, Recherche Data Gouv, V1</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../tuto_paper/">« Paper</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Thursday 24 October 2024 13:38">Thursday 24 October 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
