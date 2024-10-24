@@ -12,7 +12,7 @@ We will also explore how to add (very simplistic) mutlisite models for other wea
 These new models will be trained with respect to the given hidden states and their parameters will be periodic and vary smoothly during a calendar year.
 For now models will be trained at each site and correlated spatially with Gaussian Copulas.
 
-It shows how the hidden states and the seasonality correlate the weather variables without extra codependency between simulated variables. The results is not perfect and is work in progress.
+It shows how the hidden states and the seasonality correlates the weather variables without extra codependency between simulated variables. 
 """
 
 md"""
@@ -491,3 +491,15 @@ md"""
 ##### Evapotranspiration `ETPP`
 """
 plts_month[:ETPP]
+
+md"""
+## Reproducibility
+"""
+using InteractiveUtils
+InteractiveUtils.versioninfo()
+
+md"""
+Package list and version
+"""
+
+import Pkg; Pkg.status()

@@ -836,3 +836,15 @@ end
 
 #-
 savefigcrop(plt_qqp_copula, "qq_copula_$(station_name[j1])_$(ifelse(j2 == 8, "LA_HAGUE", station_name[j2]))_Z_full_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+
+md"""
+## Reproducibility
+"""
+using InteractiveUtils
+InteractiveUtils.versioninfo()
+
+md"""
+Package list and version
+"""
+
+import Pkg; Pkg.status()
