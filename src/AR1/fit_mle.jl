@@ -1,16 +1,20 @@
 
 #TODO: check that dropmissing (and potentially not contigous data) does not cause issue in MLE
 """
-    fit_AR1(df_full::DataFrame, X, 𝐃𝐞𝐠, T, K)
+    fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z)), T = length(unique(n2t)))
 Fit a Seasonal AR(1) model of period `T` and with `K` hidden states for the variable `X` of the DataFrame `df_full`.
-``X_{n+1} = \\mu(t_n) + \\phi(t_n) X_t + \\sigma(t_n)\\xi``
+The hidden states must be given in a the column `z` of i.e. `df_full.z`.
+The correspondance between day of the year `t` and index in the time series `n` must be given in the column `n2t` i.e. `df_full.n2t`.
+
+``X_{n+1} = \\mu(t_n, z_n) + \\phi(t_n, z_n) X_n + \\sigma(t_n, z_n)\\xi``
+
+with ``\\xi \\sim \\mathcal{N}(0,1)``.
 """
-function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T, K)
+function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z)), T = length(unique(dayofyear_Leap.(df_full.DATE))))
     df = dropmissing(df_full[:, [:DATE, var, :z]])
     z = df.z
     n2t = dayofyear_Leap.(df.DATE)
     n_in_t_k = [setdiff(findall(.&(n2t .== t, z .== k)), 1) for t in 1:T, k in 1:K]
-
 
     model_AR1_JuMP = model_for_loglikelihood_AR1(𝐃𝐞𝐠, T, silence=true)
     θ_μ, θ_ρ, θ_σ = zeros(K, 2𝐃𝐞𝐠 + 1), zeros(K, 2𝐃𝐞𝐠 + 1), zeros(K, 2𝐃𝐞𝐠 + 1)
@@ -35,13 +39,11 @@ function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T, K)
 end
 
 """
-Fit residual to constant (in time) cov matrices for each weather regime
-Example:
-```julia
-cov_ar1(data_stations, ar1sTX, :TX, K)
-```
+    cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(dfs[1].z)))
+Fit the covariance matrix of the residual `ϵ` of several AR(1) models `ar1s`. One matrix is fitted per hidden state. 
+The hidden state `z` must be given in `df.z`. Note that we consider constant in time the covariance matrices.
 """
-function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K)
+function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(dfs[1].z)))
     #TODO buggy when missing
     date_start = maximum([df.DATE[1] for df in dfs])
     date_end = minimum([df.DATE[end] for df in dfs])

@@ -99,6 +99,12 @@ function shortname(name::AbstractString)
     return split(m, "-")[1]
 end
 
+"""
+    collect_data_INRAE(station_path::String; show_warning=false, impute_missing=[])
+    collect_data_INRAE(df_full::DataFrame; show_warning=false, impute_missing=[])
+Read from a file an INRAE formatted weather station data and transform it to match ECA standard naming conventions.
+Possibility to impute missing with `Impute.Interpolate` for specified columns e.g. `impute_missing=[:TX]`.
+"""
 function collect_data_INRAE(station_path::String; show_warning=false, impute_missing=[])
     df_full = CSV.read(station_path, DataFrame, header=13)
     collect_data_INRAE(df_full; show_warning=show_warning, impute_missing=impute_missing)

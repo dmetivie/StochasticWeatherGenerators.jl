@@ -4,7 +4,7 @@
 Fit the variable `TN` (daily minimum temperature). In fact it fits the difference `ΔT = TX - TN` to ensure a positive difference between `TX` and `TN`
 """
 function fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
-    #TODO check that dropmissing (and potentially not contigous data) does not cause issue in MLE
+    #TODO check that dropmissing (and potentially not contiguous data) does not cause issue in MLE
     df = dropmissing(df_full[:, [:DATE, :TX, :TN, :z]])
 
     f(θ) = Gamma(θ[1], θ[2], check_args = false)# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])

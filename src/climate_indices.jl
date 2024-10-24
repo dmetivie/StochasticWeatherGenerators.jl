@@ -79,7 +79,7 @@ idx_all = [intersect(yea, mon) for yea in idx_year, mon in idx_month]
 monthly_agg(df.Temperature, idx_all)
 ```
 """
-monthly_agg(y::AbstractArray, idxs, func = sum) = [func(y[idx]) for idx in idxs]
+monthly_agg(y::AbstractArray, idxs, aggfunc = sum) = [aggfunc(y[idx]) for idx in idxs]
 
 
 function monthly_agg(df::DataFrame, y_col, aggfunc = sum; maxtrixform = true) 
@@ -89,7 +89,6 @@ function monthly_agg(df::DataFrame, y_col, aggfunc = sum; maxtrixform = true)
         groupby(:MONTH)
     end
     if maxtrixform == true
-        
         return reduce(hcat, [df_agg.agg for df_agg in dfs_agg])
     else 
         return [df_agg.agg for df_agg in dfs_agg]

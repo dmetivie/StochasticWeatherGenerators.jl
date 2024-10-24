@@ -19,8 +19,10 @@ end
 
 pages = [
     "Home" => "index.md",
+    "API" => "api.md",
     "Tutorials" => [
-        "Paper" => joinpath("examples", "tuto_paper.md")
+        "Paper" => joinpath("examples", "tuto_paper.md"),
+        "Add weather variables" => joinpath("examples", "tuto_add_station_variable.md")
     ]
 ]
 
@@ -35,7 +37,8 @@ makedocs(
     sitename = "StochasticWeatherGenerators",
     authors = "David Métivier",
     format = fmt,
-    modules = [StochasticWeatherGenerators]
+    modules = [StochasticWeatherGenerators],
+    pages = pages
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
