@@ -13,7 +13,7 @@ Currently, the package offers:
 
 - The possibility to add stations to the SHMM and variables w.r.t. the hidden states. In particular, a multisite SWG with 5 weather variables (Rain, Temperature Max, Temperature Min, Evapotranspiration, Solar Irradiance) was tested. The structure of the added variables is very simplistic but do the job for the proof of concept. See the associated tutorial in the documentation.
 
-> [!NOTE] Stochastics Weather Generators
+> [!NOTE]
 > Stochastics Weather Generators are probabilistic weather models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
 > They can be used to study climate variability in particular extremes and "stress" models that takes weather inputs e.g. crop models. See the [IPCC note](https://www.ipcc-data.org/guidelines/pages/weather_generators.html) on SWG for more context.
 
