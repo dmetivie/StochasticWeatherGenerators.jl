@@ -12,7 +12,7 @@ We will also explore how to add (very simplistic) mutlisite models for other wea
 These new models will be trained with respect to the given hidden states and their parameters will be periodic and vary smoothly during a calendar year.
 For now models will be trained at each site and correlated spatially with Gaussian Copulas.
 
-The hope is that the hidden states and the seasonality will correlate enough the variables for the model to be realistic.
+It shows how the hidden states and the seasonality correlate the weather variables without extra codependency between simulated variables. The results is not perfect and is work in progress.
 """
 
 md"""
@@ -45,9 +45,13 @@ using StochasticWeatherGenerators
 
 md"""
 ## Data extraction and settings
+
+To get many weather variables we use station provided by a the French research institute for agronomy and environment (INRAE).
+Monitoring data from the INRAE CLIMATIK platform[^climatik] ([https://agroclim.inrae.fr/climatik/](https://agroclim.inrae.fr/climatik/), in French) managed by the AgroClim laboratory of Avignon, France.
+
+[^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 """
 
-path_INRAE_stations = "C:/Users/metivier/Dropbox/PC (2)/Documents/X_related/GenHack_2023/test_data_SAA"
 
 local_order = 1
 memory_order = 2^local_order
@@ -66,7 +70,9 @@ Station French department number.
 station_dep = [49, 80, 40, 63]
 station_name = ["Montreuil-Bellay", "Mons-en-Chaussée", "Saint-Martin-de-Hinx", "Saint-Gènes-Champanelle"]
 
-station_path = joinpath.(path_INRAE_stations, string.("Demandes_station_pour_GENHack_INRAE_STATION_", [49215002, 80557001, 40272002, 63345002], ".csv"))
+path_INRAE_stations = "C:/Users/metivier/Dropbox/PC (2)/Documents/X_related/GenHack_2023/test_data_SAA" #src
+station_path = joinpath.(path_INRAE_stations, string.("INRAE_STATION_", [49215002, 80557001, 40272002, 63345002], ".csv")) #src
+station_path = string.("https://forgemia.inra.fr/david.metivier/weather_data_mistea/-/raw/main/INRAE_stations/INRAE_STATION_",[49215002, 80557001, 40272002, 63345002],".csv") .|> download
 
 station_ndep = string.(station_name, " (", station_dep, ")")
 

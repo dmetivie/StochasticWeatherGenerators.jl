@@ -1,6 +1,6 @@
 # API
 
-### Fit function
+## Fit function
 
 ```@docs
 fit_mle_RO
@@ -9,7 +9,7 @@ fit_TN
 fit_AR1
 ```
 
-### Climate indexes
+## Climate indexes
 
 ```@docs
 VCX3
@@ -20,16 +20,16 @@ pmf_spell
 
 ```
 
-### Simulations
+## Simulations
 
 ```@docs
 rand_RR
 rand_cond
 ```
 
-### Correlation utilities
+## Correlation utilities
 
-#### For temperature
+### For temperature
 
 ```@docs
 cor_groupby
@@ -37,7 +37,7 @@ cor_groupbyTXTN
 cov_ar1
 ```
 
-#### For rain
+### For rain
 
 ```@docs
 cor_RR
@@ -47,14 +47,14 @@ cov_RR
 joint_rain
 ```
 
-### Map utilities
+## Map utilities
 
 ```@docs
 distance_x_to_y
 dms_to_dd
 ```
 
-### Data manipulation
+## Data manipulation
 
 ```@docs
 collect_data_ECA
@@ -63,7 +63,7 @@ select_in_range_df
 shortname
 ```
 
-### Generic utilities
+## Generic utilities
 
 ```@docs
 my_color
