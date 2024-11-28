@@ -464,7 +464,7 @@ qs = [0.9, 0.5, 0.1]
 
         [title!(plt_month[XX][j], station_ndep[j]) for j = 1:D]
         plts_month[XX] = plot(plt_month[XX]..., size=(1000, 700), left_margin=19px)
-        savefigcrop(plts_month[XX], "EDF_like_$(XX)_$(NSIMU)_simu_monthly_quantile_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+        savefigcrop(plts_month[XX], "EDF_like_$(XX)_$(NSIMU)_simu_monthly_quantile_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path); #src
     end
 end
 
