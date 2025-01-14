@@ -4,24 +4,27 @@ EditURL = "../../../examples/tuto_add_station_variable.jl"
 
 ````@example tuto_add_station_variable
 using Markdown#hide
+import Pkg;
 cd(@__DIR__)#hide
 ````
 
 # Adding stations and weather variables
 
-This short tutorial shows how to easily add weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
-We will also explore how to add (very simplistic) mutlisite models for other weather variables such as daily Temperature minimum `TN`, maximum `TX`, solar irradiance `QQ` and evapotranspiration `ETPP`.
-These new models will be trained with respect to the given hidden states and their parameters will be periodic and vary smoothly during a calendar year.
-For now models will be trained at each site and correlated spatially with Gaussian Copulas.
+This tutorial shows how to easily train weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
+We will show how to make a (simplistic) mutlisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$).
+This model will be trained with respect to the given hidden states and the parameters will be periodic and vary smoothly during a calendar year.
 
-The hope is that the hidden states and the seasonality will correlate enough the variables for the model to be realistic.
+The hidden states and the seasonality are enough to correlate well the weather variables without extra codependency between simulated variables.
+
+This multisite, multivariable model has been used as input of the [STIC crop model](https://www.sciencedirect.com/science/article/pii/S1161030102001107) to generate data of annual crop yield for maize in the [GenHack 3 hackaton](https://www.polytechnique.edu/en/genhack-3-hackathon-generative-modelling).
 
 ## Set up
 
 ### Package and functions
 
 ````@example tuto_add_station_variable
-using CSV, DelimitedFiles, JLD# File Read/Load/Save/dwl
+using CSV, DelimitedFiles# File Read/Load/Save/dwl
+import JLD# File Read/Load/Save/dwl
 import Downloads
 using DataFrames, DataFramesMeta # DataFrames
 using Dates
@@ -44,9 +47,20 @@ using StochasticWeatherGenerators
 
 ## Data extraction and settings
 
-````@example tuto_add_station_variable
-path_INRAE_stations = "C:/Users/metivier/Dropbox/PC (2)/Documents/X_related/GenHack_2023/test_data_SAA"
+To get the interesting weather variables, we use weather station provided by a the French research institute for agronomy and environment (INRAE).
+This data is available through the INRAE CLIMATIK platform[^climatik] ([https://agroclim.inrae.fr/climatik/](https://agroclim.inrae.fr/climatik/), in French) managed by the AgroClim laboratory of Avignon, France.
+Unfortunately, these data are not yet open access (they should be soon).
+Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/).
+This package provide a simple command to extract the data of one station (given its STAtionID) from the API.
+```julia
+# Download the four stations used in this tutorial from MeteoFrance collection
+dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
+```
+However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
+For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
+[^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 
+````@example tuto_add_station_variable
 local_order = 1
 memory_order = 2^local_order
 K = 4
@@ -62,7 +76,7 @@ Station French department number.
 station_dep = [49, 80, 40, 63]
 station_name = ["Montreuil-Bellay", "Mons-en-Chaussée", "Saint-Martin-de-Hinx", "Saint-Gènes-Champanelle"]
 
-station_path = joinpath.(path_INRAE_stations, string.("Demandes_station_pour_GENHack_INRAE_STATION_", [49215002, 80557001, 40272002, 63345002], ".csv"))
+station_path = string.("https://forgemia.inra.fr/david.metivier/weather_data_mistea/-/raw/main/INRAE_stations/INRAE_STATION_", [49215002, 80557001, 40272002, 63345002], ".csv") .|> download
 
 station_ndep = string.(station_name, " (", station_dep, ")")
 
@@ -76,7 +90,7 @@ Load the AutoRegressive Seasonal HMM computed in this [tutorial](https://dmetivi
 ````@example tuto_add_station_variable
 file_hmm = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/hmm_fit_K_4_d_1_m_1.jld")
 begin
-    hmm_infos = load(file_hmm)
+    hmm_infos = JLD.load(file_hmm)
     hmm_fit_full = hmm_infos["hmm"]
     hist = hmm_infos["hist"]
     θq_fit = hmm_infos["Q_param"]
@@ -88,7 +102,7 @@ Load the sequence of estimated hidden states for the historical sequence.
 ````@example tuto_add_station_variable
 file_df_z = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/z_hat_K_4_d_1_m_1.csv")
 df_z = CSV.File(file_df_z) |> DataFrame
-df_z[1:10,:] # Show the first lines of the dataframes
+df_z[1:10, :] # Show the first lines of the dataframes
 ````
 
 Filter by date and valid data. There are a few missing values that we impute using `Impute.Interpolate`.
@@ -211,8 +225,8 @@ Random.seed!(50000)
 ````
 
 ````@example tuto_add_station_variable
-NSIMU = 1000
-NYEAR = 34
+NSIMU = 300
+NYEAR = 50
 
 year_start = 1986
 date_range = Date(year_start):Day(1):Date(year_start + NYEAR - 1, 12, 31)
@@ -257,20 +271,13 @@ end
 
 ### Results
 
-Cast the results into `NSIMU = 1000` $\times$ `D=4` `DataFrame`s of `NYEAR = 34` years each, with columns `[:DATE, :RR, :RN, :TX, :QQ, :ETPP, :STAID]` where `STAID` is the unique station identifier. Also cast everything into a `Dict` for convenience.
+Cast the results into `NSIMU = 300` $\times$ `D=4` `DataFrame`s of `NYEAR = 50` years each, with columns `[:DATE, :RR, :RN, :TX, :QQ, :ETPP, :STAID]` where `STAID` is the unique station identifier. Also cast everything into a `Dict` for convenience.
 
 ````@example tuto_add_station_variable
 dicts_simu = Dict(:RR => rs, :TN => tns, :TX => txs, :QQ => qqs, :ETPP => ets)
-dfs_simu = [[DataFrame(:DATE => date_range, :RR => rs[j, :, i], :TN => tns[j, :, i], :TX => txs[j, :, i], :QQ => qqs[j, :, i], :ETPP => ets[j, :, i], :STAID => fill(data_stations[j].STAID[1], length(n2t))) for j in 1:D] for i in 1:NSIMU];
+dfs_simus = [[DataFrame(:DATE => date_range, :RR => rs[j, :, i], :TN => tns[j, :, i], :TX => txs[j, :, i], :QQ => qqs[j, :, i], :ETPP => ets[j, :, i], :STAID => fill(data_stations[j].STAID[1], length(n2t))) for j in 1:D] for i in 1:NSIMU];
 nothing #hide
 ````
-
-To save the data frames you can do something like
-```julia
-map(enumerate(station_dep)) do (i,dep)
-    CSV.write(joinpath(save_tuto_path,"swg_simu_station_dep_$(dep)_years_$(length(years)).csv"), dfs_simu[i])
-end
-```
 
 ## Plots
 
@@ -364,12 +371,12 @@ begin
             dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR>0
 
             errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
-            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis = :log10) : nothing
-            XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis = :log10) : nothing # some simulated RR are super extreme and messing with the xaxis
+            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis=:log10) : nothing
+            XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
         [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
         [ylabel!(plt_dist_univ[XX][j], "PDF") for j in [1, 3]]
-station_ndep
+        station_ndep
         [title!(plt_dist_univ[XX][j], station_ndep[j]) for j = 1:D]
 
         plts_dist_univ[XX] = plot(plt_dist_univ[XX]..., size=(1000, 700), bottom_margin=11px, left_margin=15px)
@@ -475,6 +482,127 @@ plts_month[:QQ]
 
 ````@example tuto_add_station_variable
 plts_month[:ETPP]
+````
+
+## SWG + Crop model STICS
+
+In this section, we demonstrate how stochastic weather simulations can serve as inputs for a crop model. Specifically, we use the [STICS crop model](https://stics.inrae.fr/eng)[^STICS].
+
+[^STICS]: Brisson et al. (2003). An overview of the crop model STICS. European Journal of agronomy, 18(3-4), 309-332.
+
+### Description
+
+For this tutorial, we use the default STICS parameters for maize with the following modifications: no irrigation (to highlight the effect of hydric stress), `pgrainmaxi = 0.35`, and `nbgrmin = 0`, `nbgrmax = 4500` (minimum and maximum number of fruits per m$^2$).
+
+Typically, the final yield ranges between 0 and 15 t/ha and is highly dependent on rainfall and temperature.
+
+### Running STICS
+
+In the file `file_stics`, we implemented functions to streamline calls to the STICS executable (either `.exe` or `.sh`), which can be obtained from the STICS downloads. For each simulation, the script updates the STICS weather files based on the input data frames (`dfs_simus`). It extracts the final yield (along with some other quantities not used here). If STICS encounters an error, the YIELD value is set to `missing`.
+
+Since repeated calls to STICS are time-intensive, results are saved for reuse. Below, we show the executed code:
+
+````@example tuto_add_station_variable
+using Suppressor # to handle the STICS hard-printed output
+file_for_stics_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_stics.jl")
+include(file_for_stics_utilities)
+````
+
+```julia
+stics_path = joinpath(STICS_PATH, "JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") # or stics_modulo for Linux
+work_path = joinpath("stics_files", "maize") # folder where all maize files are
+
+@time res_YIELDs = map(Iterators.product(1:30, 1:D)) do (i, j)
+    GC.gc() # empirically needed
+
+    run_stics_mod_yield(dfs_simus[i][j], infos=100, stics_path=stics_path, work_path=work_path).YIELD
+end
+cd(@__DIR__)
+JLD.save("results_yield.jld",Dict("res_YIELDs"=>res_YIELDs))
+```
+
+````@example tuto_add_station_variable
+file_yield = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_2/results_yield.jld")
+res_YIELDs = JLD.load(file_yield)["res_YIELDs"]
+````
+
+### Yield distributions with uncertainty
+
+````@example tuto_add_station_variable
+begin
+    plt_dist_yield = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16, legend=:topright) for j = 1:D]
+    for j in 1:D
+        dist_j = Vector{Vector{Float64}}(filter.(!ismissing, res_YIELDs[:, j]))
+
+        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median)
+
+        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        xlims!(plt_dist_yield[j], 0, 16)
+    end
+    [xlabel!(plt_dist_yield[j], "YIELD (t/ha)") for j in [3, 4]]
+    [ylabel!(plt_dist_yield[j], "PDF") for j in [1, 3]]
+    station_ndep
+    [title!(plt_dist_yield[j], station_ndep[j]) for j = 1:D]
+
+    plts_dist_yield = plot(plt_dist_yield..., size=(1000, 700), bottom_margin=11px, left_margin=15px)
+end
+````
+
+### Sensitivity to Key Growth Periods
+
+To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods. For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
+
+For the selected station, the most critical period is from June 12 to July 27, as evidenced by the significant difference between the two distributions. Specifically, the mean rainfall, when conditioned on a high yield, is approximately 20% higher during this period. In contrast, for the other periods, the mean rainfall remains nearly identical, indicating a much lower sensitivity.
+
+````@example tuto_add_station_variable
+week_date = (date_begin=Date(1996, 4, 27), date_end=Date(1996, 10, 27), N_period=4)
+groups = chunky(Dates.value(week_date.date_end - week_date.date_begin) + 1, week_date.N_period)
+
+dfs_stat = [[stats_fortnightly(dfsim, week_date, years) for dfsim in dfs_simus[i]] for i in axes(res_YIELDs, 1)]
+for i in eachindex(dfs_stat)
+    for (j, df) in enumerate(dfs_stat[i])
+        @transform!(df, :YIELD = res_YIELDs[i, j])
+    end
+end
+
+begin
+    j = 1 # station number
+    dfi = [dropmissing(dfs_stat[i][j]) for i in eachindex(dfs_stat)]
+    df_sub = [@subset(df, :YIELD .> quantile(:YIELD, 0.5)) for df in dfi]
+    plt_scat = [plot(legend=:topright, tickfont=14, legendfontsize=14, xlabelfontsize=14, ylabelfontsize=14, titlefontsize=14) for i in 1:week_date.N_period]
+    for i in 1:week_date.N_period
+        errorlinehist!(plt_scat[i], [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+
+        errorlinehist!(plt_scat[i], [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+
+        # stephist!(plt_scat[i], dfi[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R"), norm=:pdf, lw=1.75)
+        # stephist!(plt_scat[i], df_sub[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, lw=1.75)
+        vline!([mean.([dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=2, lw = 2)
+        vline!([mean.([df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=1, lw = 2)
+        period_range = period_range_func(groups[i])
+        title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
+        xlabel!("Rain (mm/period)")
+        ylabel!("PDF")
+
+    end
+    annotate!(plt_scat[3], 5,0.8, station_ndep[j])
+    plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
+end
+````
+
+## Reproducibility
+
+````@example tuto_add_station_variable
+import InteractiveUtils
+InteractiveUtils.versioninfo()
+````
+
+Package list and version
+
+````@example tuto_add_station_variable
+import Pkg;
+Pkg.status();
+nothing #hide
 ````
 
 ---

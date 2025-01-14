@@ -520,11 +520,11 @@ stics_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather
 work_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files", "maize") #src
 include("utilities_stics.jl") #src
 
+using Suppressor # to handle the STICS hard-printed output
 file_for_stics_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_stics.jl")
 include(file_for_stics_utilities)
 md"""
 ```julia
-using Suppressor # to handle the STICS hard-printed output
 stics_path = joinpath(STICS_PATH, "JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") # or stics_modulo for Linux
 work_path = joinpath("stics_files", "maize") # folder where all maize files are
 

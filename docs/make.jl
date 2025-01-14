@@ -22,7 +22,7 @@ pages = [
     "API" => "api.md",
     "Tutorials" => [
         "Paper" => joinpath("examples", "tuto_paper.md"),
-        "Add weather variables" => joinpath("examples", "tuto_add_station_variable.md")
+        "Add weather variables and crop model application" => joinpath("examples", "tuto_add_station_variable.md")
     ]
 ]
 

@@ -4,6 +4,7 @@ EditURL = "../../../examples/tuto_paper.jl"
 
 ````@example tuto_paper
 using Markdown#hide
+import Pkg;
 cd(@__DIR__)#hide
 ````
 
@@ -764,6 +765,19 @@ begin
     xlims!(0, 22)
     ylims!(0, 22)
 end
+````
+
+## Reproducibility
+
+````@example tuto_paper
+using InteractiveUtils
+InteractiveUtils.versioninfo()
+````
+
+Package list and version
+
+````@example tuto_paper
+import Pkg; Pkg.status()
 ````
 
 ---
