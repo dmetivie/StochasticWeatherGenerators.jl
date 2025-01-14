@@ -59,6 +59,9 @@ dms_to_dd
 ```@docs
 collect_data_ECA
 collect_data_INRAE
+collect_data_MeteoFrance 
+download_data_MeteoFrance 
+clean_data 
 select_in_range_df
 shortname
 ```

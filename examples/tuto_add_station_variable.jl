@@ -60,6 +60,7 @@ dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
 However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
 For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
+
 [^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 """
 
