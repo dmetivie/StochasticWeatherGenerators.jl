@@ -1,4 +1,6 @@
 using Markdown#hide
+import Pkg;
+Pkg.activate("docs/");#src
 cd(@__DIR__)#hide
 
 md"""
