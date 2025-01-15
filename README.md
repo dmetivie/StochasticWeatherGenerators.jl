@@ -7,6 +7,21 @@
 
 A Julia package, to define, fit and use Stochastic Weather Generators (SWG).
 
+The package is currently NOT in the Julia general registry (will be soon), but on a local registry, hence to download it just add:
+
+```julia
+using Pkg
+pkg"registry add https://github.com/dmetivie/LocalRegistry"
+```
+
+and then `add` it as a normal package
+
+```julia
+Pkg.add("StochasticWeatherGenerators")
+# or
+pkg> add StochasticWeatherGenerators
+```
+
 Currently, the package offers:
 
 - The daily multisite rain SWG proposed in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states. Note that the seasonal models HMM, AR etc are currently implemented in a separate package [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl).

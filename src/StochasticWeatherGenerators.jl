@@ -50,7 +50,7 @@ export fit_TN, rand_cond
 export cor_groupby, cor_groupbyTXTN
 
 # ## Data
-export select_in_range_df, collect_data_ECA, collect_data_INRAE, shortname, collect_data_ECA!, collect_data_MeteoFrance
+export select_in_range_df, collect_data_ECA, collect_data_INRAE, shortname, collect_data_ECA!, collect_data_MeteoFrance, clean_data, download_data_MeteoFrance
 # ### Geo
 export distance_x_to_y, distance_x_to_all_stations, dms_to_dd
 
