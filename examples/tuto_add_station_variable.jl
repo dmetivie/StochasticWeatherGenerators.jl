@@ -517,27 +517,30 @@ In the file `file_stics`, we implemented functions to streamline calls to the ST
 
 Since repeated calls to STICS are time-intensive, results are saved for reuse. Below, we show the executed code:
 """
+using Suppressor # to handle the STICS hard-printed output
 stics_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files/JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") #src
 work_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files", "maize") #src
 include("utilities_stics.jl") #src
 
-using Suppressor # to handle the STICS hard-printed output
 file_for_stics_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_stics.jl")
 include(file_for_stics_utilities)
+
 md"""
 ```julia
 stics_path = joinpath(STICS_PATH, "JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") # or stics_modulo for Linux
 work_path = joinpath("stics_files", "maize") # folder where all maize files are
 
-@time res_YIELDs = map(Iterators.product(1:30, 1:D)) do (i, j)
+@time res_YIELDs = map(Iterators.product(1:300, 1:D)) do (i, j)
     GC.gc() # empirically needed
-
+    @show i,j
     run_stics_mod_yield(dfs_simus[i][j], infos=100, stics_path=stics_path, work_path=work_path).YIELD
 end
+# 15650.246490 seconds (1.03 G allocations: 108.568 GiB, 1.13% gc time, 0.01% compilation time: <1% of which was recompilation)
 cd(@__DIR__)
-JLD.save("results_yield.jld",Dict("res_YIELDs"=>res_YIELDs))
+JLD.save("results_yield.jld", Dict("res_YIELDs" => res_YIELDs))
 ```
 """
+
 file_yield = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_2/results_yield.jld")
 res_YIELDs = JLD.load(file_yield)["res_YIELDs"]
 md"""
@@ -585,21 +588,21 @@ begin
     df_sub = [@subset(df, :YIELD .> quantile(:YIELD, 0.5)) for df in dfi]
     plt_scat = [plot(legend=:topright, tickfont=14, legendfontsize=14, xlabelfontsize=14, ylabelfontsize=14, titlefontsize=14) for i in 1:week_date.N_period]
     for i in 1:week_date.N_period
-        errorlinehist!(plt_scat[i], [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        errorlinehist!(plt_scat[i], [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median)
 
-        errorlinehist!(plt_scat[i], [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        errorlinehist!(plt_scat[i], [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median)
 
         ## stephist!(plt_scat[i], dfi[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R"), norm=:pdf, lw=1.75)
         ## stephist!(plt_scat[i], df_sub[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, lw=1.75)
-        vline!([mean.([dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=2, lw = 2)
-        vline!([mean.([df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=1, lw = 2)
+        vline!([mean.([dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=2, lw=2)
+        vline!([mean.([df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=1, lw=2)
         period_range = period_range_func(groups[i])
         title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
         xlabel!("Rain (mm/period)")
         ylabel!("PDF")
 
     end
-    annotate!(plt_scat[3], 5,0.8, station_ndep[j])
+    annotate!(plt_scat[3], 5.5, 1.1, station_ndep[j])
     plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
 end
 savefigcrop(plt_sensitivity, "RR_per_period_cond_yield_dep_49.pdf", save_tuto_path) #src
