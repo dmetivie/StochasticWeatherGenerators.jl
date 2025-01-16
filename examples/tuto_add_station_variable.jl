@@ -31,6 +31,7 @@ import Downloads
 using DataFrames, DataFramesMeta # DataFrames
 using Dates
 using Random, Distributions
+using LaTeXStrings
 
 md"""
 The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
@@ -52,14 +53,23 @@ md"""
 To get the interesting weather variables, we use weather station provided by a the French research institute for agronomy and environment (INRAE).
 This data is available through the INRAE CLIMATIK platform[^climatik] ([https://agroclim.inrae.fr/climatik/](https://agroclim.inrae.fr/climatik/), in French) managed by the AgroClim laboratory of Avignon, France.
 Unfortunately, these data are not yet open access (they should be soon).
-Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/).
+Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
 This package provide a simple command to extract the data of one station (given its STAtionID) from the API.
 ```julia
 # Download the four stations used in this tutorial from MeteoFrance collection
 dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
+For example
+"""
+collect_data_MeteoFrance(49215002)[1:10,:]
+
+md"""
 However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
 For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
+
+!!! warning
+    While testing this function, it appears that MeteoFrance API might bug sometimes returning an error for some stations (and working for others).
+    In that case, you can check the API directly [here](https://www.data.gouv.fr/fr/datasets/donnees-climatologiques-de-base-quotidiennes/#).
 
 [^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 """
@@ -73,13 +83,19 @@ save_tuto_path = "../../assets/tuto_2/tuto_K_$(K)_d_$(degree)_m_$(local_order)" 
 
 md"""
 ### Weather stations
+
+We select four INRAE weather stations Montreuil-Bellay, Mons-en-Chaussée, Saint-Martin-de-Hinx and Saint-Gènes-Champanelle.
+Note that these are not the training stations used in the [paper tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/), however we will still use the weather regime trained there. The rain occurrence generation will be conditionally independent to this weather regime across all these four stations.
 """
 
 md"""
 Station French department number.
 """
+
 station_dep = [49, 80, 40, 63]
 station_name = ["Montreuil-Bellay", "Mons-en-Chaussée", "Saint-Martin-de-Hinx", "Saint-Gènes-Champanelle"]
+station_gps = [(LAT = 47.13, LON = -0.1415), (LAT = 49.875, LON = 3.031), (LAT = 43.5708, LON = -1.29933), (LAT = 45.723, LON = 3.019) ]
+D = length(station_name)
 
 path_INRAE_stations = "C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/INRAE_stations" #src
 station_path = joinpath.(path_INRAE_stations, string.("INRAE_STATION_", [49215002, 80557001, 40272002, 63345002], ".csv")) #src
@@ -87,7 +103,6 @@ station_path = string.("https://forgemia.inra.fr/david.metivier/weather_data_mis
 
 station_ndep = string.(station_name, " (", station_dep, ")")
 
-D = length(station_name)
 
 md"""
 ### Load
@@ -113,7 +128,7 @@ df_z = CSV.File(file_df_z) |> DataFrame
 df_z[1:10, :] # Show the first lines of the dataframes
 
 md"""
-Filter by date and valid data. There are a few missing values that we impute using `Impute.Interpolate`.
+Load and filter the data by date. There are a few missing values that we impute using `Impute.Interpolate`.
 """
 
 begin
@@ -126,6 +141,15 @@ end
 data_stations = [innerjoin(df, df_z; on=:DATE) for df in data_stations_full]
 
 md"""
+We compute the mean temperature during the growth month of maize (May to September) at each location.
+"""
+
+mean_summer_TX = round.([@combine(@subset(df, month.(:DATE) .∈ tuple([5,6,7,8,9])), :meanTX=mean(:TX))[1,1] for df in data_stations_full], digits = 1)
+file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") 
+include(file_for_maps_with_geomakie)
+FR_map_spell = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_TX; station_name=string.("     ",station_ndep), show_value=true, colorbar_show=true, precision_scale = 50, colorbar_label = "°C")
+
+md"""
 ## Fitting 
 We now fit the observed weather variables to seasonal models w.r.t. the hidden variables i.e. the models we fit depend continuously on the day of the year $t\in [1,366]$ and on the provided hidden state $Z \in [1,K]$.
 """
@@ -133,7 +157,7 @@ We now fit the observed weather variables to seasonal models w.r.t. the hidden v
 md"""
 ### Rain Occurrences
 Fit the Rain Occurrences of INRAE stations with respect to the given hidden states sequence.
-These distributions are then cast into the HMM emission distribution. The pre-trained transitons matrices Qₜ are kept the same.
+These distributions are then cast into the HMM emission distribution. The pre-trained transitons matrices `Qₜ` are kept the same.
 We could have added these new emission distributions to the existing one, however here we focus only on these four stations.
 """
 
@@ -297,7 +321,7 @@ md"""
 Some settings and packages to have nice plots.
 """
 
-using StatsPlots, LaTeXStrings
+using StatsPlots
 using StatsPlots.PlotMeasures # To play with margin in Plots
 
 gr() # plotly() # for interactive plots
@@ -311,6 +335,8 @@ vars = [:RR, :TN, :TX, :QQ, :ETPP]
 
 md"""
 ### Plot correlations
+
+In this section, we show different correlations between variables and stations. 
 """
 
 md"""
@@ -369,6 +395,8 @@ savefigcrop(plt_vars, "cor_var_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_p
 
 md"""
 ### Univariate distributions
+
+In this section we plot the marginal distribution of each variables at each sites.
 """
 
 md"""
@@ -495,9 +523,22 @@ md"""
 plts_month[:ETPP]
 
 md"""
-## SWG + Crop model STICS
+## Stochastic Weather Generator + Crop model STICS
 
-In this section, we demonstrate how stochastic weather simulations can serve as inputs for a crop model. Specifically, we use the [STICS crop model](https://stics.inrae.fr/eng)[^STICS].
+In this section, we demonstrate how stochastic weather simulations can serve as inputs for a crop model to study the climate sensitivity of a crop model.
+This is a proof of concept showing how SWG can be useful when combine with other models.
+
+Specifically, we use the [STICS crop model](https://stics.inrae.fr/eng)[^STICS]. To download STICS, go to this [page](https://stics.inrae.fr/telechargement) (in French...) and follow these instructions:
+
+1. Register on the dedicated [website](https://w3.avignon.inrae.fr/forge/account/register), or [log in](https://w3.avignon.inrae.fr/forge/login) if you already have an account.
+
+2. You will receive an e-mail confirming the creation of your account.
+
+3. Download files [here](https://w3.avignon.inrae.fr/forge/projects/stics_main_projecv/files) after logging in
+
+The download files will have 
+- STICS executable, here we will use the lower level one `stics_modulo` and not the Java version which is slower. In this tutorial, we used the version `STICS-10.0.0`.
+- Parameter files of different crop.
 
 [^STICS]: Brisson et al. (2003). An overview of the crop model STICS. European Journal of agronomy, 18(3-4), 309-332.
 """
@@ -543,8 +584,11 @@ JLD.save("results_yield.jld", Dict("res_YIELDs" => res_YIELDs))
 
 file_yield = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_2/results_yield.jld")
 res_YIELDs = JLD.load(file_yield)["res_YIELDs"]
+
 md"""
 ### Yield distributions with uncertainty
+
+The following plot shows the typical distribution of maize yield at four location over a 50-year span. We added the envelope of these distributions to highlight uncertainty. Each location has a very different weather (see previous sections).
 """
 begin
     plt_dist_yield = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16, legend=:topright) for j = 1:D]
@@ -566,7 +610,7 @@ end
 savefigcrop(plts_dist_yield, "pdf_YIELD_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
 
 md"""
-### Sensitivity to Key Growth Periods
+### Sensitivity of maize on rainfall during key growth periods
 
 To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods. For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
 

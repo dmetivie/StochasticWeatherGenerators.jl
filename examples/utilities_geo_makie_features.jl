@@ -6,7 +6,7 @@ using NaturalEarth
 
 """
     map_with_stations(LON_idx, LAT_idx; station_name = nothing, value=nothing, show_value=false, fontsize=15,
-    precision_scale="50m", colorbar_title=nothing, colorbar_show=false
+    precision_scale="50m", colorbar_label, colorbar_show=false
     LON_min=-5, # West
     LON_max=10, # Est
     LAT_min=41, # South
@@ -15,8 +15,8 @@ using NaturalEarth
 Plot a map (by default France) with point at the given Longitude and Latitude in  Decimal Degrees.
 One can add station names and a value display to it.
 """
-function map_with_stations(LON_idx, LAT_idx, value=:coral; station_name=nothing, show_value=false, fontsize=15,
-    precision_scale=50, colorbar_title=:none, colorbar_show=false, colorbar_limits=:none,
+function map_with_stations(LON_idx, LAT_idx, value=[1 for _ in eachindex(LON_idx)]; station_name=nothing, show_value=false, fontsize=15,
+    precision_scale=50, colorbar_label, colorbar_show=false, colorbar_limits=:none,
     LON_min=-5, # West
     LON_max=10.5, # Est
     LAT_min=41, # South
@@ -50,7 +50,7 @@ function map_with_stations(LON_idx, LAT_idx, value=:coral; station_name=nothing,
             ## GeoMakie.text!(ax, LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
         end
         if colorbar_show == true
-            GeoMakie.Colorbar(fig[1, 2], sc, label="Days")
+            GeoMakie.Colorbar(fig[1, 2], sc, label=colorbar_label)
         end
 
         if station_name !== nothing
