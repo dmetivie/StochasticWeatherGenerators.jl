@@ -281,7 +281,7 @@ LON_idx = dms_to_dd.(station.LON)
 
 long_spell = [longuest_spell(y) for y in eachcol(Y)]
 
-FR_map_spell = map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true, precision_scale = precision_scale)
+FR_map_spell = map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true, precision_scale = precision_scale, colorbar_label = "Days")
 
 #-
 savefigcrop(FR_map_spell, "FR_longest_dry_spell_$(D)_station_histo", save_tuto_path); #src
@@ -417,7 +417,7 @@ $\mathbb{P}(Y = \text{Rain}\mid Z = k, H = h)$ with `h = memory_past_cat`
 For now there are some scale rendering issues due to an [GeoMakie.jl issue](https://github.com/MakieOrg/GeoMakie.jl/issues/268) so it might be tiny.
 """
 
-p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true, colorbar_title = L"\mathbb{P}(Y = \text{Rain}\mid Z = k, H = 1)", precision_scale = precision_scale)
+p_FR_map_mean_prob = map_with_stations(LON_idx, LAT_idx, [[mean(succprob.(hmm_fit.B[k, :, j, memory_past_cat])) for j in 1:length(STAID)] for k in 1:K], colorbar_show=true, colorbar_label = L"\mathbb{P}(Y = \text{Rain}\mid Z = k, H = 1)", precision_scale = precision_scale)
 
 #-
 savefigcrop(p_FR_map_mean_prob, "FR_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)_mean_proba_cat_1", save_tuto_path); #src

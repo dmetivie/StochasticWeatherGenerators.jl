@@ -74,7 +74,7 @@ function map_with_stations(LON_idx, LAT_idx, value=[1 for _ in eachindex(LON_idx
 end
 
 function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_name=nothing, show_value=false, fontsize=15,
-    precision_scale=50, colorbar_title=:none, colorbar_show=false, colorbar_limits=:none,
+    precision_scale=50, colorbar_label=:none, colorbar_show=false, colorbar_limits=:none,
     LON_min=-5, # West
     LON_max=10.5, # Est
     LAT_min=41, # South
@@ -123,7 +123,7 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
                 end
             end
             if colorbar_show == true && k == K
-                GeoMakie.Colorbar(fig[:, K+1], sc, height=GeoMakie.Relative(1), label = colorbar_title)
+                GeoMakie.Colorbar(fig[:, K+1], sc, height=GeoMakie.Relative(1), label = colorbar_label)
                 GeoMakie.colgap!(fig.layout, -7)
             end
             k > 1 && GeoMakie.hideydecorations!(ax[k], ticks = false)

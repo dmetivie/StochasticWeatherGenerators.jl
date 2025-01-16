@@ -147,7 +147,7 @@ We compute the mean temperature during the growth month of maize (May to Septemb
 mean_summer_TX = round.([@combine(@subset(df, month.(:DATE) .∈ tuple([5,6,7,8,9])), :meanTX=mean(:TX))[1,1] for df in data_stations_full], digits = 1)
 file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") 
 include(file_for_maps_with_geomakie)
-FR_map_spell = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_TX; station_name=string.("     ",station_ndep), show_value=true, colorbar_show=true, precision_scale = 50, colorbar_label = "°C")
+FR_map = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_TX; station_name=string.("     ",station_ndep), show_value=true, colorbar_show=true, precision_scale = 50, colorbar_label = "°C")
 
 md"""
 ## Fitting 
