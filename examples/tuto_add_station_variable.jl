@@ -8,13 +8,17 @@ md"""
 """
 
 md"""
-This tutorial shows how to easily train weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
+This tutorial has two objectives
+1. Train a multivariate multisite (simplistic) model, reusing the hidden states trained in the other tutorial.
+2. How to use this model with a crop model to generate annual crop yield for maize.
+
+In the first part, the tutorial shows how to easily train weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
 We will show how to make a (simplistic) mutlisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$). 
-This model will be trained with respect to the given hidden states and the parameters will be periodic and vary smoothly during a calendar year.
+This model will be trained with respect to the given hidden states, and the parameters will be periodic and vary smoothly during a calendar year.
 
 The hidden states and the seasonality are enough to correlate well the weather variables without extra codependency between simulated variables.
 
-This multisite, multivariable model has been used as input of the [STIC crop model](https://www.sciencedirect.com/science/article/pii/S1161030102001107) to generate data of annual crop yield for maize in the [GenHack 3 hackaton](https://www.polytechnique.edu/en/genhack-3-hackathon-generative-modelling).
+This multisite, multivariable model has been used as input of the [STIC crop model](https://www.sciencedirect.com/science/article/pii/S1161030102001107) to generate data of annual crop yield for maize in the [GenHack 3 Hackathon](https://www.polytechnique.edu/en/genhack-3-hackathon-generative-modelling). See the associated published dataset [https://doi.org/10.57745/C3FNBY](https://doi.org/10.57745/C3FNBY). In the second part, we show what steps to follow to generate a similar dataset.
 """
 
 md"""
@@ -586,6 +590,12 @@ file_yield = download("https://raw.githubusercontent.com/dmetivie/StochasticWeat
 res_YIELDs = JLD.load(file_yield)["res_YIELDs"]
 
 md"""
+!!! note
+    In the GenHack 3 Hackathon, the participants were given one file per station with $10^5$ year of annual yield. The validation set was composed of $10^6$ years. 
+    Here, we generate 300 realizations of 50 year crop yield distributions (to access uncertainty).
+"""
+
+md"""
 ### Yield distributions with uncertainty
 
 The following plot shows the typical distribution of maize yield at four location over a 50-year span. We added the envelope of these distributions to highlight uncertainty. Each location has a very different weather (see previous sections).
@@ -625,6 +635,12 @@ for i in eachindex(dfs_stat)
         @transform!(df, :YIELD = res_YIELDs[i, j])
     end
 end
+dfs_stat[1][1:10,:] # show how it looks like
+
+md"""
+!!! note
+    In the GenHack 3 Hackathon, the number of period was 9, so that there were $9+9=18$ weather variables. Instead of being named `MEAN_TX_j` and `MEAN_RR_j` with `j` going from 1 to 9, there were named `W_i` with `i` going from 1 to 18.
+"""
 
 begin
     j = 1 # station number
