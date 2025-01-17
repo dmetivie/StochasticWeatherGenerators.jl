@@ -635,7 +635,7 @@ for i in eachindex(dfs_stat)
         @transform!(df, :YIELD = res_YIELDs[i, j])
     end
 end
-dfs_stat[1][1:10,:] # show how it looks like
+dfs_stat[1][1][1:10,:] # show how it looks like at one station
 
 md"""
 !!! note
