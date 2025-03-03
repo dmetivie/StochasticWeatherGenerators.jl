@@ -347,13 +347,13 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 save(joinpath(save_tuto_path, "hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"), "hmm", hmm_fit, "hist", hist, "Q_param", θq_fit, "Y_param", θy_fit); #src
 
 md"""
-Uncomment to load a previously computed hmm
+Run the following code to load a saved hmm
 ```julia
-# hmm_infos = load("save_tuto_path/hmm_fit.jld")
-# hmm_fit = hmm_infos["hmm"]
-# hist = hmm_infos["hist"]
-# θq_fit = hmm_infos["Q_param"]
-# θy_fit = hmm_infos["Y_param"]
+hmm_infos = load(joinpath(save_tuto_path,"hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"))
+hmm_fit = hmm_infos["hmm"]
+hist = hmm_infos["hist"]
+θq_fit = hmm_infos["Q_param"]
+θy_fit = hmm_infos["Y_param"]
 ```
 """
 
