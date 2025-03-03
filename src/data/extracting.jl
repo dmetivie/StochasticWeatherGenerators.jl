@@ -75,6 +75,32 @@ function collect_data_ECA!(data, path::String, var; validity=false)
     end
 end
 
+function isvalid_data_ECA(STAID::Integer, date_start, date_end, path::String, var::String; skipto=19, header=18, url=false, portion_valid_data=1)
+    file = url ? Base.download(string(path, @sprintf("STAID%06.d.txt", STAID))) : joinpath(path, string("ECA_blend_$(lowercase(var))/$(uppercase(var))_", @sprintf("STAID%06.d.txt", STAID)))
+    if isfile(file)
+        data = CSV.read(file, DataFrame, skipto=skipto, header=header, comment="#", normalizenames=true, dateformat="yyyymmdd", types=Dict(:DATE => Date))
+        @assert 0 ≤ portion_valid_data ≤ 1
+        total_time = length(date_start:Day(1):date_end)
+        @subset!(data, date_start .≤ :DATE .≤ date_end)
+        if date_start != data[1, :DATE]
+            @warn "Starting date of data is $(data[1,:DATE])"
+            return false
+        elseif date_end != data[end, :DATE]
+            @warn "Ending date of data is $(data[end,:DATE])"
+            return false
+        end
+        Q = Symbol("Q_", var)
+        valid = count(data[:, Q] .!= 9)
+        if valid / nrow(data) < portion_valid_data
+            @warn "Too much missing data -> $(nrow(data)-valid) out of $(nrow(data))"
+            return false
+        end
+        # @subset!(data, Q .== 0)
+        return true
+    else
+        return false
+    end
+end
 """
     shortname(name::String)
 Experimental function that returns only the most relevant part of a station name.
@@ -156,7 +182,7 @@ df_api_url = CSV.read(Base.download(meteofrance_id_to_url), DataFrame)
 - Option for `period` are "1846-1949", "1950-2021", "2022-2023"
 - Option for `variables` are `all`, "RR-T-Wind", "others"
 """
-function download_data_MeteoFrance(STAID; period="1950-2021", variables = "all")
+function download_data_MeteoFrance(STAID; period="1950-2021", variables="all")
     dep = string(STAID)[1:2]
     if variables != "all"
         if variables == "R-T-Wind"
@@ -167,13 +193,13 @@ function download_data_MeteoFrance(STAID; period="1950-2021", variables = "all")
             return "Check spellin"
         end
         id_name = string("QUOT_departement_", dep, "_periode_", period, "_", varFR)
-        id = @subset(df_api_url, :title .== id_name)[1,:id]
+        id = @subset(df_api_url, :title .== id_name)[1, :id]
         path = string("https://tabular-api.data.gouv.fr/api/resources/$(id)/data/csv/?NUM_POSTE__exact=", STAID)
         return df = CSV.read(Base.download(path), DataFrame)
     else
-        dfRTW = download_data_MeteoFrance(STAID; period=period, variables = "R-T-Wind")
-        dfoth = download_data_MeteoFrance(STAID; period=period, variables = "others")
-        return leftjoin!(dfRTW, dfoth[:,7:end], on = :AAAAMMJJ)
+        dfRTW = download_data_MeteoFrance(STAID; period=period, variables="R-T-Wind")
+        dfoth = download_data_MeteoFrance(STAID; period=period, variables="others")
+        return leftjoin!(dfRTW, dfoth[:, 7:end], on=:AAAAMMJJ)
     end
 end
 
