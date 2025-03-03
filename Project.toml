@@ -13,13 +13,18 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Impute = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NearestCorrelationMatrix = "59ddf330-608c-4938-8bc9-a4ee97bbbea6"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
+NonlinearSolve = "4.3.0"
+OrderedCollections = "1.8.0"
 SmoothPeriodicStatsModels = "2"
+StatsBase = "0.34.4"
 julia = "1"
 
 [extras]
