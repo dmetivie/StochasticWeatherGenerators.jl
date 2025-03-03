@@ -53,6 +53,8 @@ function corTail(x, q=0.95)
 end
 
 #TODO: is NearestCorrelationMatrix.jl the best way to enforce positivity? Uncertainty in estimation could be interesting (coefficients we trust or not).
+#Todo: proper rewrite  dealing with missing, NaN, impute
+
 """
     cor_RR(dfs::AbstractArray{<:DataFrame}[, K]; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
 Compute the (strictly positive) rain pair correlations `cor(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
@@ -71,15 +73,19 @@ Options:
 ΣRR = cor_RR(data_stations, K)
 ```
 """
-function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     D = length(dfs)
-    ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + StochasticWeatherGenerators.I for k in 1:K]
+    ΣS_k = Matrix{Union{Float64,Missing}}[zeros(D, D) + LinearAlgebra.I for k in 1:K]
     for j1 in 2:D
         for j2 in 1:j1-1
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
             for k in 1:K
                 R1R2_k = @subset(R1R2, :z .== k)[!, [:RR, :RR_1]] |> Matrix
-                ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2_k, 1) < 1, impute_missing, cor_method(R1R2_k)[1, 2])
+                # if size(R1R2_k, 1) ≤ 2
+                    ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2_k, 1) < 2, impute_missing, cor_method(R1R2_k)[1, 2])
+                # else
+                    # ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = cor_method(R1R2_k)[1, 2]
+                # end
             end
         end
     end
@@ -117,12 +123,12 @@ Options:
 ΣRR = cov_RR(data_stations, K)
 ```
 """
-function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     ΣS_k = cor_RR(dfs, K; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
     return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
 end
 
-function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     D = length(dfs)
     ΣS = zeros(D, D) + StochasticWeatherGenerators.I
     for j1 in 2:D
@@ -146,7 +152,7 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson,
     return ΣS
 end
 
-function cov_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=:nothing)
+function cov_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     ΣS = cor_RR(dfs; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
     return cor2cov(ΣS, [std(@subset(df, :RR .> 0).RR) for df in dfs])
 end
