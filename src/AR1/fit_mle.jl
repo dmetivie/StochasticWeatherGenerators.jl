@@ -2,6 +2,7 @@
 #TODO: check that dropmissing (and potentially not contigous data) does not cause issue in MLE
 """
     fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z)), T = length(unique(n2t)))
+    fit_AR1(y::AbstractArray, z::AbstractArray, n2t, 𝐃𝐞𝐠, K = length(unique(z |> skipmissing)), T = length(unique(n2t)))
 Fit a Seasonal AR(1) model of period `T` and with `K` hidden states for the variable `X` of the DataFrame `df_full`.
 The hidden states must be given in a the column `z` of i.e. `df_full.z`.
 The correspondance between day of the year `t` and index in the time series `n` must be given in the column `n2t` i.e. `df_full.n2t`.
@@ -10,16 +11,19 @@ The correspondance between day of the year `t` and index in the time series `n` 
 
 with ``\\xi \\sim \\mathcal{N}(0,1)``.
 """
-function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z)), T = length(unique(dayofyear_Leap.(df_full.DATE))))
+function fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z |> skipmissing)), T = length(unique(dayofyear_Leap.(df_full.DATE))))
     df = dropmissing(df_full[:, [:DATE, var, :z]])
     z = df.z
     n2t = dayofyear_Leap.(df.DATE)
+    y = df[:, var]
+    return fit_AR1(y, z, n2t, 𝐃𝐞𝐠, T)
+end
+
+function fit_AR1(y::AbstractArray, z::AbstractArray, n2t, 𝐃𝐞𝐠, K = length(unique(z |> skipmissing)), T = length(unique(n2t)))
     n_in_t_k = [setdiff(findall(.&(n2t .== t, z .== k)), 1) for t in 1:T, k in 1:K]
 
     model_AR1_JuMP = model_for_loglikelihood_AR1(𝐃𝐞𝐠, T, silence=true)
     θ_μ, θ_ρ, θ_σ = zeros(K, 2𝐃𝐞𝐠 + 1), zeros(K, 2𝐃𝐞𝐠 + 1), zeros(K, 2𝐃𝐞𝐠 + 1)
-
-    y = df[:, var]
 
     observable = [Dict{Symbol,Vector}() for k in 1:K]
     for k in 1:K
@@ -43,7 +47,7 @@ end
 Fit the covariance matrix of the residual `ϵ` of several AR(1) models `ar1s`. One matrix is fitted per hidden state. 
 The hidden state `z` must be given in `df.z`. Note that we consider constant in time the covariance matrices.
 """
-function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(dfs[1].z)))
+function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(dfs[1].z |> skipmissing)))
     #TODO buggy when missing
     date_start = maximum([df.DATE[1] for df in dfs])
     date_end = minimum([df.DATE[end] for df in dfs])
