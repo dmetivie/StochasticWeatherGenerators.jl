@@ -47,7 +47,7 @@ The fitted model could in principle be any seasonal model. For now by default it
 
 ``g_{k,t}(r) = \\alpha(t,k)\\exp(-r/\\theta_1(t,k))/\\theta_1(t,k) + (1-\\alpha(t,k))\\exp(-r/\\theta_2(t,k))/\\theta_2(t,k).``
 """
-function fit_mle_RR(df::DataFrame, local_order, K=length(unique(df.z)); maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini(length(unique(dayofyear_Leap.(df.DATE)))))
+function fit_mle_RR(df::DataFrame, local_order::Integer, K=length(unique(df.z |> skipmissing)); maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini(length(unique(dayofyear_Leap.(df.DATE)))))
     dfs = df[1+local_order:end, :]
 
     n2t_rain = dayofyear_Leap.([@subset(dfs, :z .== k, :RR .> 0).DATE for k in 1:K]) # un peu bourrin mais bon...
