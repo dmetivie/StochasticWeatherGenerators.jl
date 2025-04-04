@@ -1,11 +1,11 @@
 #TODO: Julify this code with fit_mle/fit, rand
 #TODO: better the code e.g. a lot of time when simulating is spent `getindex` 
 #TODO: Maybe more effective way to store the states than ordered dic?
-#TODO: work on the Wilks struct
+#TODO: work on the wgen struct
 """ 
-    Wilks
-    Wilks(p::Integer, D::Integer, ncat::Integer=2)
-    Wilks(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
+    wgen
+    wgen(p::Integer, D::Integer, ncat::Integer=2)
+    wgen(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
 Structure for a multisite rain occurrence model as described in (Wilks 1998) and generalized to higher order by Srikanthan et al. (2009). 
 It contains Markov chain transition probabilities of order `p` at each sites `j ∈ 1:D`, and a correlation matrix for the unobserved Multivariate Gaussian variable (used to generate correlated rain occurrences). When `idxs` is provided it is an `Vector` of size 12 (typically) with index of days corresponding to each months.
 `ncat` can be larger than 2 to model generic categorical variables (experimental feature).
@@ -18,33 +18,33 @@ date_range = Date(1956):Day(1):Date(2019,12,31)
 D = 5
 Y = rand(Bool, length(date_range), D)
 idx_months = [findall(x -> month.(x) == m, date_range) for m in 1:12]
-# Fit returning a `Wilks` struct
-Wilks4_model = fit_Wilks(Y, idx_months, Wilks_order)
-# Simulate from `Wilk` struct
-Y_simu = rand(Wilks4_model, 1956:2019; Y_ini=rand(Bool, p, D))
+# Fit returning a `wgen` struct
+wgen4_model = fit_wgen(Y, idx_months, wgen_order)
+# Simulate from `wgen` struct
+Y_simu = rand(wgen4_model, 1956:2019; Y_ini=rand(Bool, p, D))
 ```
 
 ## References
 - Wilks, D. S. "Multisite generalization of a daily stochastic precipitation generation model". Journal of Hydrology, (1998). https://doi.org/10.1016/S0022-1694(98)00186-3.
 - Srikanthan, Ratnasingham, et Geoffrey G. S. Pegram. "A nested multisite daily rainfall stochastic generation model". Journal of Hydrology 2009. https://doi.org/10.1016/j.jhydrol.2009.03.025.
 """
-struct Wilks
+struct wgen
     transition_probs
     Ω
 end
 
-function Wilks(p::Integer, D::Integer, ncat::Integer=2)
+function wgen(p::Integer, D::Integer, ncat::Integer=2)
     state_space = MarkovStateSpace(p, ncat)
     transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in D]
     Ω = Diagonal(fill(1, D))
-    return Wilks(transition_probs, Ω)
+    return wgen(transition_probs, Ω)
 end
 
-function Wilks(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
+function wgen(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
     state_space = MarkovStateSpace(p, ncat)
     transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in D, m in eachindex(idxs)]
     Ω = [Diagonal(fill(1, D)) for m in eachindex(idxs)]
-    return Wilks(transition_probs, Ω)
+    return wgen(transition_probs, Ω)
 end
 
 function MarkovStateSpace(p::Integer, ncat=2)
@@ -55,30 +55,33 @@ function MarkovStateSpace(p::Integer, ncat=2)
     end
 end
 
-function fit_Wilks(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
+function fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
     transition_probs = fit_markov_chain(Y, idxs, p)
     Ω = fit_Ω(transition_probs, Y, idxs; kwargs...)
-    return Wilks(transition_probs, Ω)
+    return wgen(transition_probs, Ω)
 end
 
 """
-    fit_markov_chain(data::AbstractVector{<:Integer}, p::Integer)
+    fit_markov_chain(Y::AbstractVector{<:Integer}, p::Integer)
+    fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer)
+    fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer)
 ```julia
 y = rand(Bool, 1000)
 markov = fit_markov_chain(y, 2)
 markov[[0,1]]
 ```    
+TODO: add doc
 """
-function fit_markov_chain(data::AbstractVector{<:Integer}, p::Integer, state_space=MarkovStateSpace(p))
-    if sort(unique([data[i:i+p-1] for i in 1:length(data)-p])) != MarkovStateSpace(p)
-        @warn "Unobserved $(setdiff(MarkovStateSpace(p), sort(unique([data[i:i+p-1] for i in 1:length(data)-p]))))"
+function fit_markov_chain(Y::AbstractVector{<:Integer}, p::Integer, state_space=MarkovStateSpace(p))
+    if sort(unique([Y[i:i+p-1] for i in 1:length(Y)-p])) != MarkovStateSpace(p)
+        @warn "Unobserved $(setdiff(MarkovStateSpace(p), sort(unique([Y[i:i+p-1] for i in 1:length(Y)-p]))))"
     end
     transition_counts = OrderedDict(s => OrderedDict(s′ => 0 for s′ in state_space) for s in state_space)
     transition_probs = OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space)
 
-    for i in 1:length(data)-p
-        current_state = data[i:i+p-1]
-        next_state = data[i+1:i+p]
+    for i in 1:length(Y)-p
+        current_state = Y[i:i+p-1]
+        next_state = Y[i+1:i+p]
         transition_counts[current_state][next_state] += 1
     end
 
@@ -94,29 +97,16 @@ function fit_markov_chain(data::AbstractVector{<:Integer}, p::Integer, state_spa
     return transition_probs
 end
 
-fit_markov_chain(data::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c, p) for c in eachcol(data)]
-fit_markov_chain(data::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(data[idx, j], p) for j in axes(data, 2), idx in idxs]
-# function generate_markov_chain(transition_probs, N::Integer; state_ini=rand(collect(keys(transition_probs))))
-#     @assert Int(log2(length(transition_probs))) isa Integer "The model order is not correct Int(log2(length(transition_probs))) = $(Int(log2(length(transition_probs))))"
-#     p = Int(log2(length(transition_probs)))
-#     current_state = state_ini
-#     generated_sequence = vcat(current_state...)
-
-#     for _ in 1:N-p
-#         state_next = sample(collect(keys(transition_probs[current_state])), Weights(collect(values(transition_probs[current_state]))))
-#         push!(generated_sequence, state_next[end])
-#         current_state = state_next
-#     end
-
-#     return generated_sequence
-# end
-
-# generate_markov_chain(transition_probs, state_ini) = sample(collect(keys(transition_probs[state_ini])), Weights(collect(values(transition_probs[state_ini]))))[end]
+fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c, p) for c in eachcol(Y)]
+fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(Y[idx, j], p) for j in axes(Y, 2), idx in idxs]
 
 """
     simulate_markov_gaussian(N::Integer, ΩX::AbstractMatrix, transition_probs; Y_ini)
     simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_ini)
-Function to simulate `Xt` given a correlation matrix `ΩX`
+Function to simulate `Xt` given a correlation matrix `ΩX` and transition probabilities.
+
+- If `N` is an integer then it return a sequence of size `N` with fixed parameters.
+- If not then it 
 """
 function simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini)
     p, d = size(Y_ini)  # Number of locations, order of the chain
@@ -134,12 +124,15 @@ function simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_pr
     return X
 end
 
-function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_ini)
+function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini)
     p, d = size(Y_ini)
+    @assert d == size(transition_probs, 1)
+    @assert size(transition_probs, 2) == length(ΩX)
+
     X = BitArray(undef, length(Date(years[1]):Day(1):Date(years[end], 12, 31)), d)
     id = 0
     for y in years
-        for m in 1:12
+        for m in eachindex(ΩX) # typically 1:12 for all months
             N = daysinmonth(y, m)
             idend = (id + N)
             X[(id+1):idend, :] .= simulate_markov_gaussian(N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
@@ -150,7 +143,7 @@ function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX, transiti
     return X
 end
 
-Base.rand(model::Wilks, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(years, model.Ω, model.transition_probs; Y_ini)
+Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(years, model.Ω, model.transition_probs; Y_ini)
 
 """
     fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))

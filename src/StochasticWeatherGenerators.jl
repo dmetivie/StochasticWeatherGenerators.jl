@@ -14,7 +14,7 @@ using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_
 using SmoothPeriodicStatsModels: fit_loss_optim
 import SmoothPeriodicStatsModels: fit_mle_RO
 
-# For Wilks Markov models
+# For WGEN Markov models
 using NonlinearSolve
 using OrderedCollections
 
@@ -34,7 +34,7 @@ include("data/stations.jl")
 include("rain/fit_mle.jl")
 include("rain/correlations.jl")
 include("rain/generation.jl")
-include("rain/wilks.jl")
+include("rain/wgen.jl")
 # Temperature
 include("AR1/fit_mle.jl")
 include("temperature/fit_mle.jl")
@@ -46,7 +46,7 @@ include("climate_indices.jl")
 # ## Rain
 export rand_RR, fit_mle_RR, cov_RR, cor_RR, fit_mle_RO
 export joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail
-export fit_markov_chain, simulate_markov_gaussian, fit_Ω, Wilks, fit_Wilks
+export fit_markov_chain, simulate_markov_gaussian, fit_Ω, wgen, fit_wgen
 
 # ## AR1
 export cov_ar1, fit_AR1
