@@ -1,7 +1,7 @@
 using Markdown#hide
 import Pkg;
-Pkg.activate("docs/");#src
 cd(@__DIR__)#hide
+Pkg.activate("../docs/");#src
 
 md"""
 # Multisite daily Stochastic Weather Generator
@@ -45,7 +45,6 @@ using Dates
 using StatsBase, Random
 
 using Distributions
-
 
 md"""
 The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
@@ -164,13 +163,13 @@ local_order = 1
 
 size_order = 2^local_order
 
-println("K = $K, ", "local_order = $local_order, ", "degree = $𝐃𝐞𝐠")
+println("K = $K, ", "degree = $𝐃𝐞𝐠, ", "local_order = $local_order")
 
 md"""
 ## Data
 """
 save_tuto_path = "../../assets/tuto_1/tuto_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)" #src
-
+isdir(save_tuto_path) ? nothing : mkdir(save_tuto_path)
 md"""
 ### Select relevant stations from the `station.txt` file
 """
@@ -259,6 +258,8 @@ md"""
 Binary matrix version of the rain event at the `D` stations.
 """
 
+RR = reduce(hcat, [data_stations[j].RR[1+local_order:end] for j = 1:D]) * 0.1
+
 Yall = BitMatrix(reduce(hcat, [data_stations[j].RO for j = 1:D]))
 
 Y_past = BitMatrix(Yall[1:local_order, :]) # rand(Bool, local_order, D)
@@ -339,8 +340,7 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 #!nb #     ```
 #!nb #     Then the fitting loop inside `fit_mle` will be distributed. See the [official Julia doc](https://docs.julialang.org/en/v1/stdlib/Distributed/#man-distributed) for more info.
 #!nb #     On smaller models it does not worth it since adding workers add some compilation and communication time.
-@time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past,
-    maxiter=10000, robust=true; display=:final, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
+@time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past, maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
 
 #-
 
@@ -516,7 +516,7 @@ Now we are ready to generate samples from the SWG model.
 md"""
 `Nb` is the number of realization
 """
-Nb = 1000
+Nb = 1_000
 
 md"""
 Sample the (seasonal) HMM model and output the sequence of hidden states and multi-site dry/wet.
@@ -538,6 +538,23 @@ begin
     @time "Simulations RR>0" for i in 1:Nb
         rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]', Σ²RR)
     end
+end
+
+md"""
+## WGEN model
+
+We will compare to the WGEN model that propose Markov chain of order 4 for rain occurences (fitted monthly) and laten gaussian model for multisite occurences (fitted monthly).
+- Wilks, D. S. "Multisite generalization of a daily stochastic precipitation generation model". Journal of Hydrology, (1998). https://doi.org/10.1016/S0022-1694(98)00186-3.
+- Srikanthan, Ratnasingham, et Geoffrey G. S. Pegram. "A nested multisite daily rainfall stochastic generation model". Journal of Hydrology 2009. https://doi.org/10.1016/j.jhydrol.2009.03.025.
+"""
+
+wgen_order = 4
+idx_months = [findall(x -> month.(x) == m, data_stations[1][1+local_order:end, :DATE]) for m in 1:12]
+wgen4_model = fit_wgen(Y, idx_months, wgen_order)
+
+ys_wgen = similar(ys)
+@time "Simulation Y wgen 4" for i in 1:Nb
+    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=vcat(rand(Bool, wgen_order - 1, D), Y_past))
 end
 
 md"""
@@ -581,12 +598,14 @@ begin
     p_spell_dry = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
+        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), len_spell_hist[j, dry_or_wet])))
+
+        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
 
         errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
+        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=spell_range, errortype=:percentile, alpha = 0.8)
         xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
@@ -609,12 +628,14 @@ begin
     p_spell_wet = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
     for j = 1:D
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
+        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), len_spell_hist[j, dry_or_wet])))
 
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
+
+        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
 
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=make_range(histo_spell), errortype=:percentile)
+        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=spell_range, errortype=:percentile, alpha = 0.8)
         xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
         yaxis!(:log10)
     end
@@ -627,6 +648,61 @@ end
 
 #-
 savefig(pall_spell_wet, joinpath(save_tuto_path, "spell_steppost_wet_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+
+md"""
+### Seasonal areal dry spells
+"""
+
+Rmax = 0
+ROR = [mean(r .> Rmax) for r in eachrow(RR)]
+RORs = [[mean(r .> Rmax) for r in eachrow(rr)] for rr in eachslice(ys, dims=3)]
+RORswgen = [[mean(r .> Rmax) for r in eachrow(rr)] for rr in eachslice(ys_wgen, dims=3)]
+
+JJA = [6, 7, 8]
+MAM = [3, 4, 5]
+SON = [9, 10, 11]
+DJF = [12, 1, 2]
+SEASONS = [DJF, MAM, JJA, SON]
+seasonname = ["DJF", "MAM", "JJA", "SON"]
+
+idx_seasons = [findall(month.(data_stations[1][1+local_order:end, :DATE]) .∈ tuple(season)) for season in SEASONS]
+
+let
+    perc = 0.2
+    QQ = [5, 95]
+
+    p_spell_rors = [plot(ylims=(5e-4, 1e-0), xlims=(-0.01,25), tickfont=11, legendfontsize=13, legend=:left) for i in eachindex(idx_seasons)]
+    xlabel!.(p_spell_rors[3:end], "Nb of days", xlabelfontsize=12)
+    ylabel!.(p_spell_rors[[1, 3]], "PMF", ylabelfontsize=12)
+    for m in eachindex(idx_seasons)
+        len_ror_hist = pmf_spell(ROR[idx_seasons[m]] .≤ perc, 1)
+        len_ror_simu = [pmf_spell(RORs[i][idx_seasons[m]] .≤ perc, 1) for i in 1:Nb]
+        len_ror_simuwgen = [pmf_spell(RORswgen[i][idx_seasons[m]] .≤ perc, 1) for i in 1:Nb]
+
+        errorlinehist!(p_spell_rors[m], [len_ror_hist], groupcolor=:blue, lw=2, norm=:probability, bins=make_range(len_ror_hist), errortype=:percentile,
+        label=label = islabel(m, 1, "Obs"),
+        legend=:bottom)
+        yaxis!(:log10)
+
+        sim_range = make_range(reduce(vcat, len_ror_simuwgen))
+        errorlinehist!(p_spell_rors[m], len_ror_simuwgen, groupcolor=:green, legend=:topright,
+            label=islabel(m, 1, "WGEN 4"),
+            norm=:probability, bins=sim_range, errortype=:percentile, percentiles=QQ, fillalpha=0.25, centertype=:median, linewidth=2)
+
+        sim_range = make_range(reduce(vcat, len_ror_simu))
+        errorlinehist!(p_spell_rors[m], len_ror_simu, groupcolor=:grey, legend=:topright,
+            label=islabel(m, 1, "SHHMM"),
+            norm=:probability, bins=sim_range, errortype=:percentile, percentiles=QQ, fillalpha=0.3, centertype=:median, alpha=1, linewidth=2)
+        annotate!(p_spell_rors[m], median(sim_range), 1.5, seasonname[m])
+        yticks!(10.0 .^ (-4:-0))
+    end
+
+    pall = plot(p_spell_rors..., layout=(2, 2), size=(1000, 600), top_margin=0.34cm, left_margin=0.3cm, bottom_margin=0.22cm)
+    file_name = "ROR_spell_season_perc_$(perc)_Q_$(QQ[1])_$(QQ[2])_no_inset"
+    file_name = replace(file_name, "." => "p")
+    savefig(pall, joinpath(save_tuto_path, file_name * ".pdf"))
+    pall
+end
 
 md"""
 ### Rain
@@ -678,14 +754,16 @@ Historical vs `Nb` simulations distribution
 """
 
 begin
-    p_uniR = [plot(yaxis=:log10, ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13, titlefontsize=13) for j = 1:D]
+    p_uniR = [plot(yaxis=:log10, ylims=(0.2e-4, 1e-0), tickfont=11, legendfontsize=13, titlefontsize=13) for j = 1:D]
     for j = 1:D
         dists_RR_positive_j = conversion_factor * [filter(!iszero, rs[j, :, i]) for i in 1:Nb]
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
+        Rmax = ceil(max(dists_RR_positive_j .|> maximum |> maximum, conversion_factor * filter(!iszero, data_stations[j].RR) |> maximum))
+        BINS = 0:2:Rmax # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median, bins = BINS)
 
-        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
 
-        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
+        errorlinehist!(p_uniR[j], [conversion_factor * filter(!iszero, data_stations[j].RR)], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, alpha = 0.7)
 
         xlims!(p_uniR[j], 0.0, Inf)
     end
@@ -699,6 +777,68 @@ end
 
 #-
 savefig(pall_R, joinpath(save_tuto_path, "dist_R_positive_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+
+md"""
+Aggregated 5 days `RR` distribution
+"""
+agg_window = 5
+df_res = [
+    @chain df[1+local_order:end, :] begin
+    @transform(:agg = first.(divrem.(1:N, agg_window)))
+    @by(:agg, :AGG = sum(:RR) * 0.1)
+    end
+        for df in data_stations_z
+            ]
+
+
+agg_i_full = first.(divrem.(1:N, agg_window))
+idx_agg = [findall(agg_i_full .== val) for val in unique((agg_i_full))]
+agg_rs = [[sum(rs[j, ii, i]) for ii in idx_agg] for j in 1:D, i in 1:Nb] * conversion_factor
+agg_RR = [[sum(RR[ii, j]) for ii in idx_agg] for j in 1:D]
+begin
+    p_uniR = [plot(yaxis=:log10, ylims=(3e-5, 2e-1), tickfont=11, legendfontsize=13, titlefontsize=13, legend=:bottom) for j = 1:D]
+    [plot!(p_uniR[j], xlabel=L"%$(agg_window) days rain (mm/m$^2$)") for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], ylabel="PDF") for j in staid_lat[[1, 6]]]
+    [title!(p_uniR[j], station_name[j]) for j = 1:D]
+    for j = 1:D
+        dists_RR_positive_j = agg_rs[j, :]
+        Rmax = ceil(max(agg_rs[j, :] .|> maximum |> maximum, agg_RR[j] |> maximum))
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:grey, legend=:topright, label=islabel(j, 20, L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median, bins=0:3:Rmax)
+
+        errorlinehist!(p_uniR[j], dists_RR_positive_j, groupcolor=:red, label=islabel(j, 20, L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins=0:3:Rmax)
+
+        errorlinehist!(p_uniR[j], [agg_RR[j]], label=islabel(j, 20, "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins=0:3:Rmax, fillalpha=0.8)
+
+        xlims!(p_uniR[j], 0.0, Inf)
+        yticks!(10.0 .^ (-5:-1))
+        lens!(p_uniR[j], [0, 25], [0.0, 0.2], inset=(1, bbox(0.48, -0, 0.475, 0.25)), linewidth=0)
+    end
+
+    pall_aggR = plot(p_uniR[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), bottom_margin=14px, left_margin=15px)
+    plot!(pall_aggR, (1:3)', inset=(1, bbox(2.4, 0.42, 0.6, 0.3)), subplot=2D + 1, legendfontsize=14, framestyle=:none, label=[L"Simu $q_{0,100}$" L"Simu $q_{25,75}$" "Obs"], c=[:gray :red :blue], foreground_color_legend=nothing, lw=2)
+end
+savefig(pall_aggR, joinpath(save_tuto_path, "dist_aggR_window_$(agg_window)_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+
+md"""
+#### Autocorrelation
+"""
+
+acfrange = 0:15
+@views aa = [autocor(rs[j, :, i], acfrange) for j in 1:D, i in 1:Nb]
+
+begin
+    p_spell_wet = [plot(xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=16) for j = 1:D]
+    for j = 1:D
+        errorline!(p_spell_wet[j], acfrange, stack(aa[:, j], dims=1)', groupcolor=:gray, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), errortype=:percentile, percentiles=[0, 100], fillalpha=0.8, lw=2, centertype=:median)
+        plot!(p_spell_wet[j], acfrange, autocor(RR[:, j], acfrange), label=islabel(j, staid_lat[[1]], "Obs"), lw=2.0, c=1, markers=:circle, alpha=0.8)
+    end
+
+    [xlabel!(p_spell_wet[j], "Lag", xlabelfontsize=12) for j in staid_lat[6:10]]
+    [ylabel!(p_spell_wet[j], "ACF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
+    [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
+    pall_ACF = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.42cm, bottom_margin=0.32cm)
+end
+savefig(pall_ACF, joinpath(save_tuto_path, "ACF_RR.pdf"))
 
 md"""
 #### Monthly quantile amount
