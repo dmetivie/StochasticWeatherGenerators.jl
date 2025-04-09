@@ -169,7 +169,8 @@ md"""
 ## Data
 """
 save_tuto_path = "../../assets/tuto_1/tuto_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)" #src
-isdir(save_tuto_path) ? nothing : mkdir(save_tuto_path)
+isdir(save_tuto_path) ? nothing : mkdir(save_tuto_path) #src
+
 md"""
 ### Select relevant stations from the `station.txt` file
 """
@@ -700,7 +701,7 @@ let
     pall = plot(p_spell_rors..., layout=(2, 2), size=(1000, 600), top_margin=0.34cm, left_margin=0.3cm, bottom_margin=0.22cm)
     file_name = "ROR_spell_season_perc_$(perc)_Q_$(QQ[1])_$(QQ[2])_no_inset"
     file_name = replace(file_name, "." => "p")
-    savefig(pall, joinpath(save_tuto_path, file_name * ".pdf"))
+    savefig(pall, joinpath(save_tuto_path, file_name * ".pdf")) #src
     pall
 end
 
@@ -838,7 +839,7 @@ begin
     [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
     pall_ACF = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.42cm, bottom_margin=0.32cm)
 end
-savefig(pall_ACF, joinpath(save_tuto_path, "ACF_RR.pdf"))
+savefig(pall_ACF, joinpath(save_tuto_path, "ACF_RR.pdf")) #src
 
 md"""
 #### Monthly quantile amount
