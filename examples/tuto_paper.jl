@@ -4,7 +4,7 @@ cd(@__DIR__)#hide
 Pkg.activate("../docs/");#src
 
 md"""
-# Multisite HMM Stochastic Weather Generator
+# Multisite rainfall HMM based SWG (paper)
 """
 
 md"""

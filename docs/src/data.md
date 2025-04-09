@@ -12,7 +12,7 @@ I tried [unzip-http](https://github.com/saulpw/unzip-http) but could not get it 
 
 ````@example data
 using StochasticWeatherGenerators, DataFrames, Dates
-# collect_data_ECA(33, Date(1956), Date(2019, 12, 31), "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header=21, url=true)[1:10,:]
+collect_data_ECA(33, Date(1956), Date(2019, 12, 31), "https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/ECA_blend_rr/RR_", portion_valid_data=1, skipto=22, header=21, url=true)[1:10,:]
 ````
 
 ```@docs
@@ -25,8 +25,7 @@ Météo France do have a version of this data and it is accessible through an AP
 This package provides a simple command to extract the data of one station (given its STAtionID) from the API.
 
 ````@example data
-## collect_data_MeteoFrance(49215002)[1:10,:]
-1
+collect_data_MeteoFrance(49215002)[1:10,:]
 ````
 
 ```@docs

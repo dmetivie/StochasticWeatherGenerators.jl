@@ -27,20 +27,20 @@ for file in readdir(examples_md_path)
     end
 end
 
-# for file in readdir(examples_jl_path)
-#     if !startswith(file, "utilities")
-#        Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
-#     end
-# end
+for file in readdir(examples_jl_path)
+    if !startswith(file, "utilities")
+       Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
+    end
+end
 
 pages = [
     "Home" => "index.md",
     "Models" => "models.md",
     "Data" => "data.md",
-    # "Tutorials" => [
-    #     "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
-    #     "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
-    #     ],
+    "Tutorials" => [
+        "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
+        "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
+        ],
     "Utilities" => "api.md",
 ]
 
