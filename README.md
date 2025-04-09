@@ -23,8 +23,9 @@ pkg> add StochasticWeatherGenerators
 ```
 
 Currently, the package offers:
+- The daily multisite rainfall SWG **WGEN model** proposed in [*Multisite Generalization of a Daily Stochastic Precipitation Generation Model*](https://www.sciencedirect.com/science/article/pii/S0022169498001863) by Wilks, D. S.
 
-- The daily multisite rain SWG proposed in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states. Note that the seasonal models HMM, AR etc are currently implemented in a separate package [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl).
+- The daily multisite rainfall SWG **SHHMM model** proposed in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states. Note that the seasonal models HMM, AR etc are currently implemented in a separate package [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl).
 
 - The possibility to add stations to the SHMM and variables w.r.t. the hidden states. In particular, a multisite SWG with 5 weather variables (Rain, Temperature Max, Temperature Min, Evapotranspiration, Solar Irradiance) was tested. The structure of the added variables is very simplistic but do the job for the proof of concept. See the associated tutorial in the documentation. This was used to generate a [Hackathon dataset](https://doi.org/10.57745/C3FNBY).
 

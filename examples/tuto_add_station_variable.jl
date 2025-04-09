@@ -1,10 +1,10 @@
 using Markdown#hide
 import Pkg;
-Pkg.activate("docs/");#src
 cd(@__DIR__)#hide
+Pkg.activate("../docs/");#src
 
 md"""
-# Adding stations and weather variables
+# Multivariate SWG: Application to crop model
 """
 
 md"""

@@ -2,6 +2,7 @@
 #TODO: better the code e.g. a lot of time when simulating is spent `getindex` 
 #TODO: Maybe more effective way to store the states than ordered dic?
 #TODO: work on the wgen struct
+#TODO: add rng
 """ 
     wgen
     wgen(p::Integer, D::Integer, ncat::Integer=2)
@@ -55,6 +56,12 @@ function MarkovStateSpace(p::Integer, ncat=2)
     end
 end
 
+"""
+    fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
+Use `fit_markov_chain` at each sites and each set of `idxs` to fit Markov chain of order `p`.
+Then it fits the mutlivariate Gaussian copula for occurrences (each month) with `fit_Ω`.
+Return a `wgen` structure.
+"""
 function fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
     transition_probs = fit_markov_chain(Y, idxs, p)
     Ω = fit_Ω(transition_probs, Y, idxs; kwargs...)
@@ -143,6 +150,11 @@ function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::Abstract
     return X
 end
 
+"""
+    rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini)
+Takes a `wgen` struct
+TODO    
+"""
 Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(years, model.Ω, model.transition_probs; Y_ini)
 
 """

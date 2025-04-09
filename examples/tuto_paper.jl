@@ -4,7 +4,7 @@ cd(@__DIR__)#hide
 Pkg.activate("../docs/");#src
 
 md"""
-# Multisite daily Stochastic Weather Generator
+# Multisite HMM Stochastic Weather Generator
 """
 
 md"""

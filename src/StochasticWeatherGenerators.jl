@@ -56,7 +56,7 @@ export cor_groupby, cor_groupbyTXTN
 # ## Data
 export select_in_range_df, collect_data_ECA, collect_data_INRAE, shortname, collect_data_ECA!, collect_data_MeteoFrance, clean_data, download_data_MeteoFrance, isvalid_data_ECA
 # ### Geo
-export distance_x_to_y, distance_x_to_all_stations, dms_to_dd, haversine
+export distance_x_to_y, distance_x_to_all_stations, dms_to_dd, haversine, LLA
 
 # ## Generic
 export vec_triu, onefy, zerofy

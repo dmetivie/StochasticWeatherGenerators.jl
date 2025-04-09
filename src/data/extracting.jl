@@ -175,7 +175,7 @@ end
 
 const meteofrance_id_to_url = "https://www.data.gouv.fr/fr/datasets/r/966dcd99-2856-44d0-8a2d-0b1a1c5ee737"
 
-df_api_url = CSV.read(Base.download(meteofrance_id_to_url), DataFrame)
+# df_api_url = CSV.read(Base.download(meteofrance_id_to_url), DataFrame)
 
 """
     download_data_MeteoFrance(STAID, period = "1950-2021", variables = "all")
