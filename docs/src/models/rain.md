@@ -5,11 +5,11 @@
 Pages = ["rain.md"]
 Depth = 5
 ```
-
+    
 !!! todo
-    Amongst the rich literature of SWG there are many interesting models. For example
-    - Censored Latent Gaussian models as in [2020_vaittinadaayar_SpacetimeSimulationPrecipitation, 2009_ailliot_SpaceTimeModelling](@cite), etc. In these models, the rainfall occurrence and amounts are generated using the same underlying Gaussian latent variable. It makes possible having very complex spatiotemporal covariance structures.
-    - The author of [2021_najibi_IdentifyingWeatherRegimes](@cite) created a [Git repo of their model](https://github.com/cadillac-desert/wgen), which is always cool and interesting. -> investigate
+    Amongst the rich literature of SWG there are many interesting models. For example
+    - Censored Latent Gaussian models as in [2020_vaittinadaayar_SpacetimeSimulationPrecipitation, 2009_ailliot_SpaceTimeModelling](@cite), etc. In these models, the rainfall occurrence and amounts are generated using the same underlying Gaussian latent variable. It makes possible having very complex spatiotemporal covariance structures.
+    - The author of [2021_najibi_IdentifyingWeatherRegimes](@cite) created a [Git repo of their model](https://github.com/cadillac-desert/wgen), which is always cool and interesting. -> investigate
 
 ## WGEN — Multisite latent Gaussian Rain Occurrence Model
 

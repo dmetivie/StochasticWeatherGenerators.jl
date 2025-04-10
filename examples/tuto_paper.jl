@@ -515,7 +515,7 @@ Now we are ready to generate samples from the SWG model.
 """
 
 md"""
-`Nb` is the number of realization
+`Nb` is the number of realization. In [2024_gobet_InterpretableSeasonalHiddena](@cite) `Nb = 5_000` was used.
 """
 Nb = 1_000
 

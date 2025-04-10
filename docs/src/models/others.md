@@ -22,17 +22,17 @@ cor_groupbyTXTN
 ```
 
 !!! todo
-    - Add `AR(p>1)` models.
-    - Add state-of-the-art temperature models, e.g. with good extremes.
+    - Add `AR(p>1)` models.
+    - Add state-of-the-art temperature models, e.g. with good extremes.
 
 ## Others
 
 For positive variables, one can truncate when generating the `AR(1)` model, but it is not a convincing modeling approach (but it kind of works when in a hurry).
 
-!!! todo
-    - Add a true truncated AR model.
-    - Add more appropriate and domain specific models
-    - Other multivariate models: [2018_sparks_IMAGEMultivariateMultisite, 2010_flecher_StochasticDailyWeather](@cite)
+!!! todo 
+    - Add a true truncated AR model.
+    - Add more appropriate and domain specific models
+    - Other multivariate models: [2018_sparks_IMAGEMultivariateMultisite, 2010_flecher_StochasticDailyWeather](@cite)
 
 
 ## References

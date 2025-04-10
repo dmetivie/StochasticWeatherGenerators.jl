@@ -108,7 +108,6 @@ station_path = string.("https://forgemia.inra.fr/david.metivier/weather_data_mis
 
 station_ndep = string.(station_name, " (", station_dep, ")")
 
-
 md"""
 ### Load
 """
@@ -419,21 +418,19 @@ begin
 
             dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR>0
 
-            VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
+            VarMax = XX == :RR && j == 2 ? 100 : ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
             VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_histo |> minimum))
-            if XX == :RR
-                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
-            else
-                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
-            end
+            BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.6, centertype=:median, bins = BINS)
 
-            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, fillalpha = 0.8, alpha = 0.8)
 
-            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis=:log10) : nothing
+            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-6, 0, yaxis=:log10) : nothing
+            # XX == :RR && j == 2 ? ylims!(plt_dist_univ[XX][j], 1e-7, 1e-1, yaxis=:log10) : nothing
+
             XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
         [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
@@ -448,6 +445,10 @@ end
 
 md"""
 ##### Rainfall `RR`
+
+Note that on this plot our model predicts super high values at Mons-en-Chaussée, which are above 1000 mm/m$^2$. 
+This indicates a bad fit of the seasonal rainfall amount model (probably in late summer).
+We crop the x-axis to only show a realistic range.
 """
 plts_dist_univ[:RR]
 
@@ -615,8 +616,8 @@ begin
     for j in 1:D
         dist_j = Vector{Vector{Float64}}(filter.(!ismissing, res_YIELDs[:, j]))
         VarMax = ceil(dist_j .|> maximum |> maximum)
-        VarMin = floor(dist_j .|> maximum |> maximum)
-        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        VarMin = floor(dist_j .|> minimum |> minimum)
+        BINS = range(VarMin, VarMax, length = 16) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
         errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
@@ -664,8 +665,8 @@ begin
         dist_j = [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         dist_j_sub = [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
-        VarMin = floor(min(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
-        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_sub .|> minimum |> minimum))
+        BINS = range(VarMin, VarMax, length = 20) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
         errorlinehist!(plt_scat[i], dist_j, groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
 
@@ -677,11 +678,10 @@ begin
         vline!([mean.(dist_j_sub) |> mean], label=:none, s=:dot, c=1, lw=2)
         period_range = period_range_func(groups[i])
         title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
-        xlabel!("Rain (mm/period)")
-        ylabel!("PDF")
-
+        (i == 3 || i == 4) ? xlabel!("Rain (mm/period)") : nothing
+        i == 3 || i == 1 ? ylabel!("PDF") : nothing
     end
-    annotate!(plt_scat[3], 5.5, 1.1, station_ndep[j])
+    annotate!(plt_scat[3], 6.5, 0.82, station_ndep[j])
     plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
 end
 savefigcrop(plt_sensitivity, "RR_per_period_cond_yield_dep_49.pdf", save_tuto_path) #src
