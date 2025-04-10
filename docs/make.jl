@@ -6,6 +6,8 @@ using SmoothPeriodicStatsModels
 
 using Pkg
 
+ENV["JULIA_DEBUG"] = "Documenter"
+
 PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
 PkgVERSION = PROJECT_TOML["version"]
 NAME = PROJECT_TOML["name"]
@@ -33,11 +35,13 @@ for file in readdir(examples_jl_path)
     end
 end
 
+SUBSECTION_MODELS = ["Rainfall" => joinpath("models", "rain.md"), "Temperature & Others" => joinpath("models", "others.md")]
+
 pages = [
     "Home" => "index.md",
-    "Models" => "models.md",
-    "Data" => "data.md",
-    "Tutorials" => [
+    "📘 Models" => SUBSECTION_MODELS,        
+    "📅 Weather Data" => "data.md",
+    "📎 Tutorials" => [
         "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
         "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
         ],

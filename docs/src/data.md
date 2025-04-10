@@ -1,4 +1,4 @@
-# 📅 Data management
+# 📅 Weather Data
 
 Several (and more coming) weather station format can be read and transformed to `DataFrame`.
 
@@ -41,10 +41,6 @@ The INRAE CLIMATIK platform [delannoy2022climatik](@cite) ([https://agroclim.inr
 collect_data_INRAE
 ```
 
-```@bibliography
-delannoy2022climatik
-```
-
 ## Others
 
 ## Data manipulation
@@ -53,4 +49,10 @@ delannoy2022climatik
 clean_data 
 select_in_range_df
 shortname
+```
+
+## References
+
+```@bibliography
+Pages = ["data.md"]
 ```

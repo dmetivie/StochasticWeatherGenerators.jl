@@ -8,7 +8,7 @@ import Pkg;
 cd(@__DIR__)#hide
 ````
 
-# Multisite rainfall HMM based SWG (paper)
+# [Multisite rainfall HMM based SWG (paper)](@id TutoSHHMM)
 
 This tutorial describes the numerical applications described in the paper [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
 It shows a fully reproducible example on how to use the package `StochasticWeatherGenerators.jl` to reproduce, step-by-step, exactly (almost) all the figures of the paper.
@@ -163,10 +163,6 @@ println("K = $K, ", "degree = $𝐃𝐞𝐠, ", "local_order = $local_order")
 ````
 
 ## Data
-
-````@example tuto_paper
-isdir(save_tuto_path) ? nothing : mkdir(save_tuto_path)
-````
 
 ### Select relevant stations from the `station.txt` file
 
@@ -502,7 +498,7 @@ begin
 end
 ````
 
-## WGEN model
+## [WGEN model](@id TutoWGEN)
 
 We will compare to the WGEN model that propose Markov chain of order 4 for rain occurences (fitted monthly) and laten gaussian model for multisite occurences (fitted monthly).
 - Wilks, D. S. "Multisite generalization of a daily stochastic precipitation generation model". Journal of Hydrology, (1998). https://doi.org/10.1016/S0022-1694(98)00186-3.
@@ -657,7 +653,6 @@ let
     pall = plot(p_spell_rors..., layout=(2, 2), size=(1000, 600), top_margin=0.34cm, left_margin=0.3cm, bottom_margin=0.22cm)
     file_name = "ROR_spell_season_perc_$(perc)_Q_$(QQ[1])_$(QQ[2])_no_inset"
     file_name = replace(file_name, "." => "p")
-    savefig(pall, joinpath(save_tuto_path, file_name * ".pdf"))
     pall
 end
 ````
@@ -785,7 +780,6 @@ begin
     [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
     pall_ACF = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.42cm, bottom_margin=0.32cm)
 end
-savefig(pall_ACF, joinpath(save_tuto_path, "ACF_RR.pdf"))
 ````
 
 #### Monthly quantile amount

@@ -4,7 +4,7 @@ cd(@__DIR__)#hide
 Pkg.activate("../docs/");#src
 
 md"""
-# Multisite rainfall HMM based SWG (paper)
+# [Multisite rainfall HMM based SWG (paper)](@id TutoSHHMM)
 """
 
 md"""
@@ -542,7 +542,7 @@ begin
 end
 
 md"""
-## WGEN model
+## [WGEN model](@id TutoWGEN)
 
 We will compare to the WGEN model that propose Markov chain of order 4 for rain occurences (fitted monthly) and laten gaussian model for multisite occurences (fitted monthly).
 - Wilks, D. S. "Multisite generalization of a daily stochastic precipitation generation model". Journal of Hydrology, (1998). https://doi.org/10.1016/S0022-1694(98)00186-3.

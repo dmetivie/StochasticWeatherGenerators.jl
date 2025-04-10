@@ -1,7 +1,7 @@
 using Markdown#hide
 
 md"""
-# Multivariate SWG: Application to crop model
+# [Multivariate SWG: Application to crop model](@id TutoCrop)
 """
 
 import Pkg;

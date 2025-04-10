@@ -4,11 +4,14 @@ EditURL = "../../../examples/tuto_add_station_variable.jl"
 
 ````@example tuto_add_station_variable
 using Markdown#hide
+````
+
+# [Multivariate SWG: Application to crop model](@id TutoCrop)
+
+````@example tuto_add_station_variable
 import Pkg;
 cd(@__DIR__)#hide
 ````
-
-# Multivariate SWG: Application to crop model
 
 This tutorial has two objectives
 1. Train a multivariate multisite (simplistic) model, reusing the hidden states trained in the other tutorial.
@@ -61,11 +64,7 @@ This package provide a simple command to extract the data of one station (given 
 # Download the four stations used in this tutorial from MeteoFrance collection
 dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
-For example
-
-````@example tuto_add_station_variable
-collect_data_MeteoFrance(49215002)[1:10,:]
-````
+See the Documentation [data.jl Météo France](@ref) section.
 
 However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
 For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
@@ -396,13 +395,22 @@ begin
         for (j, df) in enumerate(data_stations)
             dist_j = XX == :RR ? [filter(!iszero, x) for x in eachcol(dicts_simu[XX][j, :, :])] : [x for x in eachcol(dicts_simu[XX][j, :, :])] # RR>0
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
-
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
-
             dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR>0
 
-            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile)
+            VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
+            VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_histo |> minimum))
+            if XX == :RR
+                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+            else
+                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+            end
+
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median, bins = BINS)
+
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
+
+            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS)
+
             XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis=:log10) : nothing
             XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
@@ -586,10 +594,13 @@ begin
     plt_dist_yield = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16, legend=:topright) for j = 1:D]
     for j in 1:D
         dist_j = Vector{Vector{Float64}}(filter.(!ismissing, res_YIELDs[:, j]))
+        VarMax = ceil(dist_j .|> maximum |> maximum)
+        VarMin = floor(dist_j .|> maximum |> maximum)
+        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median)
+        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
-        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
+        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
         xlims!(plt_dist_yield[j], 0, 16)
     end
     [xlabel!(plt_dist_yield[j], "YIELD (t/ha)") for j in [3, 4]]
@@ -630,14 +641,20 @@ begin
     df_sub = [@subset(df, :YIELD .> quantile(:YIELD, 0.5)) for df in dfi]
     plt_scat = [plot(legend=:topright, tickfont=14, legendfontsize=14, xlabelfontsize=14, ylabelfontsize=14, titlefontsize=14) for i in 1:week_date.N_period]
     for i in 1:week_date.N_period
-        errorlinehist!(plt_scat[i], [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median)
+        dist_j = [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
+        dist_j_sub = [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
+        VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
+        VarMin = floor(min(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
+        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-        errorlinehist!(plt_scat[i], [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)], groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median)
+        errorlinehist!(plt_scat[i], dist_j, groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
+
+        errorlinehist!(plt_scat[i], dist_j_sub, groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
 
         # stephist!(plt_scat[i], dfi[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R"), norm=:pdf, lw=1.75)
         # stephist!(plt_scat[i], df_sub[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, lw=1.75)
-        vline!([mean.([dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=2, lw=2)
-        vline!([mean.([df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]) |> mean], label=:none, s=:dot, c=1, lw=2)
+        vline!([mean.(dist_j) |> mean], label=:none, s=:dot, c=2, lw=2)
+        vline!([mean.(dist_j_sub) |> mean], label=:none, s=:dot, c=1, lw=2)
         period_range = period_range_func(groups[i])
         title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
         xlabel!("Rain (mm/period)")
