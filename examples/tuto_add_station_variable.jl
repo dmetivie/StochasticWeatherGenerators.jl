@@ -429,8 +429,6 @@ begin
             errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, fillalpha = 0.8, alpha = 0.8)
 
             XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-6, 0, yaxis=:log10) : nothing
-            # XX == :RR && j == 2 ? ylims!(plt_dist_univ[XX][j], 1e-7, 1e-1, yaxis=:log10) : nothing
-
             XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
         [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
