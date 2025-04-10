@@ -64,7 +64,7 @@ This package provide a simple command to extract the data of one station (given 
 # Download the four stations used in this tutorial from MeteoFrance collection
 dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
-See the Documentation [data.jl Météo France](@ref) section.
+See the [Data section of the documentation](@ref DataMeteofrance) section.
 """
 
 

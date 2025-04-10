@@ -19,7 +19,7 @@ collect_data_ECA(33, Date(1956), Date(2019, 12, 31), "https://raw.githubusercont
 collect_data_ECA
 ```
 
-## Météo France
+## [Météo France](@id DataMeteofrance)
 
 Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
 This package provides a simple command to extract the data of one station (given its STAtionID) from the API.
