@@ -64,7 +64,7 @@ This package provide a simple command to extract the data of one station (given 
 # Download the four stations used in this tutorial from MeteoFrance collection
 dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
-See the Documentation [data.jl Météo France](@ref) section.
+See the [Data section of the documentation](@ref DataMeteofrance) section.
 
 However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
 For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
@@ -397,21 +397,18 @@ begin
 
             dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR>0
 
-            VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
+            VarMax = XX == :RR && j == 2 ? 100 : ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
             VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_histo |> minimum))
-            if XX == :RR
-                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
-            else
-                BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
-            end
+            nbins = XX == :ETPP ? 40 : 80
+            BINS = range(VarMin, VarMax, length = nbins) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.6, centertype=:median, bins = BINS)
 
-            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS)
+            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, fillalpha = 0.8, alpha = 0.8)
 
-            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-4, 0, yaxis=:log10) : nothing
+            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-5, 0, yaxis=:log10) : nothing
             XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
         [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
@@ -425,6 +422,10 @@ end
 ````
 
 ##### Rainfall `RR`
+
+Note that on this plot our model predicts super high values at Mons-en-Chaussée, which are above 1000 mm/m$^2$.
+This indicates a bad fit of the seasonal rainfall amount model (probably in late summer).
+We crop the x-axis to only show a realistic range.
 
 ````@example tuto_add_station_variable
 plts_dist_univ[:RR]
@@ -595,8 +596,8 @@ begin
     for j in 1:D
         dist_j = Vector{Vector{Float64}}(filter.(!ismissing, res_YIELDs[:, j]))
         VarMax = ceil(dist_j .|> maximum |> maximum)
-        VarMin = floor(dist_j .|> maximum |> maximum)
-        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        VarMin = floor(dist_j .|> minimum |> minimum)
+        BINS = range(VarMin, VarMax, length = 16) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
         errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
@@ -614,9 +615,7 @@ end
 
 ### Sensitivity of maize on rainfall during key growth periods
 
-To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods. For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
-
-For the selected station, the most critical period is from June 12 to July 27, as evidenced by the significant difference between the two distributions. Specifically, the mean rainfall, when conditioned on a high yield, is approximately 20% higher during this period. In contrast, for the other periods, the mean rainfall remains nearly identical, indicating a much lower sensitivity.
+To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods.
 
 ````@example tuto_add_station_variable
 week_date = (date_begin=Date(1996, 4, 27), date_end=Date(1996, 10, 27), N_period=4)
@@ -633,6 +632,7 @@ dfs_stat[1][1][1:10,:] # show how it looks like at one station
 
 !!! note
     In the GenHack 3 Hackathon, the number of period was 9, so that there were $9+9=18$ weather variables. Instead of being named `MEAN_TX_j` and `MEAN_RR_j` with `j` going from 1 to 9, there were named `W_i` with `i` going from 1 to 18.
+For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
 
 ````@example tuto_add_station_variable
 begin
@@ -644,8 +644,8 @@ begin
         dist_j = [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         dist_j_sub = [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
-        VarMin = floor(min(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
-        BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_sub .|> minimum |> minimum))
+        BINS = range(VarMin, VarMax, length = 20) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
         errorlinehist!(plt_scat[i], dist_j, groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
 
@@ -657,14 +657,15 @@ begin
         vline!([mean.(dist_j_sub) |> mean], label=:none, s=:dot, c=1, lw=2)
         period_range = period_range_func(groups[i])
         title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
-        xlabel!("Rain (mm/period)")
-        ylabel!("PDF")
-
+        (i == 3 || i == 4) ? xlabel!("Rain (mm/period)") : nothing
+        i == 3 || i == 1 ? ylabel!("PDF") : nothing
     end
-    annotate!(plt_scat[3], 5.5, 1.1, station_ndep[j])
+    annotate!(plt_scat[3], 6.5, 0.82, station_ndep[j])
     plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
 end
 ````
+
+For the selected station, the **most critical period** is from **June 12 to July 27**, as evidenced by the significant difference between the two distributions. Specifically, the mean rainfall, when conditioned on a high yield, is approximately 20% higher during this period. In contrast, for the other periods, the mean rainfall remains nearly identical, indicating a much lower sensitivity.
 
 ## Reproducibility
 

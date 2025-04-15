@@ -469,7 +469,7 @@ We fit a Gaussian copula to each pair of stations for joint rainy days only.
 
 Now we are ready to generate samples from the SWG model.
 
-`Nb` is the number of realization
+`Nb` is the number of realization. In [2024_gobet_InterpretableSeasonalHiddena](@cite) `Nb = 5_000` was used.
 
 ````@example tuto_paper
 Nb = 1_000
