@@ -18,6 +18,9 @@ Depth = 5
 The WGEN model is a weather generator approach using **latent Gaussian variables** to generate multisite rain occurrences with order $p$ Markov chain dependence at each site.
 The model was first proposed in [1998_wilks_MultisiteGeneralizationDaily](@cite) and extended to order 4 Markov chains in [2009_srisrikanthan_NestedMultisiteDaily](@cite).
 
+!!! warning "WGEN model"
+    In the literature, the name WGEN refers to different models e.g. to [1981_richardson_StochasticSimulationDaily](@cite) !
+
 #### Model Components
 
 - **Single site Temporal Occurrence**: Binary rain/no-rain determined by Markov chain of order $p$ at each station.
