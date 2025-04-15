@@ -1,4 +1,4 @@
-# Utilities
+# 🧰 Utilities
 
 ## Climate indexes
 

@@ -45,14 +45,15 @@ pages = [
         "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
         "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
         ],
-    "Utilities" => "api.md",
+    "🧰 Utilities" => "api.md",
+    "🌐 Other SWG Packages" => "other_pkg.md",
 ]
 
 fmt = Documenter.HTML(
         prettyurls=true,
         repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
         canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
-        assets=String["assets/citations.css"],
+        assets=String["assets/citations.css", "assets/table.css"],
         footer="[$NAME.jl]($GITHUB) v$PkgVERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
     )
 
