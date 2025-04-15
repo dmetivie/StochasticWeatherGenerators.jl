@@ -420,7 +420,8 @@ begin
 
             VarMax = XX == :RR && j == 2 ? 100 : ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
             VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_histo |> minimum))
-            BINS = range(VarMin, VarMax, length = 80) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+            nbins = XX == :ETPP ? 40 : 80
+            BINS = range(VarMin, VarMax, length = nbins) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
             errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
 
@@ -428,7 +429,7 @@ begin
 
             errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, fillalpha = 0.8, alpha = 0.8)
 
-            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-6, 0, yaxis=:log10) : nothing
+            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-5, 0, yaxis=:log10) : nothing
             XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
         end
         [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
@@ -634,9 +635,7 @@ savefigcrop(plts_dist_yield, "pdf_YIELD_K_$(K)_d_$(degree)_m_$(local_order)", sa
 md"""
 ### Sensitivity of maize on rainfall during key growth periods
 
-To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods. For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
-
-For the selected station, the most critical period is from June 12 to July 27, as evidenced by the significant difference between the two distributions. Specifically, the mean rainfall, when conditioned on a high yield, is approximately 20% higher during this period. In contrast, for the other periods, the mean rainfall remains nearly identical, indicating a much lower sensitivity.
+To identify which rainfall period between April and October has the greatest impact on maize yield, we divide the growing season into four periods. 
 """
 week_date = (date_begin=Date(1996, 4, 27), date_end=Date(1996, 10, 27), N_period=4)
 groups = chunky(Dates.value(week_date.date_end - week_date.date_begin) + 1, week_date.N_period)
@@ -653,7 +652,9 @@ md"""
 !!! note
     In the GenHack 3 Hackathon, the number of period was 9, so that there were $9+9=18$ weather variables. Instead of being named `MEAN_TX_j` and `MEAN_RR_j` with `j` going from 1 to 9, there were named `W_i` with `i` going from 1 to 18.
 """
-
+md"""
+For each period, we calculate the mean rainfall, both conditionally (blue) and unconditionally (orange), on final yields exceeding the median. Each distribution is displayed along with its interquartile range.
+"""
 begin
     j = 1 # station number
     dfi = [dropmissing(dfs_stat[i][j]) for i in eachindex(dfs_stat)]
@@ -683,6 +684,9 @@ begin
     plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
 end
 savefigcrop(plt_sensitivity, "RR_per_period_cond_yield_dep_49.pdf", save_tuto_path) #src
+md"""
+For the selected station, the **most critical period** is from **June 12 to July 27**, as evidenced by the significant difference between the two distributions. Specifically, the mean rainfall, when conditioned on a high yield, is approximately 20% higher during this period. In contrast, for the other periods, the mean rainfall remains nearly identical, indicating a much lower sensitivity.
+"""
 
 md"""
 ## Reproducibility
