@@ -14,7 +14,7 @@ This tutorial has two objectives
 2. How to use this model with a crop model to generate annual crop yield for maize.
 
 In the first part, the tutorial shows how to easily train weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
-We will show how to make a (simplistic) mutlisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$). 
+We will show how to make a (simplistic) mutlisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$). 
 This model will be trained with respect to the given hidden states, and the parameters will be periodic and vary smoothly during a calendar year.
 
 The hidden states and the seasonality are enough to correlate well the weather variables without extra codependency between simulated variables.
@@ -410,7 +410,7 @@ md"""
 begin
     plt_dist_univ = Dict()
     plts_dist_univ = Dict()
-    xlabel_string = Dict(:RR => L"Rain ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
+    xlabel_string = Dict(:RR => L"Rain ($\mathrm{m}\mathrm{m}$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
     for XX in vars
         plt_dist_univ[XX] = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16) for j = 1:D]
         for (j, df) in enumerate(data_stations)
@@ -445,7 +445,7 @@ end
 md"""
 ##### Rainfall `RR`
 
-Note that on this plot our model predicts super high values at Mons-en-Chaussée, which are above 1000 mm/m$^2$. 
+Note that on this plot our model predicts super high values at Mons-en-Chaussée, which are above 1000 mm. 
 This indicates a bad fit of the seasonal rainfall amount model (probably in late summer).
 We crop the x-axis to only show a realistic range.
 """
@@ -487,7 +487,7 @@ qs = [0.9, 0.5, 0.1]
 @time "Plot monthly quantile" begin
     plt_month = Dict()
     plts_month = Dict()
-    ylabel_string = Dict(:RR => L"Cumulated Rain ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
+    ylabel_string = Dict(:RR => L"Cumulated Rain ($\mathrm{m}\mathrm{m}$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
     for XX in vars
         plt_month[XX] = [plot(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12, legendfontsize=12, titlefontsize=12, foreground_color_legend=nothing) for j = 1:D]
         for j = 1:D

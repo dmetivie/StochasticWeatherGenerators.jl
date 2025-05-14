@@ -108,7 +108,7 @@ md"""
 """
 
 md"""
-Number of days in a year (choice here is 366)
+The period of the Seasonal HMM is chosen as the number of days in a year. Our choice is 366 however we carefully skip February 29 when needed.
 """
 
 T = 366
@@ -654,10 +654,10 @@ md"""
 ### Seasonal areal dry spells
 """
 
-Rmax = 0
-ROR = [mean(r .> Rmax) for r in eachrow(RR)]
-RORs = [[mean(r .> Rmax) for r in eachrow(rr)] for rr in eachslice(ys, dims=3)]
-RORswgen = [[mean(r .> Rmax) for r in eachrow(rr)] for rr in eachslice(ys_wgen, dims=3)]
+RRmax = 0
+ROR = [mean(r .> RRmax) for r in eachrow(RR)]
+RORs = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys, dims=3)]
+RORswgen = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys_wgen, dims=3)]
 
 JJA = [6, 7, 8]
 MAM = [3, 4, 5]
@@ -733,7 +733,7 @@ begin
         end
         ylims!(p_rainpercat[j], 0, Inf)
     end
-    [ylabel!(p_rainpercat[j], L"Rain (mm/m$^2$)") for j in staid_lat[[1, 6]]]
+    [ylabel!(p_rainpercat[j], "Rain (mm)") for j in staid_lat[[1, 6]]]
     [xticks!(
         p_rainpercat[j],
         vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
@@ -768,7 +768,7 @@ begin
 
         xlims!(p_uniR[j], 0.0, Inf)
     end
-    [plot!(p_uniR[j], xlabel=L"Rain (mm/m$^2$)") for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], xlabel="Rain (mm)") for j in staid_lat[6:10]]
     [plot!(p_uniR[j], ylabel="PDF") for j in staid_lat[[1, 6]]]
 
     [title!(p_uniR[j], station_name[j]) for j = 1:D]
@@ -798,7 +798,7 @@ agg_rs = [[sum(rs[j, ii, i]) for ii in idx_agg] for j in 1:D, i in 1:Nb] * conve
 agg_RR = [[sum(RR[ii, j]) for ii in idx_agg] for j in 1:D]
 begin
     p_uniR = [plot(yaxis=:log10, ylims=(3e-5, 2e-1), tickfont=11, legendfontsize=13, titlefontsize=13, legend=:bottom) for j = 1:D]
-    [plot!(p_uniR[j], xlabel=L"%$(agg_window) days rain (mm/m$^2$)") for j in staid_lat[6:10]]
+    [plot!(p_uniR[j], xlabel="$(agg_window) days rain (mm)") for j in staid_lat[6:10]]
     [plot!(p_uniR[j], ylabel="PDF") for j in staid_lat[[1, 6]]]
     [title!(p_uniR[j], station_name[j]) for j = 1:D]
     for j = 1:D
@@ -868,7 +868,7 @@ qs = [0.9, 0.5, 0.1]
         xticks!(p_month_RR[j], 1:12, string.(first.(monthabbr.(1:12))))
         ylims!(p_month_RR[j], 0, Inf)
     end
-    [ylabel!(p_month_RR[j], L"Rain (mm/m$^2$)") for j in staid_lat[[1, 6]]]
+    [ylabel!(p_month_RR[j], "Rain (mm)") for j in staid_lat[[1, 6]]]
 
     [title!(p_month_RR[j], station_name[j], titlefontsize=12) for j = 1:D]
     pall_month_RR = plot(p_month_RR[staid_lat]..., size=(1190, 500), layout=(2, 5), left_margin=19px)
@@ -900,7 +900,7 @@ begin
 end
 
 #-
-savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_$(Nb)_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
 The largest pair correlation error for rain occurence comes from the pair 
@@ -934,9 +934,9 @@ begin
 end
 
 #-
-savefigcrop(plots_cor[1], "full_cor_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
-savefigcrop(plots_cor[2], "full_corT_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
-savefigcrop(plot_cor_all, "full_cor_both_hist_vs_1000_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plots_cor[1], "full_cor_hist_vs_$(Nb)_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plots_cor[2], "full_corT_hist_vs_$(Nb)_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
+savefigcrop(plot_cor_all, "full_cor_both_hist_vs_$(Nb)_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
 The largest pair correlation error for rain (zero and non zero amounts) comes from the pair 
