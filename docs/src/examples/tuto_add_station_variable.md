@@ -18,7 +18,7 @@ This tutorial has two objectives
 2. How to use this model with a crop model to generate annual crop yield for maize.
 
 In the first part, the tutorial shows how to easily train weather stations given the hidden states sequence `z` obtained in the [previous tutorial](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/examples/tuto_paper/).
-We will show how to make a (simplistic) mutlisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$).
+We will show how to make a (simplistic) multisite SWG with multiple correlated weather variables such as daily Rain `RR` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$), daily Temperature minimum `TN` (°C), maximum `TX` (°C), total daily solar irradiance `QQ` (MJ/$\mathrm{m}^2$) and daily evapotranspiration Penman `ETPP` ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$).
 This model will be trained with respect to the given hidden states, and the parameters will be periodic and vary smoothly during a calendar year.
 
 The hidden states and the seasonality are enough to correlate well the weather variables without extra codependency between simulated variables.
@@ -146,7 +146,7 @@ FR_map = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_
 ````
 
 ## Fitting
-We now fit the observed weather variables to seasonal models w.r.t. the hidden variables i.e. the models we fit depend continuously on the day of the year $t\in [1,366]$ and on the provided hidden state $Z \in [1,K]$.
+We now fit the observed weather variables to seasonal models with respect to the hidden variables i.e. the models we fit depend continuously on the day of the year $t\in [1,366]$ and on the provided hidden state $Z \in [1,K]$.
 
 ### Rain Occurrences
 Fit the Rain Occurrences of INRAE stations with respect to the given hidden states sequence.
@@ -334,9 +334,9 @@ In this section, we show different correlations between variables and stations.
 
 ````@example tuto_add_station_variable
 @time begin
-    plt_cor_mutlisite = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16) for i in 1:length(vars)]
+    plt_cor_multisite = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16) for i in 1:length(vars)]
     for (i, vari) in enumerate(vars)
-        annotate!(plt_cor_mutlisite[i], 0.5, 1.15, ("$(string(vari))", 16))
+        annotate!(plt_cor_multisite[i], 0.5, 1.15, ("$(string(vari))", 16))
         X = dicts_simu[vari]
         for station_1 in 1:D-1
             @views X₁ = X[station_1, :, :]
@@ -345,13 +345,13 @@ In this section, we show different correlations between variables and stations.
                 @views X₂ = X[station_2, :, :]
                 @views mean_cor = mean(cor(X₁[:, r], X₂[:, r]) for r in 1:NSIMU)
                 arr = ([cor(df1[:, vari], df1[:, Symbol(string(vari, "_1"))])], [mean_cor])
-                scatter!(plt_cor_mutlisite[i], arr, label=ifelse(i == 2, "$(station_dep[station_1]) vs $(station_dep[station_2])", :none), markersize=6)
+                scatter!(plt_cor_multisite[i], arr, label=ifelse(i == 2, "$(station_dep[station_1]) vs $(station_dep[station_2])", :none), markersize=6)
             end
         end
         xlabel!("Observation")
         i ∈ [1, 4] ? ylabel!("Simulation") : nothing
     end
-    plt_cor_mutlisites = plot(plt_cor_mutlisite..., size=(1000, 1000), layout=(3, 3), top_margin=7px)
+    plt_cor_multisites = plot(plt_cor_multisite..., size=(1000, 1000), layout=(3, 3), top_margin=7px)
 end
 ````
 

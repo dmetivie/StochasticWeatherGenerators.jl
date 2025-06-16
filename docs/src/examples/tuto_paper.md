@@ -874,7 +874,7 @@ println("$(station_name[findmax(cor_hist - cor_mean_simu)[2][1]]) and $(station_
 
 ##### Gaussian copula hypothesis
 
-For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution with the Mahalanobis distance to the theoretical $\chi^2(2)$-distriubtion.
+For a pair of stations, we transform the marginal $R_s>0$ to $\mathcal{N}(0,1)$. We compare the obtained bi-variate Normal distribution with the Mahalanobis distance to the theoretical $\chi^2(2)$-distribution.
 
 ````@example tuto_paper
 corΣ = cov2cor.(Σ²RR)

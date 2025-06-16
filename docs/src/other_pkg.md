@@ -9,7 +9,7 @@ Below is a **far from exhaustive list**[^1] that we (the authors and contributor
     If you know of a useful model with code not listed here, feel free to suggest it or contribute via Pull Request.
 
 ```@raw html
-<embed type="text/html" src="../other_pkg/table_pkg.html" width=100%>
+<embed type="text/html" src="../other_pkg/table_pkg.html" width="100vw" height="50vh">
 ```
 
 !!! tip "Two Languages Problem"
