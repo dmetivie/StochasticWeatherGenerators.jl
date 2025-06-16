@@ -160,7 +160,7 @@ Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov
 """
     fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
     fit_Ω(transition_probs::AbstractMatrix, Y, idxs; ω0=(-0.999, 0.999))    
-Fit the mutlisite mutlivariate Gaussian variable.
+Fit the multisite mutlivariate Gaussian variable.
 """
 function fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
     @assert size(Y, 2) == 2
