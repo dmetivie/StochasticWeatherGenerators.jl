@@ -704,7 +704,10 @@ md"""
 ## [Yield vs the Weather Time series](@id YieldvsWeather)
 
 This section shows how the yield is related to the weather time series at a given station.
+Bellow is the code to generate the GIF at the beginning of this tutorial.
 """
+md"""
+```julia
 idx_simu = 153  # simulation number, 1 to 300
 idx_station = 1 # station number, 1 to 4
 cs = cgrad([:red, :green], 10, categorical = true)
@@ -728,7 +731,10 @@ begin
 	    frame(anim)
 	end
 end
-gif(anim, "yield_vs_TS_station_$(idx_station)_simu_$(idx_simu).gif", fps=1) #src
+gif(anim, "yield_vs_TS_station_$(idx_station)_simu_$(idx_simu).gif", fps=1)
+```
+"""
+
 
 md"""
 ## Reproducibility
