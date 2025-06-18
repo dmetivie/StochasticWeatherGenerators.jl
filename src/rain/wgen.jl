@@ -59,7 +59,7 @@ end
 """
     fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
 Use `fit_markov_chain` at each sites and each set of `idxs` to fit Markov chain of order `p`.
-Then it fits the mutlivariate Gaussian copula for occurrences (each month) with `fit_Ω`.
+Then it fits the multivariate Gaussian copula for occurrences (each month) with `fit_Ω`.
 Return a `wgen` structure.
 """
 function fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
@@ -160,7 +160,7 @@ Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov
 """
     fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
     fit_Ω(transition_probs::AbstractMatrix, Y, idxs; ω0=(-0.999, 0.999))    
-Fit the multisite mutlivariate Gaussian variable.
+Fit the multisite multivariate Gaussian variable.
 """
 function fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
     @assert size(Y, 2) == 2
