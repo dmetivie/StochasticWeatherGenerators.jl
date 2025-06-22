@@ -187,14 +187,14 @@ a[data_stations[1].z[1]] = 1.0 # Initial state of the HMM
 hmm_fit = ARPeriodicHMM(a, hmm_fit_full.A, B)
 
 md"""
-### Rain Amounts
+### Rainfall amounts
 
-Here for simplicity we select the double exponential model for the rain amount. 
+Here for simplicity we select the double exponential model for the Rainfall amount. 
 We aim for a generic interface where one could easily change this choice to other univariate distribution e.g. `mix₀ = MixtureModel([Exponential(1), Gamma(1,2)], [1/2,1/2])` or `mix₀ = Pareto(1)`. 
 For now this is not supported (because of the seasonal fit).
 """
 
-@time "Fit Rain amounts" mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));
+@time "Fit Rainfall amounts" mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));
 
 md"""
 The Gaussian copula covariance matrices are then estimated.

@@ -26,7 +26,7 @@ function fit_mle_RO(df::DataFrame, df_z::DataFrame, local_order, degree, K=lengt
     return fit_mle_RO(df_f, local_order, degree, K, T; kwargs...)
 end
 
-#* Rain amount
+#* Rainfall amount
 
 #TODO add degree option! Here degree is forced to 1
 function mix_ini(T::Integer)
@@ -42,7 +42,7 @@ end
 
 """
     fit_mle_RR(df::DataFrame, local_order,  K = length(unique(df.z)); maxiter=5000, tol=2e-4, robust=true, silence=true, warm_start=true, display=:none, mix₀=mix_ini(length(unique(dayofyear_Leap.(df.DATE)))))
-Fit the strictly positive rain amounts `RR>0` distribution ``g_{k,t}(r)`` w.r.t. to each hidden states `k∈[1,K]` (provided in a column of `df.z`). 
+Fit the strictly positive rainfall amounts `RR>0` distribution ``g_{k,t}(r)`` w.r.t. to each hidden states `k∈[1,K]` (provided in a column of `df.z`). 
 The fitted model could in principle be any seasonal model. For now by default it is a double exponential model,
 
 ``g_{k,t}(r) = \\alpha(t,k)\\exp(-r/\\theta_1(t,k))/\\theta_1(t,k) + (1-\\alpha(t,k))\\exp(-r/\\theta_2(t,k))/\\theta_2(t,k).``
