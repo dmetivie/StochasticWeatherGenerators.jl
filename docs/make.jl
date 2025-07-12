@@ -53,7 +53,7 @@ fmt = Documenter.HTML(
         prettyurls=true,
         repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
         canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
-        assets=String["assets/citations.css", "assets/table.css"],
+        assets=String["assets/citations.css", "assets/table.css", "assets/favicon.ico"],
         footer="[$NAME.jl]($GITHUB) v$PkgVERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
     )
 
