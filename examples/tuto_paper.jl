@@ -65,9 +65,9 @@ Pkg.add(url = "https://github.com/dmetivie/StochasticWeatherGenerators.jl")
 ```
 """
 
-using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
-
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
+
+using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
 
 #-
 Random.seed!(1234)
@@ -488,7 +488,7 @@ g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-
 whose parameters $w(t)$, $\vartheta_1(t)$ and $\vartheta_2(t)$ are smooth periodic functions of the day of the year.
 """
 
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T));
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, local_order, mix₀=mix_ini(T));
 
 save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE); #src
 

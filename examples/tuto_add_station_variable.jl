@@ -59,8 +59,8 @@ Pkg.add("StochasticWeatherGenerators")
 ```
 """
 
-using SmoothPeriodicStatsModels
 using StochasticWeatherGenerators
+using SmoothPeriodicStatsModels
 
 md"""
 ## Data extraction and settings
@@ -232,7 +232,6 @@ We will then simulate the `TN` conditionally to the `TX`
 θ_cor = cor_groupbyTXTN.(data_stations, T)
 f(θ) = Gamma(θ[1], θ[2]) # other options e.g. MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
 f(t, θ) = f([σₜ(t, θ[1:(2+1)]), σₜ(t, θ[(2+2):end])])
-
 
 md"""
 ### Solar Irradiance (QQ)

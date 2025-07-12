@@ -53,3 +53,5 @@ function rand_RR(mixs::AbstractArray{M}, n2t::AbstractVector, z::AbstractVector,
     end
     return rand_RR(reshape_mixs, n2t, z, y, Σk)
 end
+
+function rand_cond end
