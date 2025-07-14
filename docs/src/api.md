@@ -13,6 +13,7 @@ pmf_spell
 ## Generic utilities
 
 ```@docs
+mix_ini
 my_color
 ```
 

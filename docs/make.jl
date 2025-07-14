@@ -17,7 +17,6 @@ GITHUB = "https://github.com/dmetivie/StochasticWeatherGenerators.jl"
 bib = CitationBibliography(
     joinpath(@__DIR__, "src", "biblio_swg.bib"),
     style=:authoryear #:numeric  # default
-
 )
 
 examples_jl_path = joinpath(dirname(@__DIR__), "examples")
@@ -31,7 +30,7 @@ end
 
 for file in readdir(examples_jl_path)
     if !startswith(file, "utilities")
-       Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
+        Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
     end
 end
 
@@ -39,30 +38,35 @@ SUBSECTION_MODELS = ["Rainfall" => joinpath("models", "rain.md"), "Temperature &
 
 pages = [
     "Home" => "index.md",
-    "📘 Models" => SUBSECTION_MODELS,        
+    "📘 Models" => SUBSECTION_MODELS,
     "📅 Weather Data" => "data.md",
     "📎 Tutorials" => [
         "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
         "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
-        ],
+    ],
     "🧰 Utilities" => "api.md",
     "🌐 Other SWG Packages" => "other_pkg.md",
 ]
 
 fmt = Documenter.HTML(
-        prettyurls=true,
-        repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
-        canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
-        assets=String["assets/citations.css", "assets/table.css", "assets/favicon.ico"],
-        footer="[$NAME.jl]($GITHUB) v$PkgVERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
-    )
+    prettyurls=true,
+    repolink="https://github.com/dmetivie/StochasticWeatherGenerators.jl",
+    canonical="https://dmetivie.github.io/StochasticWeatherGenerators.jl",
+    assets=String["assets/citations.css", "assets/table.css", "assets/favicon.ico"],
+    footer="[$NAME.jl]($GITHUB) v$PkgVERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
+)
 
 makedocs(
-    sitename = "StochasticWeatherGenerators.jl",
-    authors = "David Métivier",
-    format = fmt,
-    modules = [StochasticWeatherGenerators],
-    pages = pages,
+    sitename="StochasticWeatherGenerators.jl",
+    authors="David Métivier",
+    format=fmt,
+    modules=[
+        StochasticWeatherGenerators,
+        # https://discourse.julialang.org/t/docstrings-from-package-extensions-in-documenter-jl/104690/3?
+        isdefined(Base, :get_extension) ?
+        Base.get_extension(StochasticWeatherGenerators, :SmoothPeriodicStatsModelsExt) :
+        StochasticWeatherGenerators.SmoothPeriodicStatsModelsExt],
+    pages=pages,
     plugins=[bib]
 )
 
