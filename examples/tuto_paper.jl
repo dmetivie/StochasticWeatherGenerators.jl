@@ -47,22 +47,8 @@ using StatsBase, Random
 using Distributions
 
 md"""
-The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
-They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package i.e. 
-```julia
-using Pkg
-pkg"registry add https://github.com/dmetivie/LocalRegistry"
-Pkg.add("SmoothPeriodicStatsModels")
-Pkg.add("StochasticWeatherGenerators")
-```
-
-Or directly on the master branch with `add`ed via url i.e.
-
-```julia
-import Pkg
-Pkg.add(url = "https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
-Pkg.add(url = "https://github.com/dmetivie/StochasticWeatherGenerators.jl")
-```
+The main package is `StochasticWeatherGenerators.jl`, which provides the interface to the models and data.
+`SmoothPeriodicStatsModels.jl` contains the smooth periodic models (fit and sampling methods) used in this tutorial, namely the Seasonal Hidden Markov Model (SHMM), and the seasonal mixture models for rainfall amounts.
 """
 
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl

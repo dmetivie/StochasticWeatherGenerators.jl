@@ -6,17 +6,12 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/)
 
 A Julia package, to define, fit and use Stochastic Weather Generators (SWG).
+It provides the interface to the models and data.
 
-The package is currently NOT in the Julia general registry (will be soon), but on a local registry, hence to download it just add:
-
-```julia
-using Pkg
-pkg"registry add https://github.com/dmetivie/LocalRegistry"
-```
-
-and then `add` it as a normal package
+To install it, just `add` it as any other Julia package, i.e. in the Julia REPL:
 
 ```julia
+import Pkg
 Pkg.add("StochasticWeatherGenerators")
 # or
 pkg> add StochasticWeatherGenerators
