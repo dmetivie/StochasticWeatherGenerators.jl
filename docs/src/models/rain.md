@@ -116,6 +116,12 @@ fit_mle_RO
 fit_mle_RR
 ```
 
+TO get an initial condition for `fit_mle_RR`, one can use (for a given hidden state `k`):
+
+```@docs
+mix_ini
+```
+
 TODO add `SmoothPeriodicStatsModels.fit_mle`
 
 #### Spatial correlations
