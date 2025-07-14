@@ -1,6 +1,6 @@
 """
     rand_RR(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::AbstractVector, y::AbstractMatrix, Σk::AbstractArray)
-Generate a (nonhomegenous) sequence of length `length(n2t)` of rain amounts conditionally to a given dry/wet matrix `y` and (hidden) state sequence `z`.
+Generate a (nonhomegenous) sequence of length `length(n2t)` of rainfall amounts conditionally to a given dry/wet matrix `y` and (hidden) state sequence `z`.
 Univariate distribution are given by `mixs` while correlations are given by covariance matrix Σk.
 """
 function rand_RR(mixs::AbstractArray{<:MixtureModel}, n2t::AbstractVector, z::AbstractVector, y::AbstractArray, Σk::AbstractArray)
@@ -53,3 +53,5 @@ function rand_RR(mixs::AbstractArray{M}, n2t::AbstractVector, z::AbstractVector,
     end
     return rand_RR(reshape_mixs, n2t, z, y, Σk)
 end
+
+function rand_cond end

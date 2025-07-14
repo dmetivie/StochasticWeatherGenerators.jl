@@ -8,7 +8,7 @@ md"""
 """
 
 md"""
-This tutorial describes the numerical applications described in the paper [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
+This tutorial describes the numerical applications described in the paper [*Interpretable Seasonal Multisite Hidden Markov Model for stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
 It shows a fully reproducible example on how to use the package `StochasticWeatherGenerators.jl` to reproduce, step-by-step, exactly (almost) all the figures of the paper.
 
 The paper describes the construction of a Stochastic Weather Generator with an Autoregressive Seasonal Hidden Markov Model (SHMM). The SHMM is trained with French weather stations, and the hidden states are interpreted as weather regimes. The model is validated with simulations, especially for its ability to reproduce extreme weather, e.g. droughts. 
@@ -47,27 +47,13 @@ using StatsBase, Random
 using Distributions
 
 md"""
-The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
-They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package i.e. 
-```julia
-using Pkg
-pkg"registry add https://github.com/dmetivie/LocalRegistry"
-Pkg.add("SmoothPeriodicStatsModels")
-Pkg.add("StochasticWeatherGenerators")
-```
-
-Or directly on the master branch with `add`ed via url i.e.
-
-```julia
-import Pkg
-Pkg.add(url = "https://github.com/dmetivie/SmoothPeriodicStatsModels.jl")
-Pkg.add(url = "https://github.com/dmetivie/StochasticWeatherGenerators.jl")
-```
+The main package is `StochasticWeatherGenerators.jl`, which provides the interface to the models and data.
+`SmoothPeriodicStatsModels.jl` contains the smooth periodic models (fit and sampling methods) used in this tutorial, namely the Seasonal Hidden Markov Model (SHMM), and the seasonal mixture models for rainfall amounts.
 """
 
-using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
-
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
+
+using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
 
 #-
 Random.seed!(1234)
@@ -128,7 +114,7 @@ LAT_min = 41 # South
 LAT_max = 52 # North
 
 md"""
-`conversion_factor` for rain amounts `RR` in 0.1 mm to mm 
+`conversion_factor` for rainfall amounts `RR` in 0.1 mm to mm 
 """
 
 conversion_factor = 0.1 # 0.1 mm -> mm 
@@ -474,13 +460,13 @@ end
 savefig(pviterbi, joinpath(save_tuto_path, "temporal_1959_2009_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
 
 md"""
-## Adding Rain amounts to the model
+## Adding Rainfall amounts to the model
 """
 
 md"""
 ### Marginal distribution
 
-We fit the marginals of the rain amount $R>0$ at each station $s$ and for each hidden state $Z$ independently. 
+We fit the marginals of the rainfall amount $R>0$ at each station $s$ and for each hidden state $Z$ independently. 
 We use a mixture of exponential functions 
 ```math
 g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-{\frac {r}{\vartheta_2}}}}{\vartheta_2}.
@@ -488,7 +474,7 @@ g(r) = w \dfrac{e^{-{\frac {r}{\vartheta_1}}}}{\vartheta_1} + (1-w)  \dfrac{e^{-
 whose parameters $w(t)$, $\vartheta_1(t)$ and $\vartheta_2(t)$ are smooth periodic functions of the day of the year.
 """
 
-@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, local_order, mix₀=StochasticWeatherGenerators.mix_ini(T));
+@time "FitMLE RR" mix_allE = fit_mle_RR.(data_stations_z, local_order, mix₀=mix_ini(T));
 
 save(joinpath(save_tuto_path, "rain_mix.jld"), "mix2Exp", mix_allE); #src
 
@@ -501,6 +487,7 @@ md"""
 
 We fit a Gaussian copula to each pair of stations for joint rainy days only.
 """
+
 #!nb # !!! warning
 #!nb #     For some hidden states corresponding to dry weather, it might happen that for some pair of stations, there are not enough simultaneous rain occurrences in a rain category $Z = k$ to estimate a correlation coefficient.
 #!nb #     In that case a `missing` coefficient is returned by `cov_RR` or it returns the value `impute_missing` if specified (to avoid missing).
@@ -531,7 +518,7 @@ begin
 end
 
 md"""
-Given the hidden states and dry/wet, it generates the rain amounts at each station (correlated with a Gaussian Copula).
+Given the hidden states and dry/wet, it generates the rainfall amounts at each station (correlated with a Gaussian Copula).
 """
 
 begin
@@ -544,7 +531,7 @@ end
 md"""
 ## [WGEN model](@id TutoWGEN)
 
-We will compare to the WGEN model that propose Markov chain of order 4 for rain occurences (fitted monthly) and laten gaussian model for multisite occurences (fitted monthly).
+We will compare to the WGEN model that propose Markov chain of order 4 for rain occurrences (fitted monthly) and laten gaussian model for multisite occurrences (fitted monthly).
 - Wilks, D. S. "Multisite generalization of a daily stochastic precipitation generation model". Journal of Hydrology, (1998). https://doi.org/10.1016/S0022-1694(98)00186-3.
 - Srikanthan, Ratnasingham, et Geoffrey G. S. Pegram. "A nested multisite daily rainfall stochastic generation model". Journal of Hydrology 2009. https://doi.org/10.1016/j.jhydrol.2009.03.025.
 """
@@ -712,7 +699,7 @@ md"""
 md"""
 #### Interpretation: Mean Rain per weather regime $R > 0 \mid Z = k$.
 
-We plot the empirical (strictly) positive **mean** rain amounts per weather regime. The results are smoothed using a `cyclic_moving_average` with a time window of $\pm 15$ days and the Epanechnikov kernel.
+We plot the empirical (strictly) positive **mean** rainfall amounts per weather regime. The results are smoothed using a `cyclic_moving_average` with a time window of $\pm 15$ days and the Epanechnikov kernel.
 """
 
 begin
@@ -903,13 +890,13 @@ end
 savefigcrop(plot_cor_bin, "full_cor_binary_hist_vs_$(Nb)_mean_simu_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)", save_tuto_path); #src
 
 md"""
-The largest pair correlation error for rain occurence comes from the pair 
+The largest pair correlation error for rain occurrence comes from the pair 
 """
 
 println("$(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][1]]) and $(station_name[findmax(cor_bin_hist - cor_bin_mean_simu)[2][2]])")
 
 md"""
-##### Rain amount
+##### Rainfall amount
 """
 
 cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));

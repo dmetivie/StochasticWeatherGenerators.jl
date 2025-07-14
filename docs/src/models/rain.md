@@ -5,7 +5,7 @@
 Pages = ["rain.md"]
 Depth = 5
 ```
-    
+
 !!! todo
     Amongst the rich literature of SWG there are many interesting models. For example
     - Censored Latent Gaussian models as in [2020_vaittinadaayar_SpacetimeSimulationPrecipitation, 2009_ailliot_SpaceTimeModelling](@cite), etc. In these models, the rainfall occurrence and amounts are generated using the same underlying Gaussian latent variable. It makes possible having very complex spatiotemporal covariance structures.
@@ -80,7 +80,7 @@ It has a **Hierarchical Structure** as it combines a discrete HMM for occurrence
 - **Hidden Weather Regimes**: The model infers interpretable hidden states (weather regimes) from daily **rain occurrence** data, without relying on exogenous variables.
 - **Rain Occurrence Layer**: Discrete Bernoulli HMM modeling rain/no-rain across stations.
 - **Local Memory**: Incorporates autoregressive memory for dry/wet persistence (Auto-Regressive HMM). The local memory can be per site. TODO: doc
-- **Rain Amount Layer**: Gaussian copula-based model to assign amounts conditioned on the occurrence and hidden states. The parametric form can be an arbitrary continuous distribution from `Distributions.jl`.
+- **Rainfall amount Layer**: Gaussian copula-based model to assign amounts conditioned on the occurrence and hidden states. The parametric form can be an arbitrary continuous distribution from `Distributions.jl`.
 - **Seasonality**: All model parameters vary continuously over the year.
 
 #### Assumptions & Limitations
@@ -130,7 +130,7 @@ joint_rain
 
 #### Generation
 
-Function to generate rain amounts
+Function to generate rainfall amounts
 
 ```@docs
 rand_RR

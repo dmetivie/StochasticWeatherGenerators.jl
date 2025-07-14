@@ -9,10 +9,6 @@ using LinearAlgebra
 using Copulas # for correlated generation
 using NearestCorrelationMatrix: nearest_cor!, nearest_cor
 using RollingFunctions # rollmean for climate indices
-using SmoothPeriodicStatsModels: αₜ, σₜ, μₜ, ρₜ
-using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_optimize!
-using SmoothPeriodicStatsModels: fit_loss_optim
-import SmoothPeriodicStatsModels: fit_mle_RO
 
 # For WGEN Markov models
 using NonlinearSolve
@@ -37,14 +33,15 @@ include("rain/generation.jl")
 include("rain/wgen.jl")
 # Temperature
 include("AR1/fit_mle.jl")
-include("temperature/fit_mle.jl")
-include("temperature/correlations.jl")
+include("temperature/TN.jl")
+
 
 # Climate
 include("climate_indices.jl")
 
 # ## Rain
 export rand_RR, fit_mle_RR, cov_RR, cor_RR, fit_mle_RO
+export mix_ini
 export joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail
 export fit_markov_chain, simulate_markov_gaussian, fit_Ω, wgen, fit_wgen
 

@@ -49,18 +49,12 @@ using LaTeXStrings
 using StatsBase
 
 md"""
-The two main packages for this tutorial are not yet registered in the official Julia registry, since they are not quite fully ready. 
-They can be either `add`ed through [my local Julia registry](https://github.com/dmetivie/LocalRegistry) with the [LocalRegistry.jl](https://github.com/GunnarFarneback/LocalRegistry.jl) package i.e. 
-```julia
-using Pkg
-pkg"registry add https://github.com/dmetivie/LocalRegistry"
-Pkg.add("SmoothPeriodicStatsModels")
-Pkg.add("StochasticWeatherGenerators")
-```
+The main package is `StochasticWeatherGenerators.jl`, which provides the interface to the models and data.
+`SmoothPeriodicStatsModels.jl` contains the smooth periodic models (fit and sampling methods) used in this tutorial, namely the Seasonal Hidden Markov Model (SHMM), the seasonal AR(1) model, and the seasonal mixture models for rainfall amounts.
 """
 
-using SmoothPeriodicStatsModels
 using StochasticWeatherGenerators
+using SmoothPeriodicStatsModels
 
 md"""
 ## Data extraction and settings
@@ -70,10 +64,12 @@ This data is available through the INRAE CLIMATIK platform[^climatik] ([https://
 Unfortunately, these data are not yet open access (they should be soon).
 Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
 This package provide a simple command to extract the data of one station (given its STAtionID) from the API.
+
 ```julia
 # Download the four stations used in this tutorial from MeteoFrance collection
 dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
 ```
+
 See the [Data section of the documentation](@ref DataMeteofrance) section.
 """
 
@@ -187,14 +183,14 @@ a[data_stations[1].z[1]] = 1.0 # Initial state of the HMM
 hmm_fit = ARPeriodicHMM(a, hmm_fit_full.A, B)
 
 md"""
-### Rain Amounts
+### Rainfall amounts
 
-Here for simplicity we select the double exponential model for the rain amount. 
+Here for simplicity we select the double exponential model for the Rainfall amount. 
 We aim for a generic interface where one could easily change this choice to other univariate distribution e.g. `mix₀ = MixtureModel([Exponential(1), Gamma(1,2)], [1/2,1/2])` or `mix₀ = Pareto(1)`. 
 For now this is not supported (because of the seasonal fit).
 """
 
-@time "Fit Rain amounts" mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));
+@time "Fit Rainfall amounts" mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));
 
 md"""
 The Gaussian copula covariance matrices are then estimated.
@@ -232,7 +228,6 @@ We will then simulate the `TN` conditionally to the `TX`
 θ_cor = cor_groupbyTXTN.(data_stations, T)
 f(θ) = Gamma(θ[1], θ[2]) # other options e.g. MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
 f(t, θ) = f([σₜ(t, θ[1:(2+1)]), σₜ(t, θ[(2+2):end])])
-
 
 md"""
 ### Solar Irradiance (QQ)
