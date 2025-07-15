@@ -26,6 +26,7 @@ SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
 SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 
 [compat]
+Impute = "0.6"
 NonlinearSolve = "4.3.0"
 OrderedCollections = "1.8.0"
 SmoothPeriodicStatsModels = "2.0.3"
