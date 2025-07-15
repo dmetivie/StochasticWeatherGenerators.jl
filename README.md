@@ -17,8 +17,9 @@ Pkg.add("StochasticWeatherGenerators")
 pkg> add StochasticWeatherGenerators
 ```
 
-> [!NOTE]
-> Stochastic Weather Generators are probabilistic weather models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
+> [!TIP] Stochastic Weather Generators
+> Stochastic Weather Generators are a class of generative models.
+> Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
 > They can be used to study climate variability, in particular extremes, and "stress" models that take weather inputs, e.g., crop models. See the [IPCC note](https://www.ipcc-data.org/guidelines/pages/weather_generators.html) on SWG for more context.
 
 [<img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg" width="100%" alt = "Illustration of SWG"/>

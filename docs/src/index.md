@@ -4,11 +4,11 @@ A Julia package to define, fit and generate from Stochastic Weather Generators (
 
 ## Stochastic Weather Generators
 
-Stochastic Weather Generators are probabilistic weather models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
+Stochastic Weather Generators are a class of generative models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
 They can be used to study climate variability, in particular extremes, and "stress" models that take weather inputs to quantify climate risk (present and future) typically in hydrology, agriculture, ecology, energy, insurance.
 See the [IPCC note](https://www.ipcc-data.org/guidelines/pages/weather_generators.html) on SWG for more context.
 
-![Illustration SWG](https://github.com/user-attachments/assets/7d4a66ab-ab28-4373-85fc-c9a176e26c82)
+<img src="https://github-production-user-asset-6210df.s3.amazonaws.com/46794064/466196788-7d4a66ab-ab28-4373-85fc-c9a176e26c82.svg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250715%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250715T082127Z&X-Amz-Expires=300&X-Amz-Signature=1740099d90d8bcf2f812091d38fadeba9e332b370e86ad6693ae0729f953be1f&X-Amz-SignedHeaders=host" width="95%" alt = "Illustration of a SWG"/>
 
 ## Models
 
