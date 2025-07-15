@@ -27,15 +27,6 @@ In Julia there is the [CliMA organization](https://github.com/CliMA) that is bui
 
 In contrast, **Stochastic Weather Generators** provide a **fast** and **flexible** way to generate synthetic weather sequences only for **a few variables of interest** and for the **desired spatio-temporal resolution** making them suitable for impact studies.
 
-### Where is AI?
-
-SWGs are spatiotemporal generative models. 
-Currently, they are mostly based on classic statistical models, such as Markov chains, Hidden Markov Models, autoregressive models and geostatistical models. Generative Deep Learning models are not as widely used yet in this field as in other domains like image or text generation. A few reasons for this are:
-- The relatively small size of weather datasets compared to image or text datasets, e.g., 60 years of daily data is only 21,900 data points for one station.
-- Moreover, this data is very non i.i.d. (independent and identically distributed), i.e., there are trend effects, seasonal effects.
-- 
-
-
 ## Models
 
 Currently, the package offers a few models:
