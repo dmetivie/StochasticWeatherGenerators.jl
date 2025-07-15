@@ -1,9 +1,6 @@
-# StochasticWeatherGenerators
+# <img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/logo.svg" alt="StochasticWeatherGenerators.jl Logo" width="80"/> StochasticWeatherGenerators.jl 
 
-[<img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/logo.svg" width="25%" alt = "StochasticWeatherGenerators.jl"/>
-](https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/logo.svg)
-
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/)
+[![Dev Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/)
 
 A Julia package to define, fit and generate from Stochastic Weather Generators (SWG).
 It provides the interface to the models and data.
@@ -17,12 +14,16 @@ Pkg.add("StochasticWeatherGenerators")
 pkg> add StochasticWeatherGenerators
 ```
 
+## Stochastic Weather Generators
+
+Stochastic Weather Generators (SWGs) are statistical tools that create realistic sequences of weather data by mimicking patterns found in observations. They are used to study climate variability and provide synthetic data for impact models in fields like hydrology and agriculture.
+For more details, see the [documentation](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/#Stochastic-Weather-Generators) or the [IPCC note on weather generators](https://www.ipcc-data.org/guidelines/pages/weather_generators.html).
+
 [<img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg" width="100%" alt = "Illustration of SWG"/>
 ](https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg)
 
-> [!NOTE]
-> Stochastic Weather Generators (SWGs) are statistical tools that create realistic sequences of weather data by mimicking patterns found in observations. They are used to study climate variability and provide synthetic data for impact models in fields like hydrology and agriculture.
-> For more details, see the [documentation](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/#Stochastic-Weather-Generators) or the [IPCC note on weather generators](https://www.ipcc-data.org/guidelines/pages/weather_generators.html).
+
+
 
 ## Models
 
