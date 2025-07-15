@@ -8,7 +8,7 @@ Stochastic Weather Generators (SWGs) are statistical models designed to simulate
 Simply put, they are like random number generators but for weather data.
 
 ```@raw html
-<img src="https://github-production-user-asset-6210df.s3.amazonaws.com/46794064/466196788-7d4a66ab-ab28-4373-85fc-c9a176e26c82.svg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250715%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250715T082127Z&X-Amz-Expires=300&X-Amz-Signature=1740099d90d8bcf2f812091d38fadeba9e332b370e86ad6693ae0729f953be1f&X-Amz-SignedHeaders=host" width="95%" alt = "Illustration of a SWG"/>
+<img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg" width="95%" alt = "Illustration of a SWG"/>
 ```
 
 SWGs are used to assess climate variability and change, especially for analyzing rare or extreme events. They provide synthetic weather data for driving impact models in fields such as hydrology, agriculture, ecology, energy, and insurance, enabling robust risk assessments under current and future climate scenarios.
@@ -26,6 +26,15 @@ These models are essential for understanding long-term climate trends, feedback 
 In Julia there is the [CliMA organization](https://github.com/CliMA) that is building a new Earth system model.
 
 In contrast, **Stochastic Weather Generators** provide a **fast** and **flexible** way to generate synthetic weather sequences only for **a few variables of interest** and for the **desired spatio-temporal resolution** making them suitable for impact studies.
+
+### Where is AI?
+
+SWGs are spatiotemporal generative models. 
+Currently, they are mostly based on classic statistical models, such as Markov chains, Hidden Markov Models, autoregressive models and geostatistical models. Generative Deep Learning models are not as widely used yet in this field as in other domains like image or text generation. A few reasons for this are:
+- The relatively small size of weather datasets compared to image or text datasets, e.g., 60 years of daily data is only 21,900 data points for one station.
+- Moreover, this data is very non i.i.d. (independent and identically distributed), i.e., there are trend effects, seasonal effects.
+- 
+
 
 ## Models
 
