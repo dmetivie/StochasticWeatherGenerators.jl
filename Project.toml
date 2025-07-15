@@ -27,6 +27,13 @@ SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 
 [compat]
 Copulas = "0.1"
+CSV = "0.10"
+RollingFunctions = "0.8"
+Impute = "0.6"
+Distributions = "0.25"
+NearestCorrelationMatrix = "1"
+DataFrames = "1"
+DataFramesMeta = "0.15"
 NonlinearSolve = "4.3.0"
 OrderedCollections = "1.8.0"
 SmoothPeriodicStatsModels = "2.0.3"

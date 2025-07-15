@@ -17,17 +17,17 @@ Pkg.add("StochasticWeatherGenerators")
 pkg> add StochasticWeatherGenerators
 ```
 
-> [!TIP] Stochastic Weather Generators
-> Stochastic Weather Generators are a class of generative models.
-> Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
-> They can be used to study climate variability, in particular extremes, and "stress" models that take weather inputs, e.g., crop models. See the [IPCC note](https://www.ipcc-data.org/guidelines/pages/weather_generators.html) on SWG for more context.
-
 [<img src="https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg" width="100%" alt = "Illustration of SWG"/>
 ](https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/docs/src/assets/fig_swg_dice.svg)
+
+> [!NOTE]
+> Stochastic Weather Generators (SWGs) are statistical tools that create realistic sequences of weather data by mimicking patterns found in observations. They are used to study climate variability and provide synthetic data for impact models in fields like hydrology and agriculture.
+> For more details, see the [documentation](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/#Stochastic-Weather-Generators) or the [IPCC note on weather generators](https://www.ipcc-data.org/guidelines/pages/weather_generators.html).
 
 ## Models
 
 Currently, the package offers:
+
 - The daily multisite rainfall SWG **WGEN model** proposed in [*Multisite Generalization of a Daily Stochastic Precipitation Generation Model*](https://www.sciencedirect.com/science/article/pii/S0022169498001863) by Wilks, D. S.
 
 - The daily multisite rainfall SWG **SHHMM model** proposed in the [*Interpretable Seasonal Hidden Markov Model for spatio-temporal stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states. Note that the seasonal models HMM, AR etc are currently implemented in a separate package [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl).

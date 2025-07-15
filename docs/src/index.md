@@ -4,11 +4,14 @@ A Julia package to define, fit and generate from Stochastic Weather Generators (
 
 ## Stochastic Weather Generators
 
-Stochastic Weather Generators are a class of generative models. Like random number generators, they can quickly generate multiple random sequences, except that the produced sequences correctly reproduce some statistics of interest, e.g. spatial-temporal correlations, extremes, etc.
-They can be used to study climate variability, in particular extremes, and "stress" models that take weather inputs to quantify climate risk (present and future) typically in hydrology, agriculture, ecology, energy, insurance.
-See the [IPCC note](https://www.ipcc-data.org/guidelines/pages/weather_generators.html) on SWG for more context.
+Stochastic Weather Generators (SWGs) are statistical models designed to simulate realistic sequences of weather variables, such as rainfall or temperature, by capturing key statistical properties observed in training data. SWGs are calibrated to reproduce important features like spatial and temporal correlations, frequency and intensity of extremes, and seasonal patterns.
+Simply put, they are like random number generators but for weather data.
 
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/46794064/466196788-7d4a66ab-ab28-4373-85fc-c9a176e26c82.svg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20250715%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250715T082127Z&X-Amz-Expires=300&X-Amz-Signature=1740099d90d8bcf2f812091d38fadeba9e332b370e86ad6693ae0729f953be1f&X-Amz-SignedHeaders=host" width="95%" alt = "Illustration of a SWG"/>
+
+SWGs are used to assess climate variability and change, especially for analyzing rare or extreme events. They provide synthetic weather data for driving impact models in fields such as hydrology, agriculture, ecology, energy, and insurance, enabling robust risk assessments under current and future climate scenarios.
+
+For more background, see the [IPCC note on weather generators](https://www.ipcc-data.org/guidelines/pages/weather_generators.html).
 
 ## Models
 
