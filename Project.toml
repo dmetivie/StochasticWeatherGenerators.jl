@@ -28,6 +28,7 @@ SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 [compat]
 NonlinearSolve = "4.3.0"
 OrderedCollections = "1.8.0"
+RollingFunctions = "0.8"
 SmoothPeriodicStatsModels = "2.0.3"
 StatsBase = "0.34.4"
 julia = "1"
