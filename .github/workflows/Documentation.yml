@@ -17,9 +17,6 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: '1'
-      - name: Setup general registery local registry
-        run: |
-          julia --project=docs docs/add_local_registry.jl  
       - name: Install dependencies
       # see https://discourse.julialang.org/t/hosting-docs-with-documenter-jl-with-dependencies-github-actions-with-unregistered-packages/83364/10
         run: | 
