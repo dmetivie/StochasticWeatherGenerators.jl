@@ -25,8 +25,12 @@ Météo France do have a version of this data and it is accessible through an AP
 This package provides a simple command to extract the data of one station (given its STAtionID) from the API.
 
 ````@example data
-collect_data_MeteoFrance(49215002)[1:10,:]
+collect_data_MeteoFrance(34154001)[1:10,:] # Montpellier Airport
 ````
+
+!!! warning 
+    As it is rather new, this DataGov/MeteoFrance API may change in the future making this function not working anymore.
+    It is currently not fully working. One would have to call the DataGov API directly.
 
 ```@docs
 collect_data_MeteoFrance 

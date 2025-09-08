@@ -177,12 +177,18 @@ const meteofrance_id_to_url = "https://www.data.gouv.fr/fr/datasets/r/966dcd99-2
 
 df_api_url = CSV.read(Base.download(meteofrance_id_to_url), DataFrame)
 
+#TODO: fix and try using datagov api
 """
-    download_data_MeteoFrance(STAID, period = "1950-2021", variables = "all")
+    download_data_MeteoFrance(STAID, period = "2024-2025", variables = "all")
+
+Function not really working anymore as the API changed in 2024.
+
 - Option for `period` are "1846-1949", "1950-2021", "2022-2023"
 - Option for `variables` are `all`, "RR-T-Wind", "others"
+The data is available through the French [Data.gouv.fr](https://www.data.gouv.fr/en/) website api. Data may be updated without notice.
+In particular the path to the data may change.
 """
-function download_data_MeteoFrance(STAID; period="1950-2021", variables="all")
+function download_data_MeteoFrance(STAID; period="1950-2021", variables="R-T-Wind")
     dep = string(STAID)[1:2]
     if variables != "all"
         if variables == "R-T-Wind"
@@ -194,11 +200,12 @@ function download_data_MeteoFrance(STAID; period="1950-2021", variables="all")
         end
         id_name = string("QUOT_departement_", dep, "_periode_", period, "_", varFR)
         id = @subset(df_api_url, :title .== id_name)[1, :id]
+        id = "bedfeab3-55b1-4b2a-964d-4f93b291a101"
         path = string("https://tabular-api.data.gouv.fr/api/resources/$(id)/data/csv/?NUM_POSTE__exact=", STAID)
         return df = CSV.read(Base.download(path), DataFrame)
     else
         dfRTW = download_data_MeteoFrance(STAID; period=period, variables="R-T-Wind")
-        dfoth = download_data_MeteoFrance(STAID; period=period, variables="others")
+        # dfoth = download_data_MeteoFrance(STAID; period=period, variables="others")
         return leftjoin!(dfRTW, dfoth[:, 7:end], on=:AAAAMMJJ)
     end
 end
