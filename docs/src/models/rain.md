@@ -71,7 +71,7 @@ simulate_markov_gaussian
 ### Overview
 
 `SHHMM` is a **multisite stochastic weather generator** (SWG) based on a **seasonal Hidden Markov Model (HMM)**.
-The model was proposed in [2024_gobet_InterpretableSeasonalHiddena](@cite) by one author of this package.
+The model was proposed in [2025_gobet_InterpretableSeasonalMultisite](@cite) by one author of this package.
 It is designed to generate **temporally and spatially correlated precipitation sequences** over large regions (e.g., France), while maintaining full interpretability.
 It has a **Hierarchical Structure** as it combines a discrete HMM for occurrences with a **seasonal rainfall amount model** conditional on the hidden states.
 
@@ -104,7 +104,7 @@ TODO
 
 ### Usage
 
-For a complete example see the [this section](@ref TutoSHHMM) that both serve as a tutorial to fit, simulate and visualize the SHHMM model **and** the reproducible supplementary material of the paper [2024_gobet_InterpretableSeasonalHiddena](@cite).
+For a complete example see the [this section](@ref TutoSHHMM) that both serve as a tutorial to fit, simulate and visualize the SHHMM model **and** the reproducible supplementary material of the paper [2025_gobet_InterpretableSeasonalMultisite](@cite).
 Some element of the paper are not included in the tutorial to limit runtime of CI (model selection, Weather Regimes illustration, comparison with climate models).
 
 #### Fit

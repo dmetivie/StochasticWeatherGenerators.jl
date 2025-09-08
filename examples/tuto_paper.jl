@@ -8,7 +8,7 @@ md"""
 """
 
 md"""
-This tutorial describes the numerical applications described in the paper [*Interpretable Seasonal Multisite Hidden Markov Model for stochastic rain generation in France*](https://hal.inrae.fr/hal-04621349) by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
+This tutorial describes the numerical applications described in the paper [*Interpretable Seasonal Multisite Hidden Markov Model for stochastic rain generation in France*](https://ascmo.copernicus.org/articles/11/159/2025/) by [Emmanuel Gobet](http://www.cmap.polytechnique.fr/~gobet/) (CMAP - École Polytechnique), [David Métivier](https://davidmetivier.mistea.inrae.fr/) (MISTEA -- INRAE) and [Sylvie Parey](https://fr.linkedin.com/in/sylvie-parey-60285194) (R&D -- EDF).
 It shows a fully reproducible example on how to use the package `StochasticWeatherGenerators.jl` to reproduce, step-by-step, exactly (almost) all the figures of the paper.
 
 The paper describes the construction of a Stochastic Weather Generator with an Autoregressive Seasonal Hidden Markov Model (SHMM). The SHMM is trained with French weather stations, and the hidden states are interpreted as weather regimes. The model is validated with simulations, especially for its ability to reproduce extreme weather, e.g. droughts. 
@@ -502,7 +502,7 @@ Now we are ready to generate samples from the SWG model.
 """
 
 md"""
-`Nb` is the number of realization. In [2024_gobet_InterpretableSeasonalHiddena](@cite) `Nb = 5_000` was used.
+`Nb` is the number of realization. In [2025_gobet_InterpretableSeasonalMultisite](@cite) `Nb = 5_000` was used.
 """
 Nb = 1_000
 

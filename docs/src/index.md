@@ -15,9 +15,9 @@ SWGs are used to assess climate variability and change, especially for analyzing
 
 For more background, see the [IPCC note on weather generators](https://www.ipcc-data.org/guidelines/pages/weather_generators.html).
 
-### Difference with climate models
+### Difference with (physics based) climate models
 
-Climate models are based on physical principles, relying on partial differential equations (PDEs) to simulate the dynamics of the atmosphere, oceans, and land surfaces. These models discretize the entire Earth into a grid and solve for many variables (e.g., temperature, pressure, humidity) at each grid point.
+Climate models are based on physical principles, relying mostly on partial differential equations (PDEs) to simulate the dynamics of the atmosphere, oceans, and land surfaces. These models discretize the entire Earth into a grid and solve for many variables (e.g., temperature, pressure, humidity) at each grid point.
 
 - This approach is computationally intensive and typically very slow, especially for generating large ensembles or long time series.
 - Climate models often struggle to accurately reproduce rare or extreme events due to limitations in spatial resolution and the complexity of underlying processes.
