@@ -33,7 +33,7 @@ Currently, the package offers a few models:
 
 - The daily multisite rainfall SWG **WGEN model** proposed in [1998_wilks_MultisiteGeneralizationDaily](@cite) and [2009_srisrikanthan_NestedMultisiteDaily](@cite)
 
-- The daily multisite rainfall SWG **SHHMM model** proposed in the [2024_gobet_InterpretableSeasonalHiddena](@cite) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states.
+- The daily multisite rainfall SWG **SHHMM model** proposed in the [2025_gobet_InterpretableSeasonalMultisite](@cite) paper. This SWG relies on a "Seasonal Autoregressive Hidden Markov Models" (SHMM) with interpretable hidden states.
 
 - Some seasonal models HMM, AR(1), rain amounts, ..., are available as a [package extension](https://pkgdocs.julialang.org/v1/creating-packages/#Conditional-loading-of-code-in-packages-(Extensions)) with the package [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl). This means that to use these models, this package must also be installed and loaded. Seasonal models are models with yearly periodic parameters. For now, the parameters are transformations of trigonometric functions with arbitrary degree. This allows fitting all the data at once instead of fitting each month/season independently. This is useful for small datasets with high variability, e.g., rainfall data.
 
