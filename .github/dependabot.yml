@@ -18,7 +18,7 @@ updates:
     schedule:
       interval: "weekly"
     # To group all Julia dependency updates into a single PR, uncomment the following:
-    # groups:
-    #   julia-dependencies:
-    #     patterns:
-    #       - "*"
+    groups:
+      julia-dependencies:
+        patterns:
+          - "*"
