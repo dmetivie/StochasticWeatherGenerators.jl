@@ -36,14 +36,15 @@ DocumenterCitations = "1.4.1"
 GeoMakie = "0.7.16"
 JLD = "0.13.5"
 LaTeXStrings = "1.4.0"
+LineSearches = "7.7.1"
 Literate = "2.21.0"
 NaturalEarth = "0.1.0"
-OrderedCollections = "1.8.1"
+OptimizationOptimJL = "0.4.14"
+OrderedCollections = "1.8.1, 2.0"
 SmoothPeriodicStatsModels = "2.1.1"
 StatsBase = "0.34.10"
 StatsPlots = "0.15.8"
 StochasticWeatherGenerators = "1.3.1"
 Suppressor = "0.2.8"
-
 [sources]
 StochasticWeatherGenerators = {path = ".."}
