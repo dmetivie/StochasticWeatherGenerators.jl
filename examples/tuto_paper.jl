@@ -16,9 +16,12 @@ In the paper, the model is also used with Climate Change RCP scenarios (not show
 """
 
 md"""
+The model fits first a Hidden Markov Model (HMM) with hidden states $Z\in\{1,\ldots,K\}$ and observations the multi-site rain occurrences (dry/wet) $Y = (Y_1, \ldots, Y_D)$ where $D$ is the number of stations.
 ```@raw html
 <img src="https://github.com/dmetivie/StochasticWeatherGenerators.jl/assets/46794064/5fe1d677-877d-4fd5-83ac-29d30f728ca5" width="95%" alt = "Schematic of the Autoregressive Seasonal Hidden Markov Model"/>
 ```
+Then, for each station and hidden state, the distribution of the rainfall amount $R$ is fitted with a mixture of exponential functions.
+All parameters of the model are smooth functions of the day of the year, which allows to capture seasonality.
 """
 
 md"""
@@ -183,6 +186,7 @@ selected_station_name = ["BOURGES", "TOULOUSE", "MARIGNANE", "LUXEMBOURG", "LILL
 #!nb # !!! note "Hypothesis: Conditional Independence of Rain Occurrences"
 #!nb #     You can change the selected stations. However, keep in mind that for the model to work, the **conditional independence hypothesis** must hold between stations i.e. $\mathbb{P}(Y_1 = y_1, \cdots, Y_S = y_s\mid Z = k) = \prod_{s=1}^S \mathbb{P}(Y_s = y_s)$.
 #!nb #     Hence stations must be sufficiently far apart. Check out this [MNIST example](https://dmetivie.github.io/ExpectationMaximization.jl/dev/examples/#MNIST-dataset:-Bernoulli-Mixture) to see Bernoulli mixtures in action!
+#!nb #     This assumption is relaxed in [this tutorial](@ref TutoSHMMSpa) where a spatial version of the HMM that captures the conditional spatial dependence between stations is used.
 
 station = @subset(station_all, :STANAME .∈ tuple(selected_station_name))
 

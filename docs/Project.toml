@@ -12,8 +12,10 @@ GeoMakie = "db073c08-6b98-4ee5-b6a4-5efafb3259c6"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 JLD = "4138dd39-2aa7-5051-a626-17a0bb65d9c8"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
+LineSearches = "d3d80556-e9d4-5f37-9878-2ab0fcc64255"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 NaturalEarth = "436b0209-26ab-4e65-94a9-6526d86fea76"
+OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
@@ -42,3 +44,6 @@ StatsBase = "0.34.10"
 StatsPlots = "0.15.8"
 StochasticWeatherGenerators = "1.3.1"
 Suppressor = "0.2.8"
+
+[sources]
+StochasticWeatherGenerators = {path = ".."}

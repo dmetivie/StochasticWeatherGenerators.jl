@@ -39,37 +39,22 @@ function map_with_stations(LON_idx, LAT_idx, value=[1 for _ in eachindex(LON_idx
         GeoMakie.lines!(ax, GeoMakie.to_multilinestring.(rivers_ne.geometry); linewidth=0.5)
 
         sc = GeoMakie.scatter!(ax, LON_idx, LAT_idx; color=value, markersize=15, colormap=:plasma, colorrange=((3.5minimum(value)) ÷ 4, (4.5maximum(value)) ÷ 4))
+        if station_name !== nothing
+            GeoMakie.annotation!(ax, GeoMakie.Point2.(LON_idx, LAT_idx); text=station_name, color=:black, font=:bold)
+        end
+
         if show_value == true
-            for i in eachindex(station_name)
-                if i == 7
-                    GeoMakie.text!(ax, [LON_idx[i]], [LAT_idx[i]]; text=string.([value[i]]), color=:black, font=:bold, offset=(-2, 0), align=(:left, :top), fontsize=19)
-                else
-                    GeoMakie.text!(ax, [LON_idx[i]], [LAT_idx[i]]; text=string.([value[i]]), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=19)
-                end
-            end
-            ## GeoMakie.text!(ax, LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
+            GeoMakie.annotation!(ax, GeoMakie.Point2.(LON_idx, LAT_idx); text=string.(value), color=:black, font=:bold, align=(:center, :top))
         end
         if colorbar_show == true
             GeoMakie.Colorbar(fig[1, 2], sc, label=colorbar_label)
-        end
-
-        if station_name !== nothing
-            ## GeoMakie.text!(ax, LON_idx, LAT_idx; text=station_name, color=:black, font=:bold, offset=(-7, 4), align=(:center, :bottom))
-            for i in eachindex(station_name)
-                if i ∈ [7, 2]
-                    GeoMakie.text!(ax, [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(-14, 4), align=(:center, :bottom))
-                elseif i == 3
-                    GeoMakie.text!(ax, [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(0, 4), align=(:center, :bottom))
-                else
-                    GeoMakie.text!(ax, [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(-7, 4), align=(:center, :bottom))
-                end
-            end
         end
 
         GeoMakie.colsize!(fig.layout, 1, GeoMakie.Aspect(1, 1.0)) # remove white gap in between colorbar/map
         GeoMakie.resize_to_layout!(fig) # remove white gap around figure
         fig
     end
+
     return fig
 end
 
