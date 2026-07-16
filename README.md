@@ -34,6 +34,8 @@ Currently, the package offers:
 
 * The possibility to add stations to the SHMM and variables with respect to the hidden states. In particular, a multisite SWG with 5 weather variables (Rain, Temperature Max, Temperature Min, Evapotranspiration, Solar Irradiance) was tested. The structure of the added variables is very simplistic but does the job for the proof of concept. See the associated tutorial in the documentation. This was used to generate a [Hackathon dataset](https://doi.org/10.57745/C3FNBY).
 
+* The daily multisite rainfall SWG **SHHMM model with spatial dependence** proposed in the [*Spatio-temporal generation of precipitation using a Hidden Markov Model, extended extreme distributions and conditional Gaussian fields*](https://hal.science/hal-05523768/) paper.
+
 > [!IMPORTANT]
 > The objective of this package is not only to show *my* model, but also to propose several classic (and newer) SWG models. Hence, **feel free to open an issue or open a PR** with ideas and models.
 > This would allow easy model comparison and, in some cases, combination.
