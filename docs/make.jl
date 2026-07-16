@@ -29,7 +29,7 @@ for file in readdir(examples_md_path)
 end
 
 for file in readdir(examples_jl_path)
-    if !startswith(file, "utilities")
+    if !startswith(file, "utilities") && endswith(file, ".jl") && startswith(file, "tuto")
         Literate.markdown(joinpath(examples_jl_path, file), examples_md_path, mdstrings=true)
     end
 end
@@ -41,7 +41,8 @@ pages = [
     "📘 Models" => SUBSECTION_MODELS,
     "📅 Weather Data" => "data.md",
     "📎 Tutorials" => [
-        "Multisite rainfall HMM based SWG (paper) " => joinpath("examples", "tuto_paper.md"),
+        "Multisite rainfall (HMM)" => joinpath("examples", "tuto_paper.md"),
+        "Multisite rainfall (HMM + gaussian)" => joinpath("examples", "tuto_paper_HMMspatial.md"),
         "Multivariate SWG: Application to crop model" => joinpath("examples", "tuto_add_station_variable.md")
     ],
     "🧰 Utilities" => "api.md",
@@ -56,7 +57,7 @@ fmt = Documenter.HTML(
     footer="[$NAME.jl]($GITHUB) v$PkgVERSION docs powered by [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl)."
 )
 
-makedocs(
+@time makedocs(
     sitename="StochasticWeatherGenerators.jl",
     authors="David Métivier",
     format=fmt,
