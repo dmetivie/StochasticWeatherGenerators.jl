@@ -44,7 +44,7 @@ function map_with_stations(LON_idx, LAT_idx, value=[1 for _ in eachindex(LON_idx
         end
 
         if show_value == true
-            GeoMakie.annotation!(ax, GeoMakie.Point2.(LON_idx, LAT_idx); text=string.(value), color=:black, font=:bold, align=(:center, :top))
+            GeoMakie.annotation!(ax, GeoMakie.Point2.(LON_idx, LAT_idx); text=string.(value), color=:black, font=:bold)
         end
         if colorbar_show == true
             GeoMakie.Colorbar(fig[1, 2], sc, label=colorbar_label)
