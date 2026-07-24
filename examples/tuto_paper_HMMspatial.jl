@@ -357,7 +357,7 @@ The `solver` keyword specifies the inner optimiser used for the range update ste
 """
 solver = OptimizationOptimJL.LBFGS(linesearch=LineSearches.BackTracking())
 
-@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θᴬ_fit, θᴮ_fit, θᴿ, Y, Y_past; solver=solver, n2t=n2t, maxiter=300, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=200);
+@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θᴬ_fit, θᴮ_fit, θᴿ, Y, Y_past; solver=solver, n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
 
 md"""
 In classic EM algorithm, the log-likelihood is guaranteed to increase at each iteration. However, here a modified EM (see paper) and 1) increase was not demonstrated theoretically (though it might be true) 2) the spatial likelihood is estimated with a quasi-Monte Carlo method, which adds some noise to the likelihood estimation. 
