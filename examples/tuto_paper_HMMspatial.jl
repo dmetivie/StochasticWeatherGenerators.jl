@@ -26,7 +26,8 @@ md"""
 """
 
 using CSV, DelimitedFiles # File Read/Load/Save
-using JLD2#src
+
+using JLD
 
 using DataFrames, DataFramesMeta # DataFrames
 
@@ -119,7 +120,7 @@ md"""
 Local memory order i.e. at station $j$, $\mathbb{P}(Y_n^{(j)} = y_n^{(j)} \mid Z = k, Y_{n-1:n-\texttt{local memory}}^{(j)} = y_{n-1:n-\texttt{local memory}}^{(j)})$
 """
 
-local_order = 0
+local_order = 1
 
 size_order = 2^local_order
 
@@ -307,27 +308,19 @@ Here we choose `j=1` $\to$ `STAID=32` $\to$ `BOURGES` because it is a central st
 ref_station = 1
 
 md"""
-This generates a random Periodic HMM that we then fit slice by slice (day by day). See paper.
-"""
-hmm_random = randARPeriodicHMM(K, T, D, local_order; ξ=ξ, ref_station=ref_station);
-
-@time "FitMLE SHMM (Slice)" hmm_slice = fit_mle_all_slices(hmm_random, Y, Y_past; n2t=n2t, robust=true, rand_ini=true, Dirichlet_α=0.8, history=false, n_random_ini=1, Yₜ_extanted=[-12, -7, 0, 6, 13]);
-
-θᴬ_slice, θᴮ_slice = fit_θ!(hmm_slice, 𝐃𝐞𝐠);
-
-md"""
-### Fit with Baum-Welch using the slice estimate as a starting point
+The following code loads the HMM fitted in the previous tutorial [Multisite HMM with independent Bernoulli emissions](@ref TutoSHHMM).
+It will be used as the initial condition for the spatial HMM fitting.
 """
 
-@time "FitMLE SHMM (Baum Welch)" hmm_ind, θᴬ_fit, θᴮ_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past, maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
+hmm_ind_infos = JLD.load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_1", "hmm_fit_K_4_d_1_m_1.jld"))
+
+hmm_ind = hmm_ind_infos["hmm"]
+hist_ind = hmm_ind_infos["hist"]
+θq_fit_ind = hmm_ind_infos["Q_param"]
+θy_fit_ind = hmm_ind_infos["Y_param"];
 
 md"""
-## Step 2: Initialise and fit the spatial HMM
-"""
-
-md"""
-### Initialise the range parameters
-
+The Spatial model need also the range parameter `θᴿ` for the exponential covariance kernel of the `SpatialBernoulli` distribution.
 The range parameter trigonometric coefficients `θᴿ` are initialised with a constant $\log(R_0)$,
 which corresponds to a time-invariant spatial range of $R_0$ km.
 """
@@ -345,7 +338,7 @@ matrices `A` (transition), `B` (Bernoulli probabilities) and `R` (spatial range)
 `ARPeriodicHMMSpatial` object.
 """
 
-hmm_spa_init = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), θᴬ_fit, θᴮ_fit, θᴿ, T, my_distance)
+hmm_spa_init = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), θq_fit_ind, θy_fit_ind, θᴿ, T, my_distance)
 
 md"""
 ### Fit the spatial HMM with EM
@@ -354,10 +347,24 @@ md"""
 `θᴬ`, the Bernoulli emission parameters `θᴮ`, and the spatial range parameters `θᴿ` jointly.
 
 The `solver` keyword specifies the inner optimiser used for the range update step (M-step for `R`).
+
+For time sake in this tutorial, we load the fitted model but show bellow the code to run the EM algorithm (that can take an hour or so).
 """
+md"""
+```julia
 solver = OptimizationOptimJL.LBFGS(linesearch=LineSearches.BackTracking())
 
-@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θᴬ_fit, θᴮ_fit, θᴿ, Y, Y_past; solver=solver, n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
+@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θq_fit_ind, θy_fit_ind, θᴿ, Y, Y_past; solver=solver, n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
+JLD.save(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "hmm_fit_K_4_d_1_m_1.jld"), "history", history, "all_θq_iter", all_θᴬ_iter, "all_θy_iter", all_θᴮ_iter, "all_θr_iter", all_θᴿ_iter); 
+```
+"""
+
+hmm_infos = load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3","hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"))
+
+history = hmm_infos["history"]
+all_θq_iter = hmm_infos["all_θq_iter"]
+all_θy_iter = hmm_infos["all_θy_iter"]
+all_θr_iter = hmm_infos["all_θr_iter"]
 
 md"""
 In classic EM algorithm, the log-likelihood is guaranteed to increase at each iteration. However, here a modified EM (see paper) and 1) increase was not demonstrated theoretically (though it might be true) 2) the spatial likelihood is estimated with a quasi-Monte Carlo method, which adds some noise to the likelihood estimation. 
@@ -374,20 +381,9 @@ md"""
 Reconstruct the best model from the stored parameter iterates:
 """
 
-hmm_spa = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), all_θᴬ_iter[iter_best+1], all_θᴮ_iter[iter_best+1], all_θᴿ_iter[iter_best+1], T, my_distance)
+hmm_spa = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), all_θq_iter[iter_best+1], all_θy_iter[iter_best+1], all_θr_iter[iter_best+1], T, my_distance)
 
 #-
-
-save(joinpath(save_tuto_path, "hmm_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld2"), Dict("hmm" => hmm_spa, "logtots" => history["logtots"], "all_thetaA_iterations" => all_θᴬ_iter, "all_thetaB_iterations" => all_θᴮ_iter, "all_thetaR_iterations" => all_θᴿ_iter)); #src
-
-md"""
-Run the following code to load a saved spatial HMM:
-```julia
-hmmspa_infos    = load(joinpath(save_tuto_path, "hmm_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld2"))
-hmm_spa         = hmmspa_infos["hmm"]
-history_logtots = hmmspa_infos["logtots"]
-```
-"""
 
 md"""
 ### Log-likelihood convergence
