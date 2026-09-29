@@ -3,6 +3,11 @@ using Documenter
 using Literate
 using StochasticWeatherGenerators
 using SmoothPeriodicStatsModels
+# JLD reconstructs types saved in .jld files by `eval`-ing their fully qualified
+# name in `Main`. Documenter runs @example blocks in sandbox baremodules, so a
+# `using JLD` there does not make `Main.JLD` visible: without this line, nested
+# `Dict`s (stored as `JLD.AssociativeWrapper`) come back as unusable reconstructed types.
+using JLD
 
 using Pkg
 
