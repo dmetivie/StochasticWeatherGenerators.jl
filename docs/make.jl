@@ -4,10 +4,15 @@ using Literate
 using StochasticWeatherGenerators
 using SmoothPeriodicStatsModels
 # JLD reconstructs types saved in .jld files by `eval`-ing their fully qualified
-# name in `Main`. Documenter runs @example blocks in sandbox baremodules, so a
-# `using JLD` there does not make `Main.JLD` visible: without this line, nested
-# `Dict`s (stored as `JLD.AssociativeWrapper`) come back as unusable reconstructed types.
+# name in `Main`. Documenter runs @example blocks in sandbox baremodules, so the
+# `using` statements in the tutorials do not make those modules visible from `Main`.
+# Every module appearing in a type stored in `assets/**/*.jld` must therefore be
+# loaded here, otherwise the values come back as unusable reconstructed types:
+#   JLD                       -> JLD.AssociativeWrapper (how nested `Dict`s are stored)
+#   SmoothPeriodicStatsModels -> ARPeriodicHMM (loaded above)
+#   Distributions             -> Bernoulli, MixtureModel, ArrayLikeVariate, ...
 using JLD
+using Distributions
 
 using Pkg
 
