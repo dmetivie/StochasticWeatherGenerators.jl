@@ -26,7 +26,7 @@ SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
 SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 
 [compat]
-Copulas = "0.1"
+Copulas = "0.1, 1.0"
 CSV = "0.10, 1.1"
 Dates = "1.11"
 LinearAlgebra = "1.12"
