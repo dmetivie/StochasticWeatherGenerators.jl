@@ -46,7 +46,18 @@ The main package is `StochasticWeatherGenerators.jl`, which provides the interfa
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
 
 using SmoothPeriodicStatsModels # Small collection of smooth periodic models e.g. AR, HMM, HMMSpatial
-using OptimizationOptimJL, LineSearches
+
+md"""
+Since `SmoothPeriodicStatsModels.jl` v3 all the fitting code lives in a package extension: the models and
+`rand` are always available, while `fit_mle!` and friends are only defined once the SciML solver stack below
+is loaded. These four packages are the extension trigger, so forgetting one gives you an explicit
+"load Optimization, ... to fit" error rather than a `MethodError`.
+`LineSearches.jl` is only needed for the solver we configure by hand further down.
+"""
+
+using Optimization, OptimizationOptimJL # optimization interface + the default `LBFGS()` solver
+using SimpleNonlinearSolve, ForwardDiff # nonlinear least squares (used by `fit_θ`) + the default AD backend
+using LineSearches
 #-
 Random.seed!(123)
 
@@ -266,19 +277,19 @@ md"""
 Binary matrix version of the rain event at the `D` stations.
 """
 
-Yall = BitMatrix(reduce(hcat, [data_stations[j].RO for j = 1:D]))
+Yall = BitMatrix(stack([data_stations[j].RO for j = 1:D]; dims=1)) # D × N, the emission convention
 
-Y_past = BitMatrix(Yall[1:local_order, :]) # rand(Bool, local_order, D)
+Y_past = BitMatrix(Yall[:, 1:local_order]) # rand(Bool, D, local_order)
 
 ξ = [1; zeros(K - 1)];  # 1 jan 1956 was most likely a type Z = 1 wet day all over France
 
-Y = Yall[1+local_order:end, :]
+Y = Yall[:, 1+local_order:end]
 
 md"""
 ### Map of stations
 """
 
-long_spell = [longuest_spell(y) for y in eachcol(Y)]
+long_spell = [longuest_spell(y) for y in eachrow(Y)] # one row per station
 
 FR_map_spell = map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true, precision_scale=precision_scale, colorbar_label="Days")
 
@@ -346,7 +357,12 @@ md"""
 `fit_mle!` runs the EM algorithm for `ARPeriodicHMMSpatial`.  It updates the transition parameters
 `θᴬ`, the Bernoulli emission parameters `θᴮ`, and the spatial range parameters `θᴿ` jointly.
 
-The `solver` keyword specifies the inner optimiser used for the range update step (M-step for `R`).
+Every M-step goes through the same four keywords: `solver` (the algorithm handed to `solve`, `LBFGS()` by
+default), `adtype` (the AD backend, `AutoForwardDiff()` by default), `ensemble` (`EnsembleSerial()`,
+`EnsembleThreads()` or `EnsembleDistributed()` for the per-state/per-site problems) and `solve_kwargs`
+(a `NamedTuple` forwarded verbatim to `solve`). Any `Optimization.jl`-compatible solver works, so the
+choice below is just the one that behaves best on the range update.
+`maxiters_R` stays a separate keyword because it caps the inner iterations of the `R` M-step only.
 
 For time sake in this tutorial, we load the fitted model but show bellow the code to run the EM algorithm (that can take an hour or so).
 """
@@ -354,7 +370,7 @@ md"""
 ```julia
 solver = OptimizationOptimJL.LBFGS(linesearch=LineSearches.BackTracking())
 
-@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θq_fit_ind, θy_fit_ind, θᴿ, Y, Y_past; solver=solver, n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
+@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θq_fit_ind, θy_fit_ind, θᴿ, Y, Y_past; solver=solver, ensemble=EnsembleThreads(), n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
 JLD.save(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "hmm_fit_K_4_d_1_m_1.jld"), "history", history, "all_θq_iter", all_θᴬ_iter, "all_θy_iter", all_θᴮ_iter, "all_θr_iter", all_θᴿ_iter); 
 ```
 """
@@ -530,9 +546,9 @@ Nb = 1000
 
 begin
     zs = zeros(Int, N, Nb)
-    ys = zeros(Bool, N, D, Nb)
+    ys = zeros(Bool, D, N, Nb)
     @time "Simulations Z, Y (spatial HMM)" for i in 1:Nb
-        zs[:, i], ys[:, :, i] = rand(hmm_spa, n2t; y_ini=Yall[1:local_order, :], z_ini=1, seq=true)
+        zs[:, i], ys[:, :, i] = rand(hmm_spa, n2t; y_ini=Yall[:, 1:local_order], z_ini=1, seq=true)
     end
 end
 
@@ -550,7 +566,7 @@ wgen4_model = fit_wgen(Y, idx_months, wgen_order)
 
 ys_wgen = similar(ys)
 @time "Simulation Y wgen 4" for i in 1:Nb
-    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=vcat(rand(Bool, wgen_order - local_order, D), Y_past))
+    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=hcat(rand(Bool, D, wgen_order - local_order), Y_past))
 end
 
 md"""
@@ -562,7 +578,7 @@ Simulate from the independent (non-spatial) `ARPeriodicHMM` fitted in Step 1, fo
 ys_ind = similar(ys)
 zs_ind = zeros(Int, N, Nb)
 @time "Simulations Z, Y (HMM_ind)" for i in 1:Nb
-    zs_ind[:, i], ys_ind[:, :, i] = rand(hmm_ind, n2t; y_ini=Yall[1:local_order, :], z_ini=1, seq=true)
+    zs_ind[:, i], ys_ind[:, :, i] = rand(hmm_ind, n2t; y_ini=Yall[:, 1:local_order], z_ini=1, seq=true)
 end
 
 md"""
@@ -587,13 +603,13 @@ md"""
 ##### Historic spells
 """
 
-len_spell_hist = [pmf_spell(Y[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];
+len_spell_hist = [pmf_spell(Y[j, idx_month_vcat], dw) for j in 1:D, dw in 0:1];
 
 md"""
 ##### Simulation spells
 """
 
-len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];
+len_spell_simu = [pmf_spell(ys[j, idx_month_vcat, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];
 
 md"""
 #### Dry spell
@@ -662,10 +678,10 @@ md"""
 """
 
 RRmax = 0
-ROR = [mean(r .> RRmax) for r in eachrow(Y)]
-RORs = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys, dims=3)]
-RORs_ind = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys_ind, dims=3)]
-RORswgen = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys_wgen, dims=3)]
+ROR = [mean(r .> RRmax) for r in eachcol(Y)]
+RORs = [[mean(r .> RRmax) for r in eachcol(rr)] for rr in eachslice(ys, dims=3)]
+RORs_ind = [[mean(r .> RRmax) for r in eachcol(rr)] for rr in eachslice(ys_ind, dims=3)]
+RORswgen = [[mean(r .> RRmax) for r in eachcol(rr)] for rr in eachslice(ys_wgen, dims=3)]
 
 JJA = [6, 7, 8]
 MAM = [3, 4, 5]
@@ -727,13 +743,13 @@ md"""
 ##### Rain event dry/wet
 """
 
-cor_bin_hist = cor(reduce(hcat, [df.RO for df in data_stations]));
+cor_bin_hist = cor(stack([df.RO for df in data_stations]; dims=1), dims=2);
 
-cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
+cor_bin_mean_simu = mean(cor(ys[:, :, i], dims=2) for i in 1:Nb);
 
-cor_bin_mean_simu_ind = mean(cor(ys_ind[:, :, i]) for i in 1:Nb);
+cor_bin_mean_simu_ind = mean(cor(ys_ind[:, :, i], dims=2) for i in 1:Nb);
 
-cor_bin_mean_simu_wgen = mean(cor(ys_wgen[:, :, i]) for i in 1:Nb);
+cor_bin_mean_simu_wgen = mean(cor(ys_wgen[:, :, i], dims=2) for i in 1:Nb);
 
 begin
     plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:1]

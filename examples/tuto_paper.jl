@@ -36,7 +36,7 @@ md"""
 #!nb #     There are several ways to `add` a package before `using`, one way is for this tutorial to copy-paste (it might take a while):
 #!nb #     ```julia
 #!nb #     import Pkg
-#!nb #     Pkg.add(["CSV", "JLD", "DelimitedFiles", "DataFrames", "DataFramesMeta", "StatsBase", "Random", "Distributions", "StatsPlots", "LaTeXStrings"])
+#!nb #     Pkg.add(["CSV", "JLD", "DelimitedFiles", "DataFrames", "DataFramesMeta", "StatsBase", "Random", "Distributions", "StatsPlots", "LaTeXStrings", "Optimization", "OptimizationOptimJL", "SimpleNonlinearSolve", "ForwardDiff"])
 #!nb #     ```
 
 using CSV, JLD, DelimitedFiles # File Read/Load/Save
@@ -57,6 +57,16 @@ The main package is `StochasticWeatherGenerators.jl`, which provides the interfa
 using StochasticWeatherGenerators # interface to use with SmoothPeriodicStatsModels.jl
 
 using SmoothPeriodicStatsModels # Name might change. Small collection of smooth periodic models e.g. AR, HMM
+
+md"""
+Since `SmoothPeriodicStatsModels.jl` v3 all the fitting code lives in a package extension: the models,
+`rand` and the likelihoods are always available, while `fit_mle` and friends are only defined once the
+SciML solver stack below is loaded. These four packages are the extension trigger, so forgetting one
+gives you an explicit "load Optimization, ... to fit" error rather than a `MethodError`.
+"""
+
+using Optimization, OptimizationOptimJL # optimization interface + the default `LBFGS()` solver
+using SimpleNonlinearSolve, ForwardDiff # nonlinear least squares (used by `fit_θ`) + the default AD backend
 
 #-
 Random.seed!(1234)
@@ -249,15 +259,15 @@ md"""
 Binary matrix version of the rain event at the `D` stations.
 """
 
-RR = reduce(hcat, [data_stations[j].RR[1+local_order:end] for j = 1:D]) * 0.1
+RR = stack([data_stations[j].RR[1+local_order:end] for j = 1:D]; dims=1) * 0.1 # D × N
 
-Yall = BitMatrix(reduce(hcat, [data_stations[j].RO for j = 1:D]))
+Yall = BitMatrix(stack([data_stations[j].RO for j = 1:D]; dims=1)) # D × N, the emission convention
 
-Y_past = BitMatrix(Yall[1:local_order, :]) # rand(Bool, local_order, D)
+Y_past = BitMatrix(Yall[:, 1:local_order]) # rand(Bool, D, local_order)
 
 ξ = [1; zeros(K - 1)];  # 1 jan 1956 was most likely a type Z = 1 wet day all over France
 
-Y = Yall[1+local_order:end, :]
+Y = Yall[:, 1+local_order:end]
 
 md"""
 ### Map of stations
@@ -271,7 +281,7 @@ LAT_idx = dms_to_dd.(station.LAT)
 
 LON_idx = dms_to_dd.(station.LON)
 
-long_spell = [longuest_spell(y) for y in eachcol(Y)]
+long_spell = [longuest_spell(y) for y in eachrow(Y)] # one row per station
 
 FR_map_spell = map_with_stations(LON_idx, LAT_idx, long_spell; station_name=station_name, show_value=true, colorbar_show=true, precision_scale = precision_scale, colorbar_label = "Days")
 
@@ -323,15 +333,30 @@ With the Slice estimate as a good starting point for the full (seasonal) Baum We
 """
 
 #!nb # !!! tip
-#!nb #     To accelerate the fitting procedure (especially for larger models or when testing various model hyperparameters), one can do
+#!nb #     Each M-step solves one independent problem per hidden state, site and memory. They are run as a
+#!nb #     SciML `EnsembleProblem`, so parallelism is selected with the `ensemble` keyword rather than by
+#!nb #     adding workers behind the scene. To accelerate the fitting procedure (especially for larger models
+#!nb #     or when testing various model hyperparameters), start Julia with `julia -t auto` and pass
+#!nb #     ```julia
+#!nb #     fit_mle(...; ensemble=EnsembleThreads())
+#!nb #     ```
+#!nb #     or, to distribute over several processes,
 #!nb #     ```julia
 #!nb #     using Distributed
 #!nb #     addprocs(10) # number of worker to add
-#!nb #     @everywhere using SmoothPeriodicStatsModels # load the pkg on each worker
+#!nb #     @everywhere using SmoothPeriodicStatsModels, Optimization, OptimizationOptimJL, SimpleNonlinearSolve, ForwardDiff # load the pkg *and* the extension trigger on each worker
+#!nb #     fit_mle(...; ensemble=EnsembleDistributed())
 #!nb #     ```
-#!nb #     Then the fitting loop inside `fit_mle` will be distributed. See the [official Julia doc](https://docs.julialang.org/en/v1/stdlib/Distributed/#man-distributed) for more info.
+#!nb #     See the [official Julia doc](https://docs.julialang.org/en/v1/stdlib/Distributed/#man-distributed) for more info.
 #!nb #     On smaller models it does not worth it since adding workers add some compilation and communication time.
-@time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past, maxiter=10000, robust=true; display=:iter, silence=true, tol=1e-3, θ_iters=true, n2t=n2t);
+@time "FitMLE SHMM (Baum Welch)" hmm_fit, θq_fit, θy_fit, hist, histo_A, histo_B = fit_mle(hmm_slice, θᴬ_slice, θᴮ_slice, Y, Y_past, maxiter=10000, robust=true; display=:iter, tol=1e-3, θ_iters=true, n2t=n2t);
+
+md"""
+The solver used by every M-step is the `solver` keyword, `LBFGS()` by default, and its own options go
+through `solve_kwargs`, e.g. `fit_mle(...; solver=NewtonTrustRegion(), solve_kwargs=(maxiters=200,))`.
+The v2 keywords `silence` and `warm_start` were Ipopt/JuMP concepts and are gone: solver verbosity is a
+`solve_kwargs` entry, and every M-step now starts from the previous iterate unconditionally.
+"""
 
 #-
 
@@ -515,9 +540,9 @@ Sample the (seasonal) HMM model and output the sequence of hidden states and mul
 """
 begin
     zs = zeros(Int, N, Nb)
-    ys = zeros(Bool, N, D, Nb)
+    ys = zeros(Bool, D, N, Nb)
     @time "Simulations Z, Y" for i in 1:Nb
-        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=Yall[1:local_order, :], z_ini=1, seq=true)
+        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=Yall[:, 1:local_order], z_ini=1, seq=true)
     end
 end
 
@@ -528,7 +553,7 @@ Given the hidden states and dry/wet, it generates the rainfall amounts at each s
 begin
     rs = zeros(D, N, Nb)
     @time "Simulations RR>0" for i in 1:Nb
-        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]', Σ²RR)
+        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i], Σ²RR)
     end
 end
 
@@ -546,7 +571,7 @@ wgen4_model = fit_wgen(Y, idx_months, wgen_order)
 
 ys_wgen = similar(ys)
 @time "Simulation Y wgen 4" for i in 1:Nb
-    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=vcat(rand(Bool, wgen_order - 1, D), Y_past))
+    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=hcat(rand(Bool, D, wgen_order - 1), Y_past))
 end
 
 md"""
@@ -571,13 +596,13 @@ md"""
 ##### Historic spells
 """
 
-len_spell_hist = [pmf_spell(Y[idx_month_vcat, j], dw) for j in 1:D, dw in 0:1];
+len_spell_hist = [pmf_spell(Y[j, idx_month_vcat], dw) for j in 1:D, dw in 0:1];
 
 md"""
 ##### Simulation spells
 """
 
-len_spell_simu = [pmf_spell(ys[idx_month_vcat, j, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];
+len_spell_simu = [pmf_spell(ys[j, idx_month_vcat, i], dw) for i in 1:Nb, j in 1:D, dw in 0:1];
 
 md"""
 #### Dry spell
@@ -646,9 +671,9 @@ md"""
 """
 
 RRmax = 0
-ROR = [mean(r .> RRmax) for r in eachrow(RR)]
-RORs = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys, dims=3)]
-RORswgen = [[mean(r .> RRmax) for r in eachrow(rr)] for rr in eachslice(ys_wgen, dims=3)]
+ROR = [mean(r .> RRmax) for r in eachcol(RR)]
+RORs = [[mean(r .> RRmax) for r in eachcol(rr)] for rr in eachslice(ys, dims=3)]
+RORswgen = [[mean(r .> RRmax) for r in eachcol(rr)] for rr in eachslice(ys_wgen, dims=3)]
 
 JJA = [6, 7, 8]
 MAM = [3, 4, 5]
@@ -786,7 +811,7 @@ df_res = [
 agg_i_full = first.(divrem.(1:N, agg_window))
 idx_agg = [findall(agg_i_full .== val) for val in unique((agg_i_full))]
 agg_rs = [[sum(rs[j, ii, i]) for ii in idx_agg] for j in 1:D, i in 1:Nb] * conversion_factor
-agg_RR = [[sum(RR[ii, j]) for ii in idx_agg] for j in 1:D]
+agg_RR = [[sum(RR[j, ii]) for ii in idx_agg] for j in 1:D]
 begin
     p_uniR = [plot(yaxis=:log10, ylims=(3e-5, 2e-1), tickfont=11, legendfontsize=13, titlefontsize=13, legend=:bottom) for j = 1:D]
     [plot!(p_uniR[j], xlabel="$(agg_window) days rain (mm)") for j in staid_lat[6:10]]
@@ -822,7 +847,7 @@ begin
     p_spell_wet = [plot(xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=16) for j = 1:D]
     for j = 1:D
         errorline!(p_spell_wet[j], acfrange, stack(aa[:, j], dims=1)', groupcolor=:gray, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), errortype=:percentile, percentiles=[0, 100], fillalpha=0.8, lw=2, centertype=:median)
-        plot!(p_spell_wet[j], acfrange, autocor(RR[:, j], acfrange), label=islabel(j, staid_lat[[1]], "Obs"), lw=2.0, c=1, markers=:circle, alpha=0.8)
+        plot!(p_spell_wet[j], acfrange, autocor(RR[j, :], acfrange), label=islabel(j, staid_lat[[1]], "Obs"), lw=2.0, c=1, markers=:circle, alpha=0.8)
     end
 
     [xlabel!(p_spell_wet[j], "Lag", xlabelfontsize=12) for j in staid_lat[6:10]]
@@ -836,11 +861,11 @@ md"""
 #### Monthly quantile amount
 """
 
-rh = reduce(hcat, [df[1+local_order:end, :RR] for df in data_stations])
+rh = stack([df[1+local_order:end, :RR] for df in data_stations]; dims=1) # D × N
 
 month_rain_simu = [monthly_agg(rs[j, :, i], idx_all) for j in 1:D, i in 1:Nb];
 
-month_rain_histo = [monthly_agg(rh[:, j], idx_all) for j in 1:D]
+month_rain_histo = [monthly_agg(rh[j, :], idx_all) for j in 1:D]
 
 qs = [0.9, 0.5, 0.1]
 
@@ -876,9 +901,9 @@ md"""
 ##### Rain event dry/wet
 """
 
-cor_bin_hist = cor(reduce(hcat, [df.RO for df in data_stations]));
+cor_bin_hist = cor(stack([df.RO for df in data_stations]; dims=1), dims=2);
 
-cor_bin_mean_simu = mean(cor(ys[:, :, i]) for i in 1:Nb);
+cor_bin_mean_simu = mean(cor(ys[:, :, i], dims=2) for i in 1:Nb);
 
 
 begin
@@ -903,13 +928,13 @@ md"""
 ##### Rainfall amount
 """
 
-cor_hist = cor(reduce(hcat, [df.RR for df in data_stations]));
+cor_hist = cor(stack([df.RR for df in data_stations]; dims=1), dims=2);
 
-corT_hist = corTail(reduce(hcat, [df.RR for df in data_stations]));
+corT_hist = corTail(stack([df.RR for df in data_stations]; dims=1), dims=2);
 
-cor_mean_simu = mean(cor(rs[:, :, i]') for i in 1:Nb);
+cor_mean_simu = mean(cor(rs[:, :, i], dims=2) for i in 1:Nb);
 
-corT_mean_simu = mean(corTail(rs[:, :, i]') for i in 1:Nb);
+corT_mean_simu = mean(corTail(rs[:, :, i], dims=2) for i in 1:Nb);
 
 begin
     plots_cor = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:2]
@@ -954,11 +979,11 @@ begin
             @aside u = StochasticWeatherGenerators.Copulas.pseudos(permutedims(hcat(_.RR, _.RR_1)))
             @transform(:X = quantile(Normal(), u[1,:]), :X_1 = quantile(Normal(), u[2,:]))
         end
-        X = hcat(df_X.X, df_X.X_1)
+        X = stack([df_X.X, df_X.X_1]; dims=1) # 2 × n
         cor_sigma = [1 corΣ[k][j1,j2]; corΣ[k][j1,j2] 1]
         Σ⁻¹ = inv(cor_sigma)
 
-        X2 = [(x' * Σ⁻¹ * x) for x in eachrow(X)] |> sort
+        X2 = [(x' * Σ⁻¹ * x) for x in eachcol(X)] |> sort
         ecdfX2 = ecdf(X2)(X2) * length(X2) / (length(X2) + 1)
 
         plot!(quantile(Chisq(2), ecdfX2), X2, xlabel=L"$\chi^2(2)$-quantile", c=my_color(k, K), ylabel="Observed squared Mahalanobis distance", label=L"Z = %$k ", legend=:topleft, lw=2)

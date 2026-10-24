@@ -12,7 +12,7 @@ function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(d
         leftjoin!(df_i, df, on=:DATE, makeunique=true)
     end
     dropmissing!(df_i)
-    𝕿 = Matrix(df_i[:, findall([startswith(c, string(var)) for c in names(df_i)])])
+    𝕿 = permutedims(Matrix(df_i[:, findall([startswith(c, string(var)) for c in names(df_i)])])) # D × N
     ẑ = df_i.z
     n_in_k = [findall(ẑ .== k) for k in 1:K]
     n2t = dayofyear_Leap.(df_i.DATE)
@@ -26,7 +26,7 @@ function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(d
             ϵ[j, n] = (𝕿[j, n] - ar1.ρ[ẑ[n], n2t[n]] * 𝕿[j, n-1] - ar1.μ[ẑ[n], n2t[n]]) / ar1.σ[ẑ[n], n2t[n]]
         end
     end
-    return [cov(ϵ[n_in_k[k], :]) for k in 1:K]
+    return [cov(permutedims(ϵ[:, n_in_k[k]])) for k in 1:K] # `cov` wants observations in rows
 end
 
 function fit_AR1 end

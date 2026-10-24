@@ -1,51 +1,77 @@
 ##* Rain correlations *#
 
-"""
-    joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r = 0)
-Select all the rows of `M` with values for (two) columns above some value `r`.
-"""
-joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r=0) = M[(M[:, j1].>r).&(M[:, j2].>r), [j1, j2]]
+# These four mirror `Statistics.cor` / `cov`, so they take the same `dims` keyword with the same
+# meaning: `dims = 1` for observations in rows (the `cor` default), `dims = 2` for observations in
+# columns -- the `D x N` layout used everywhere else in this package, which is why every call site
+# here passes `dims = 2`.
+_check_dims(dims::Integer) = dims in (1, 2) ? dims :
+    throw(ArgumentError("dims must be 1 (observations in rows) or 2 (observations in columns), got $dims"))
+
+# the variables of `M`, as a lazy vector of vectors
+_variables(M::AbstractMatrix, dims::Integer) = _check_dims(dims) == 1 ? eachcol(M) : eachrow(M)
+
+# `M` rearranged so observations are in rows, which is what StatsBase's `cor*` want
+_obs_in_rows(M::AbstractMatrix, dims::Integer) = _check_dims(dims) == 1 ? M : permutedims(M)
 
 """
-    Σ_Spearman2Pearson(M::AbstractMatrix)
-Compute the Pearson correlation coefficient i.e. the classic one from the Spearman correlation
+    joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r = 0; dims = 1)
+Select the observations of `M` where variables `j1` and `j2` are both above some value `r`, keeping
+only those two variables. With `dims = 1` (the `cor` convention) variables are columns and the
+result is `n x 2`; with `dims = 2` they are rows and the result is `2 x n`.
+"""
+function joint_rain(M::AbstractMatrix, j1::Integer, j2::Integer, r=0; dims=1)
+    v = _variables(M, dims)
+    keep = (v[j1] .> r) .& (v[j2] .> r)
+    return dims == 1 ? M[keep, [j1, j2]] : M[[j1, j2], keep]
+end
+
+"""
+    Σ_Spearman2Pearson(M::AbstractMatrix; dims = 1)
+Compute the Pearson correlation coefficient i.e. the classic one from the Spearman correlation.
+`dims` follows `Statistics.cor`: `1` for observations in rows, `2` for observations in columns.
 #TODO Add ref
 """
-function Σ_Spearman2Pearson(M::AbstractMatrix)
-    n, d = size(M)
+function Σ_Spearman2Pearson(M::AbstractMatrix; dims=1)
+    X = _obs_in_rows(M, dims)
+    n, d = size(X)
     if n > 1
-        return 2sin.(corspearman(M) .* (π / 6))
+        return 2sin.(corspearman(X) .* (π / 6))
     else
         return [j == 1 ? 1 : missing for i in 1:d, j in 1:d]
     end
 end
 
 """
-    Σ_Kendall2Pearson(M::AbstractMatrix)
-Compute the Pearson correlation coefficient i.e. the classic one from the Kendall correlation
+    Σ_Kendall2Pearson(M::AbstractMatrix; dims = 1)
+Compute the Pearson correlation coefficient i.e. the classic one from the Kendall correlation.
+`dims` follows `Statistics.cor`: `1` for observations in rows, `2` for observations in columns.
 #TODO Add ref
 """
-function Σ_Kendall2Pearson(M::AbstractMatrix)
-    n, d = size(M)
+function Σ_Kendall2Pearson(M::AbstractMatrix; dims=1)
+    X = _obs_in_rows(M, dims)
+    n, d = size(X)
     if n > 1
-        return sin.(corkendall(M) .* (π / 2))
+        return sin.(corkendall(X) .* (π / 2))
     else
         return [j == 1 ? 1 : missing for i in 1:d, j in 1:d]
     end
 end
 
 """
-    corTail(x::AbstractMatrix, q = 0.95)
-Compute the (symmetric averaged) tail index matrix `M` of a vector x, i.e. M[i, j] = (ℙ(x[:,j] > Fxⱼ(q) ∣ x[:,i] > Fxᵢ(q)) + ℙ(x[:,i] > Fxᵢ(q) ∣ x[:,j] > Fxⱼ(q)))/2 where Fx(q) is the CDF of x.
-Note it uses the same convention as `cor` function i.e. observations in rows and features in column.
+    corTail(x::AbstractMatrix, q = 0.95; dims = 1)
+Compute the (symmetric averaged) tail index matrix `M` of `x`, i.e. M[i, j] = (ℙ(xⱼ > Fxⱼ(q) ∣ xᵢ > Fxᵢ(q)) + ℙ(xᵢ > Fxᵢ(q) ∣ xⱼ > Fxⱼ(q)))/2 where Fx(q) is the CDF of x.
+`dims` follows `Statistics.cor`: `1` for observations in rows, `2` for observations in columns.
 """
-function corTail(x, q=0.95)
-    n, k = size(x)
+function corTail(x, q=0.95; dims=1)
+    vars = _variables(x, dims)
+    k = length(vars)
     c = zeros(k, k)
     for i in 1:k
-        ind_i = findall(x[:, i] .>= quantile(x[:, i], q))
+        xi = vars[i]
+        ind_i = findall(xi .>= quantile(xi, q))
         for j in 1:k
-            c[i, j] = count(x[ind_i, j] .>= quantile(x[:, j], q)) / length(ind_i)
+            xj = vars[j]
+            c[i, j] = count(xj[ind_i] .>= quantile(xj, q)) / length(ind_i)
         end
     end
 
@@ -66,7 +92,7 @@ Output: `K` correlation matrix of size `S×S`
 Options:
 
 - `force_PosDef` will enforce Positive Definite matrix with [NearestCorrelationMatrix.jl](https://github.com/adknudson/NearestCorrelationMatrix.jl).
-- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
+- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`; it is called as `cor_method(M; dims = 2)`, i.e. it must accept `dims` like `Statistics.cor` does
 - `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
 
 ```julia
@@ -80,9 +106,9 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
         for j2 in 1:j1-1
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
             for k in 1:K
-                R1R2_k = @subset(R1R2, :z .== k)[!, [:RR, :RR_1]] |> Matrix
-                # if size(R1R2_k, 1) ≤ 2
-                    ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2_k, 1) < 2, impute_missing, cor_method(R1R2_k)[1, 2])
+                R1R2_k = permutedims(@subset(R1R2, :z .== k)[!, [:RR, :RR_1]] |> Matrix) # 2 × n
+                # if size(R1R2_k, 2) ≤ 2
+                    ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2_k, 2) < 2, impute_missing, cor_method(R1R2_k; dims=2)[1, 2])
                 # else
                     # ΣS_k[k][j1, j2] = ΣS_k[k][j2, j1] = cor_method(R1R2_k)[1, 2]
                 # end
@@ -116,7 +142,7 @@ Output: `K` covariance matrix of size `S×S`
 Options:
 
 - `force_PosDef` will enforce Positive Definite matrix with [NearestCorrelationMatrix.jl](https://github.com/adknudson/NearestCorrelationMatrix.jl).
-- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`
+- `cor_method`: typically `Σ_Spearman2Pearson` or `Σ_Kendall2Pearson`; it is called as `cor_method(M; dims = 2)`, i.e. it must accept `dims` like `Statistics.cor` does
 - `impute_missing`: if `nothing`, `missing` will be outputted when two stations do not have at least two rain days in common. Otherwise the value `impute_missing` will be set.
 
 ```julia
@@ -134,8 +160,8 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson,
     for j1 in 2:D
         for j2 in 1:j1-1
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
-            R1R2 = R1R2[!, [:RR, :RR_1]] |> Matrix
-            ΣS[j1, j2] = ΣS[j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2, 1) < 1, impute_missing, cor_method(R1R2)[1, 2])
+            R1R2 = permutedims(R1R2[!, [:RR, :RR_1]] |> Matrix) # 2 × n
+            ΣS[j1, j2] = ΣS[j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2, 2) < 1, impute_missing, cor_method(R1R2; dims=2)[1, 2])
         end
     end
     if all((!ismissing).(ΣS)) # are they no missing?

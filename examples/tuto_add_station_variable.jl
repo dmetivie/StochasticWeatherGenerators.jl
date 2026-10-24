@@ -57,6 +57,17 @@ using StochasticWeatherGenerators
 using SmoothPeriodicStatsModels
 
 md"""
+Since `SmoothPeriodicStatsModels.jl` v3 all the fitting code lives in a package extension: the models and
+`rand` are always available, while `fit_mle` and friends -- and hence `fit_mle_RO`, `fit_mle_RR`, `fit_AR1`
+and `fit_TN` here -- are only defined once the SciML solver stack below is loaded. These four packages are
+the extension trigger, so forgetting one gives you an explicit "load Optimization, ... to fit" error rather
+than a `MethodError`.
+"""
+
+using Optimization, OptimizationOptimJL # optimization interface + the default `LBFGS()` solver
+using SimpleNonlinearSolve, ForwardDiff # nonlinear least squares (used by `fit_θ`) + the default AD backend
+
+md"""
 ## Data extraction and settings
 
 To get the interesting weather variables, we use weather station provided by a the French research institute for agronomy and environment (INRAE).
@@ -224,7 +235,7 @@ To prevent that we fit the positive difference `ΔT = TX-TN` with a Gamma distri
 We will then simulate the `TN` conditionally to the `TX`
 """
 
-@time "Fit TN residuals" θ_ΔT = fit_TN.(data_stations, 1, T; print_level=0) # 1 is the degree
+@time "Fit TN residuals" θ_ΔT = fit_TN.(data_stations, 1, T) # 1 is the degree
 θ_cor = cor_groupbyTXTN.(data_stations, T)
 f(θ) = Gamma(θ[1], θ[2]) # other options e.g. MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
 f(t, θ) = f([σₜ(t, θ[1:(2+1)]), σₜ(t, θ[(2+2):end])])
@@ -253,7 +264,7 @@ md"""
 ### Initial conditions
 """
 
-y_ini = [@subset(df, :DATE .== Date(2000) - Day(1)).RO[1] for df in data_stations]'
+y_ini = reshape([@subset(df, :DATE .== Date(2000) - Day(1)).RO[1] for df in data_stations], :, 1) # D × order
 tx_ini = [@subset(df, :DATE .== Date(2000)).TX[1] for df in data_stations]
 z_ini = @subset(data_stations[1], :DATE .== Date(2000)).z[1]
 
@@ -283,7 +294,7 @@ N = length(n2t)
     Random.seed!(50000)
 
     zs = zeros(Int, N, NSIMU)
-    ys = zeros(Bool, N, D, NSIMU)
+    ys = zeros(Bool, D, N, NSIMU)
     rs = zeros(D, N, NSIMU)
     txs = zeros(D, N, NSIMU)
     ϵ_TX = zeros(D, N, NSIMU)
@@ -295,14 +306,14 @@ N = length(n2t)
         zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=y_ini, z_ini=z_ini, seq=true)
     end
     @time "Rain" for i in 1:NSIMU
-        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i]', Σ²RR)
+        rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i], Σ²RR)
     end
     @time "T_max" for i in 1:NSIMU
         txs[:, :, i], ϵ_TX[:, :, i] = rand(ar1sTX, n2t, zs[:, i], Σ²TX; y₁=tx_ini, output_ϵ=true)
     end
 
     @time "T_min" for i in 1:NSIMU
-        ΔTs[:, :, i] = reduce(hcat, [rand_cond(ϵ_TX[j, :, i], zs[:, i], θ_ΔT[j], θ_cor[j], n2t, T) for j in 1:D]) |> permutedims
+        ΔTs[:, :, i] = stack([rand_cond(ϵ_TX[j, :, i], zs[:, i], θ_ΔT[j], θ_cor[j], n2t, T) for j in 1:D]; dims=1)
     end
     tns = txs - ΔTs #rand(ar1sTN, n2t, zs, Σ²TN; y₁=tn_ini)
     @time "Solar Radiation" for i in 1:NSIMU

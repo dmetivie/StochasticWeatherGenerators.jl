@@ -9,6 +9,7 @@
     wgen(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
 Structure for a multisite rain occurrence model as described in (Wilks 1998) and generalized to higher order by Srikanthan et al. (2009). 
 It contains Markov chain transition probabilities of order `p` at each sites `j ∈ 1:D`, and a correlation matrix for the unobserved Multivariate Gaussian variable (used to generate correlated rain occurrences). When `idxs` is provided it is an `Vector` of size 12 (typically) with index of days corresponding to each months.
+Observation matrices are `D × N` (sites in rows, days in columns), as everywhere in this package.
 `ncat` can be larger than 2 to model generic categorical variables (experimental feature).
 
 ## Example
@@ -17,12 +18,12 @@ It contains Markov chain transition probabilities of order `p` at each sites `j 
 p = 4
 date_range = Date(1956):Day(1):Date(2019,12,31)
 D = 5
-Y = rand(Bool, length(date_range), D)
+Y = rand(Bool, D, length(date_range)) # D × N
 idx_months = [findall(x -> month.(x) == m, date_range) for m in 1:12]
 # Fit returning a `wgen` struct
 wgen4_model = fit_wgen(Y, idx_months, wgen_order)
 # Simulate from `wgen` struct
-Y_simu = rand(wgen4_model, 1956:2019; Y_ini=rand(Bool, p, D))
+Y_simu = rand(wgen4_model, 1956:2019; Y_ini=rand(Bool, D, p)) # returns D × N
 ```
 
 ## References
@@ -104,8 +105,8 @@ function fit_markov_chain(Y::AbstractVector{<:Integer}, p::Integer, state_space=
     return transition_probs
 end
 
-fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c, p) for c in eachcol(Y)]
-fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(Y[idx, j], p) for j in axes(Y, 2), idx in idxs]
+fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c, p) for c in eachrow(Y)]
+fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(Y[j, idx], p) for j in axes(Y, 1), idx in idxs]
 
 """
     simulate_markov_gaussian(N::Integer, ΩX::AbstractMatrix, transition_probs; Y_ini)
@@ -116,34 +117,34 @@ Function to simulate `Xt` given a correlation matrix `ΩX` and transition probab
 - If not then it 
 """
 function simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini)
-    p, d = size(Y_ini)  # Number of locations, order of the chain
+    d, p = size(Y_ini)  # Number of locations, order of the chain
     U = rand(MvNormal(zeros(d), ΩU), N)  # Generate multivariate normal samples
-    X = BitArray(undef, N, d)
-    states = [Y_ini[:, i] for i in axes(Y_ini, 2)]
+    X = BitArray(undef, d, N)
+    states = [Y_ini[j, :] for j in axes(Y_ini, 1)]
     for n in 1:N
         for (j, s) in enumerate(states)
             pr = transition_probs[j][s][[s[2:p]; 1]] # rain proba
             Φ⁻¹ = quantile(Normal(), pr)   # Compute Φ⁻¹(pr)
-            X[n, j] = U[j, n] ≤ Φ⁻¹  # Apply thresholding to get binary states
-            states[j] = [s[2:end]; X[n, j]]
+            X[j, n] = U[j, n] ≤ Φ⁻¹  # Apply thresholding to get binary states
+            states[j] = [s[2:end]; X[j, n]]
         end
     end
     return X
 end
 
 function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini)
-    p, d = size(Y_ini)
+    d, p = size(Y_ini)
     @assert d == size(transition_probs, 1)
     @assert size(transition_probs, 2) == length(ΩX)
 
-    X = BitArray(undef, length(Date(years[1]):Day(1):Date(years[end], 12, 31)), d)
+    X = BitArray(undef, d, length(Date(years[1]):Day(1):Date(years[end], 12, 31)))
     id = 0
     for y in years
         for m in eachindex(ΩX) # typically 1:12 for all months
             N = daysinmonth(y, m)
             idend = (id + N)
-            X[(id+1):idend, :] .= simulate_markov_gaussian(N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
-            Y_ini .= X[(idend-(p-1)):idend]
+            X[:, (id+1):idend] .= simulate_markov_gaussian(N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
+            Y_ini .= X[:, (idend-(p-1)):idend]
             id = idend
         end
     end
@@ -163,10 +164,12 @@ Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov
 Fit the multisite multivariate Gaussian variable.
 """
 function fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
-    @assert size(Y, 2) == 2
-    ρ = cor(Y)[1, 2]
+    @assert size(Y, 1) == 2
+    # `cor` wants observations in rows, and `f` below is evaluated by Monte Carlo inside a root
+    # find, so even a last-bit change in ρ moves the answer: keep the matrix form of `cor`.
+    ρ = cor(permutedims(Y))[1, 2]
     p_order = Int(log2(length(transition_probs[1])))
-    f(ω, p) = abs(ω) < 1 ? (cor(simulate_markov_gaussian(2000, [1.0 ω; ω 1.0], transition_probs; Y_ini=zeros(Int, p_order, 2)))[1, 2] - ρ) : Inf
+    f(ω, p) = abs(ω) < 1 ? (cor(permutedims(simulate_markov_gaussian(2000, [1.0 ω; ω 1.0], transition_probs; Y_ini=zeros(Int, 2, p_order))))[1, 2] - ρ) : Inf
 
     prob = IntervalNonlinearProblem(f, ω0)
     sol = solve(prob)
@@ -179,12 +182,12 @@ end
 function fit_Ω(transition_probs::AbstractMatrix, Y, idxs; force_PosDef=true, kwargs...)
     D, M = size(transition_probs)
     @assert M == length(idxs)
-    @assert D == size(Y, 2)
+    @assert D == size(Y, 1)
     Ω = [ones(D, D) for m in 1:M]
     for m in 1:M
         for i in 1:D-1
             for j in i+1:D
-                Ω[m][i, j] = Ω[m][j, i] = fit_Ω(transition_probs[[i, j], m], Y[idxs[m], [i, j]]; kwargs...)
+                Ω[m][i, j] = Ω[m][j, i] = fit_Ω(transition_probs[[i, j], m], Y[[i, j], idxs[m]]; kwargs...)
             end
         end
     end

@@ -18,13 +18,13 @@ function StochasticWeatherGenerators.fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T;
         @transform(:y = :TX - :TN)
         groupby([:z])
     end
-    sol_Ipopt = map(enumerate(dfk)) do (k, dfkⱼ)
+    sols = map(enumerate(dfk)) do (k, dfkⱼ)
         n2t = dfkⱼ.n2t
         ℓ(θ, x) = -sum(logpdf(f(t / T, θ), x[n]) for (n, t) in enumerate(n2t)) # = -loglikelihood
         y = dfkⱼ.y
-        return fit_loss_optim(ℓ, y, θ0; kwargs...)# fit_mle(OptimMLE(ℓ, Ipopt.Optimizer(), vec(θ0)), y)
+        return fit_loss_optim(ℓ, y, θ0; kwargs...)
     end
-    return sol_Ipopt#[t->f(t,θ_fit) for θ_fit in sol_Ipopt]
+    return sols#[t->f(t,θ_fit) for θ_fit in sols]
 end
 
 #TODO: robustify
@@ -44,7 +44,7 @@ function StochasticWeatherGenerators.cor_groupby(df::DataFrame, var1, var2, T::I
     end
     ρs = map(enumerate(df_groups)) do (k, df)
         ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0, :Ipopt, print_level=0)
+        fit_loss_optim(ℓₖ, df.COR, θ0)
     end
     return ρs
 end
@@ -64,7 +64,7 @@ function StochasticWeatherGenerators.cor_groupbyTXTN(df::DataFrame, T::Integer; 
     end
     ρs = map(enumerate(df_groups)) do (k, df)
         ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0, :Ipopt, print_level=0)
+        fit_loss_optim(ℓₖ, df.COR, θ0)
     end
     return ρs
 end

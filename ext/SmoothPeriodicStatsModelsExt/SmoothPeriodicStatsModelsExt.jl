@@ -3,7 +3,7 @@ module SmoothPeriodicStatsModelsExt
 using StochasticWeatherGenerators
 
 using SmoothPeriodicStatsModels: αₜ, σₜ, μₜ, ρₜ
-using SmoothPeriodicStatsModels: AR1, model_for_loglikelihood_AR1, initialvalue_optimize!
+using SmoothPeriodicStatsModels: AR1, fit_mle_AR1
 using SmoothPeriodicStatsModels: fit_loss_optim
 import SmoothPeriodicStatsModels: fit_mle_RO
 
