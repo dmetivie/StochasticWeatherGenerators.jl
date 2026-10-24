@@ -21,7 +21,9 @@ function cov_ar1(dfs::AbstractArray{<:DataFrame}, ar1s, var, K = length(unique(d
     ϵ = zeros(size(𝕿))
     for (j, ar1) in enumerate(ar1s)
         for n in 2:N
-            ϵ[n, j] = (𝕿[n] - ar1.ρ[ẑ[n], n2t[n]] * 𝕿[n-1] - ar1.μ[ẑ[n], n2t[n]]) / ar1.σ[ẑ[n], n2t[n]]
+            # NB: this used to read `𝕿[n]` / `𝕿[n-1]`, i.e. linear indexing into the
+            # matrix, so every station's residual came from the first station's series.
+            ϵ[j, n] = (𝕿[j, n] - ar1.ρ[ẑ[n], n2t[n]] * 𝕿[j, n-1] - ar1.μ[ẑ[n], n2t[n]]) / ar1.σ[ẑ[n], n2t[n]]
         end
     end
     return [cov(ϵ[n_in_k[k], :]) for k in 1:K]
