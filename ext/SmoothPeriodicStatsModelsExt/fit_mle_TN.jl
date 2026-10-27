@@ -72,19 +72,21 @@ end
 #TODO: add flexibility in distribution + simplify arguments if possible (maybe dataframe?)
 #TODO: do that functions just for residu `ϵ₁` `ϵ₂` leave the transformation back to a marginal for another function
 """
-    rand_cond(ϵ, z, θ_uni, θ_cor, n2t, T)
+    rand_cond([rng::AbstractRNG, ]ϵ, z, θ_uni, θ_cor, n2t, T)
 Generate a random variable conditionally to another one assuming a Gaussian copula dependance with correlation `ρₜ(t / T, θ_cor)` (depending on the day of the year).
 `ϵ` is assumed `Normal(0,1)`.
 """
-function StochasticWeatherGenerators.rand_cond(ϵ, z, θ_uni, θ_cor, n2t, T)
+function StochasticWeatherGenerators.rand_cond(rng::AbstractRNG, ϵ, z, θ_uni, θ_cor, n2t, T)
     f(θ_uni) = Gamma(θ_uni[1], θ_uni[2])# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
     f(t, θ_uni) = f([σₜ(t/T, θ_uni[1:(2+1)]), σₜ(t/T, θ_uni[(2+2):end])])
-    q(t, ϵ, θ_cor) = cdf(Normal(), rand(Normal(ρₜ(t / T, θ_cor) * ϵ, (1 - ρₜ(t / T, θ_cor)^2))))
+    q(t, ϵ, θ_cor) = cdf(Normal(), rand(rng, Normal(ρₜ(t / T, θ_cor) * ϵ, (1 - ρₜ(t / T, θ_cor)^2))))
     return map(enumerate(n2t)) do (n, t)
         k = z[n]
         quantile(f(t, θ_uni[k]), q(t, ϵ[n], θ_cor[k]))
     end
 end
+
+StochasticWeatherGenerators.rand_cond(ϵ, z, θ_uni, θ_cor, n2t, T) = StochasticWeatherGenerators.rand_cond(GLOBAL_RNG, ϵ, z, θ_uni, θ_cor, n2t, T)
 
 # ```math
 # X_1 \mid (X_2 = ϵ) \sim \mathcal{N}\left(\mu_1 + \dfrac{\sigma_1}{\sigma_2}\rho (a - \mu_2), (1-\rho^2)\sigma_1^2 \right)

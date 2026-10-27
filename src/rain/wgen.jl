@@ -2,7 +2,6 @@
 #TODO: better the code e.g. a lot of time when simulating is spent `getindex` 
 #TODO: Maybe more effective way to store the states than ordered dic?
 #TODO: work on the wgen struct
-#TODO: add rng
 """ 
     wgen
     wgen(p::Integer, D::Integer, ncat::Integer=2)
@@ -58,16 +57,18 @@ function MarkovStateSpace(p::Integer, ncat=2)
 end
 
 """
-    fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
+    fit_wgen([rng::AbstractRNG, ]Y::AbstractMatrix, idxs, p::Integer; kwargs...)
 Use `fit_markov_chain` at each sites and each set of `idxs` to fit Markov chain of order `p`.
 Then it fits the multivariate Gaussian copula for occurrences (each month) with `fit_Ω`.
 Return a `wgen` structure.
 """
-function fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...)
+function fit_wgen(rng::AbstractRNG, Y::AbstractMatrix, idxs, p::Integer; kwargs...)
     transition_probs = fit_markov_chain(Y, idxs, p)
-    Ω = fit_Ω(transition_probs, Y, idxs; kwargs...)
+    Ω = fit_Ω(rng, transition_probs, Y, idxs; kwargs...)
     return wgen(transition_probs, Ω)
 end
+
+fit_wgen(Y::AbstractMatrix, idxs, p::Integer; kwargs...) = fit_wgen(GLOBAL_RNG, Y, idxs, p; kwargs...)
 
 """
     fit_markov_chain(Y::AbstractVector{<:Integer}, p::Integer)
@@ -109,16 +110,16 @@ fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c
 fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(Y[j, idx], p) for j in axes(Y, 1), idx in idxs]
 
 """
-    simulate_markov_gaussian(N::Integer, ΩX::AbstractMatrix, transition_probs; Y_ini)
-    simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_ini)
+    simulate_markov_gaussian([rng::AbstractRNG, ]N::Integer, ΩX::AbstractMatrix, transition_probs; Y_ini)
+    simulate_markov_gaussian([rng::AbstractRNG, ]years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_ini)
 Function to simulate `Xt` given a correlation matrix `ΩX` and transition probabilities.
 
 - If `N` is an integer then it return a sequence of size `N` with fixed parameters.
 - If not then it 
 """
-function simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini)
+function simulate_markov_gaussian(rng::AbstractRNG, N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini)
     d, p = size(Y_ini)  # Number of locations, order of the chain
-    U = rand(MvNormal(zeros(d), ΩU), N)  # Generate multivariate normal samples
+    U = rand(rng, MvNormal(zeros(d), ΩU), N)  # Generate multivariate normal samples
     X = BitArray(undef, d, N)
     states = [Y_ini[j, :] for j in axes(Y_ini, 1)]
     for n in 1:N
@@ -132,7 +133,9 @@ function simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_pr
     return X
 end
 
-function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini)
+simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini) = simulate_markov_gaussian(GLOBAL_RNG, N, ΩU, transition_probs; Y_ini)
+
+function simulate_markov_gaussian(rng::AbstractRNG, years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini)
     d, p = size(Y_ini)
     @assert d == size(transition_probs, 1)
     @assert size(transition_probs, 2) == length(ΩX)
@@ -143,7 +146,7 @@ function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::Abstract
         for m in eachindex(ΩX) # typically 1:12 for all months
             N = daysinmonth(y, m)
             idend = (id + N)
-            X[:, (id+1):idend] .= simulate_markov_gaussian(N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
+            X[:, (id+1):idend] .= simulate_markov_gaussian(rng, N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
             Y_ini .= X[:, (idend-(p-1)):idend]
             id = idend
         end
@@ -151,25 +154,29 @@ function simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::Abstract
     return X
 end
 
+simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini) = simulate_markov_gaussian(GLOBAL_RNG, years, ΩX, transition_probs; Y_ini)
+
 """
-    rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini)
+    rand([rng::AbstractRNG, ]model::wgen, years::AbstractArray{<:Integer}; Y_ini)
 Takes a `wgen` struct
 TODO    
 """
-Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(years, model.Ω, model.transition_probs; Y_ini)
+Base.rand(rng::AbstractRNG, model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(rng, years, model.Ω, model.transition_probs; Y_ini)
+
+Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = rand(GLOBAL_RNG, model, years; Y_ini)
 
 """
-    fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
-    fit_Ω(transition_probs::AbstractMatrix, Y, idxs; ω0=(-0.999, 0.999))    
+    fit_Ω([rng::AbstractRNG, ]transition_probs, Y; ω0=(-0.999, 0.999))
+    fit_Ω([rng::AbstractRNG, ]transition_probs::AbstractMatrix, Y, idxs; ω0=(-0.999, 0.999))    
 Fit the multisite multivariate Gaussian variable.
 """
-function fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
+function fit_Ω(rng::AbstractRNG, transition_probs, Y; ω0=(-0.999, 0.999))
     @assert size(Y, 1) == 2
     # `cor` wants observations in rows, and `f` below is evaluated by Monte Carlo inside a root
     # find, so even a last-bit change in ρ moves the answer: keep the matrix form of `cor`.
     ρ = cor(permutedims(Y))[1, 2]
     p_order = Int(log2(length(transition_probs[1])))
-    f(ω, p) = abs(ω) < 1 ? (cor(permutedims(simulate_markov_gaussian(2000, [1.0 ω; ω 1.0], transition_probs; Y_ini=zeros(Int, 2, p_order))))[1, 2] - ρ) : Inf
+    f(ω, p) = abs(ω) < 1 ? (cor(permutedims(simulate_markov_gaussian(rng, 2000, [1.0 ω; ω 1.0], transition_probs; Y_ini=zeros(Int, 2, p_order))))[1, 2] - ρ) : Inf
 
     prob = IntervalNonlinearProblem(f, ω0)
     sol = solve(prob)
@@ -179,7 +186,9 @@ function fit_Ω(transition_probs, Y; ω0=(-0.999, 0.999))
     return sol.u
 end
 
-function fit_Ω(transition_probs::AbstractMatrix, Y, idxs; force_PosDef=true, kwargs...)
+fit_Ω(transition_probs, Y; kwargs...) = fit_Ω(GLOBAL_RNG, transition_probs, Y; kwargs...)
+
+function fit_Ω(rng::AbstractRNG, transition_probs::AbstractMatrix, Y, idxs; force_PosDef=true, kwargs...)
     D, M = size(transition_probs)
     @assert M == length(idxs)
     @assert D == size(Y, 1)
@@ -187,7 +196,7 @@ function fit_Ω(transition_probs::AbstractMatrix, Y, idxs; force_PosDef=true, kw
     for m in 1:M
         for i in 1:D-1
             for j in i+1:D
-                Ω[m][i, j] = Ω[m][j, i] = fit_Ω(transition_probs[[i, j], m], Y[[i, j], idxs[m]]; kwargs...)
+                Ω[m][i, j] = Ω[m][j, i] = fit_Ω(rng, transition_probs[[i, j], m], Y[[i, j], idxs[m]]; kwargs...)
             end
         end
     end
@@ -201,6 +210,8 @@ function fit_Ω(transition_probs::AbstractMatrix, Y, idxs; force_PosDef=true, kw
     end
     return Ω
 end
+
+fit_Ω(transition_probs::AbstractMatrix, Y, idxs; kwargs...) = fit_Ω(GLOBAL_RNG, transition_probs, Y, idxs; kwargs...)
 
 
 # owm

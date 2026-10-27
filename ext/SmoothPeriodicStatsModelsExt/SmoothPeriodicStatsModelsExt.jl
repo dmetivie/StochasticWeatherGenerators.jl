@@ -8,6 +8,7 @@ using SmoothPeriodicStatsModels: fit_loss_optim
 import SmoothPeriodicStatsModels: fit_mle_RO
 
 using StatsBase, Distributions
+using Random: AbstractRNG, GLOBAL_RNG
 using DataFrames, DataFramesMeta, Dates
 using LinearAlgebra
 

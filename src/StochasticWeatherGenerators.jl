@@ -3,6 +3,7 @@ module StochasticWeatherGenerators
 # Trigonometric part
 
 using StatsBase, Distributions
+using Random: AbstractRNG, GLOBAL_RNG
 using DataFrames, DataFramesMeta, Dates
 using CSV, Printf # File Read/Load
 using LinearAlgebra
