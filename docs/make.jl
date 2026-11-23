@@ -12,6 +12,7 @@ using SmoothPeriodicStatsModels
 #   SmoothPeriodicStatsModels -> ARPeriodicHMM (loaded above)
 #   Distributions             -> Bernoulli, MixtureModel, ArrayLikeVariate, ...
 using JLD
+using Random # `AbstractRNG`, needed to evaluate the `rand(rng::AbstractRNG, ...)` signature in the `@docs` block of models/rain.md
 using Distributions
 
 using Pkg
