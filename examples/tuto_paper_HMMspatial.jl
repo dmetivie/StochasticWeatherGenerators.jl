@@ -85,7 +85,7 @@ my_palette(K) = plots_colors[my_color.(1:K, K)] # blue for k = 1 (∼wetter) and
 
 month_days = vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366) # x ticks for day of the year plots
 
-month_letters = vcat(string.(first.(monthabbr.(1:12))), "")
+month_letters = vcat(string.(first.(monthabbr.(1:12))), "");
 
 include("utilities_plot.jl") #src
 
@@ -377,7 +377,7 @@ JLD.save(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "hmm_
 hmm_infos = load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3","hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"))
 
 logtots = hmm_infos["logtots"]
-ps_iters = hmm_infos["ps_iters"]
+ps_iters = hmm_infos["ps_iters"];
 
 md"""
 In classic EM algorithm, the log-likelihood is guaranteed to increase at each iteration. However, here a modified EM (see paper) and 1) increase was not demonstrated theoretically (though it might be true) 2) the spatial likelihood is estimated with a quasi-Monte Carlo method, which adds some noise to the likelihood estimation. 

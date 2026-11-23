@@ -97,7 +97,7 @@ my_palette(K) = plots_colors[my_color.(1:K, K)] # blue for k = 1 (∼wetter) and
 
 month_days = vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366) # x ticks for day of the year plots
 
-month_letters = vcat(string.(first.(monthabbr.(1:12))), "")
+month_letters = vcat(string.(first.(monthabbr.(1:12))), "");
 
 include("utilities_plot.jl") #src
 
@@ -361,7 +361,7 @@ it, and the `θ_iters` trajectory is `hist.ps_iters`.
 
 hmm_fit = ARPeriodicHMM(hmm_fit_smooth)   # the evaluated twin, to plot and simulate from
 θq_fit = copy(parameters(hmm_fit_smooth).A) # `copy`: a block of the parameters is a view, which JLD cannot read back
-θy_fit = copy(parameters(hmm_fit_smooth).B)
+θy_fit = copy(parameters(hmm_fit_smooth).B);
 
 md"""
 The loop itself is [HiddenMarkovModels.jl](https://github.com/gdalle/HiddenMarkovModels.jl)'s:
