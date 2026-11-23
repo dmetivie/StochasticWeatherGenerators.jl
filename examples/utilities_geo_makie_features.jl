@@ -84,29 +84,7 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
             GeoMakie.lines!(ax[k], GeoMakie.to_multilinestring.(rivers_ne.geometry); linewidth=0.5)
 
             sc = GeoMakie.scatter!(ax[k], LON_idx, LAT_idx; color=value[k], markersize=11, colormap=GeoMakie.Reverse(:plasma), colorrange=(0, 1))
-            if show_value == true
-                for i in eachindex(station_name)
-                    if i == 7
-                        GeoMakie.text!(ax[k], [LON_idx[i]], [LAT_idx[i]]; text=string.([value[i]]), color=:black, font=:bold, offset=(-2, 0), align=(:left, :top), fontsize=19)
-                    else
-                        GeoMakie.text!(ax[k], [LON_idx[i]], [LAT_idx[i]]; text=string.([value[i]]), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=19)
-                    end
-                end
-                ## GeoMakie.text!(ax, LON_idx, LAT_idx; text=string.(value), color=:black, font=:bold, offset=(8, 10), align=(:left, :top), fontsize=18)
 
-                if station_name !== nothing
-                    ## GeoMakie.text!(ax, LON_idx, LAT_idx; text=station_name, color=:black, font=:bold, offset=(-7, 4), align=(:center, :bottom))
-                    for i in eachindex(station_name)
-                        if i ∈ [7, 2]
-                            GeoMakie.text!(ax[k], [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(-14, 4), align=(:center, :bottom))
-                        elseif i == 3
-                            GeoMakie.text!(ax[k], [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(0, 4), align=(:center, :bottom))
-                        else
-                            GeoMakie.text!(ax[k], [LON_idx[i]], [LAT_idx[i]]; text=station_name[i], color=:black, font=:bold, offset=(-7, 4), align=(:center, :bottom))
-                        end
-                    end
-                end
-            end
             if colorbar_show == true && k == K
                 GeoMakie.Colorbar(fig[:, K+1], sc, height=GeoMakie.Relative(1), label = colorbar_label)
                 GeoMakie.colgap!(fig.layout, -7)
@@ -119,8 +97,14 @@ function map_with_stations(LON_idx, LAT_idx, value::AbstractArray{V}; station_na
     return fig
 end
 
-function savefigcrop(plt::CairoMakie.Figure, save_name)
-    CairoMakie.save(string(save_name, ".pdf"), plt)
-    run(`pdfcrop $(string(save_name,".pdf"))`) # Petit délire pour croper proprement la figure 
-    mv(string(save_name, "-crop", ".pdf"), string(save_name, ".pdf"), force=true)
+function savefigcrop(plt::CairoMakie.Figure, save_name::AbstractString)
+    if !endswith(save_name, ".pdf")
+        save_name = string(save_name, ".pdf")
+    end
+    save_name_with_ext = replace(save_name, ".pdf" => "")
+    CairoMakie.save(save_name, plt)
+    run(`pdfcrop $(save_name)`) # Petit délire pour croper proprement la figure pas forcément necessaire ici?? Ca demande peut être d'installer pdfcrop
+    mv(string(save_name_with_ext, "-crop", ".pdf"), save_name, force=true)
 end
+
+savefigcrop(save_name::AbstractString, plt::CairoMakie.Figure) = savefigcrop(plt, save_name)

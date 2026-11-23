@@ -59,13 +59,14 @@ using SmoothPeriodicStatsModels
 md"""
 Since `SmoothPeriodicStatsModels.jl` v3 all the fitting code lives in a package extension: the models and
 `rand` are always available, while `fit_mle` and friends -- and hence `fit_mle_RO`, `fit_mle_RR`, `fit_AR1`
-and `fit_TN` here -- are only defined once the SciML solver stack below is loaded. These four packages are
-the extension trigger, so forgetting one gives you an explicit "load Optimization, ... to fit" error rather
-than a `MethodError`.
+and `fit_TN` here -- are only defined once the SciML solver stack below is loaded: Optimization and
+SimpleNonlinearSolve are the extension trigger. Every fit then takes its optimization algorithm
+explicitly as `solver`, here `LBFGS` from OptimizationOptimJL.
 """
 
-using Optimization, OptimizationOptimJL # optimization interface + the default `LBFGS()` solver
-using SimpleNonlinearSolve, ForwardDiff # nonlinear least squares (used by `fit_θ`) + the default AD backend
+using Optimization, SimpleNonlinearSolve # load the fitting routines
+using OptimizationOptimJL # the optimization algorithm, LBFGS
+solver = LBFGS() # every fit below takes its optimization algorithm explicitly
 
 md"""
 ## Data extraction and settings
@@ -102,6 +103,8 @@ K = 4
 degree = 1
 T = 366
 save_tuto_path = "../../assets/tuto_2/tuto_K_$(K)_d_$(degree)_m_$(local_order)" #src
+save_tuto_path = joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_2", "tuto_K_$(K)_d_$(degree)_m_$(local_order)") #src
+isdir(save_tuto_path) ? nothing : mkdir(save_tuto_path) #src
 
 md"""
 ### Weather stations
@@ -116,7 +119,7 @@ Station French department number.
 
 station_dep = [49, 80, 40, 63]
 station_name = ["Montreuil-Bellay", "Mons-en-Chaussée", "Saint-Martin-de-Hinx", "Saint-Gènes-Champanelle"]
-station_gps = [(LAT = 47.13, LON = -0.1415), (LAT = 49.875, LON = 3.031), (LAT = 43.5708, LON = -1.29933), (LAT = 45.723, LON = 3.019) ]
+station_gps = [(LAT=47.13, LON=-0.1415), (LAT=49.875, LON=3.031), (LAT=43.5708, LON=-1.29933), (LAT=45.723, LON=3.019)]
 D = length(station_name)
 
 path_INRAE_stations = "C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/INRAE_stations" #src
@@ -134,18 +137,17 @@ Load the AutoRegressive Seasonal HMM computed in this [tutorial](https://dmetivi
 """
 
 file_hmm = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/hmm_fit_K_4_d_1_m_1.jld")
+
 begin
-    hmm_infos = JLD.load(file_hmm)
-    hmm_fit_full = hmm_infos["hmm"]
-    hist = hmm_infos["hist"]
-    θq_fit = hmm_infos["Q_param"]
+    hmm_ind_infos = JLD.load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_1", "hmm_fit_K_4_d_1_m_1.jld"))
+    hmm_fit_full = hmm_ind_infos["hmm"]
+    θq_fit = hmm_ind_infos["Q_param"]
 end
 
 md"""
 Load the sequence of estimated hidden states for the historical sequence.
 """
-file_df_z = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_1/z_hat_K_4_d_1_m_1.csv")
-df_z = CSV.File(file_df_z) |> DataFrame
+df_z = CSV.read(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_1", "z_hat_K_4_d_1_m_1.csv"), DataFrame)
 df_z[1:10, :] # Show the first lines of the dataframes
 
 md"""
@@ -165,10 +167,23 @@ md"""
 We compute the mean temperature during the growth month of maize (May to September) at each location.
 """
 
-mean_summer_TX = round.([@combine(@subset(df, month.(:DATE) .∈ tuple([5,6,7,8,9])), :meanTX=mean(:TX))[1,1] for df in data_stations_full], digits = 1)
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") 
-include(file_for_maps_with_geomakie)
-FR_map = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_TX; station_name=string.("     ",station_ndep), show_value=true, colorbar_show=true, precision_scale = 50, colorbar_label = "°C")
+mean_summer_TX = round.([@combine(@subset(df, month.(:DATE) .∈ tuple([5, 6, 7, 8, 9])), :meanTX=mean(:TX))[1, 1] for df in data_stations_full], digits=1)
+
+md"""
+Plots are made with [Makie.jl](https://docs.makie.org/) and its `CairoMakie` backend.
+Loading Makie defines the plot functions of `StochasticWeatherGenerators.jl` (`errorline`, `errorlinehist`, ...).
+Loading `GeoMakie.jl` and `NaturalEarth.jl` as well defines `map_with_stations` to plot maps.
+The theme sets the LaTeX fonts and the font size of every figure. Each figure is then sized by the `width` and `height` of its axes.
+"""
+
+using CairoMakie, GeoMakie, NaturalEarth
+
+plots_colors = [RGBf(0.0, 0.606, 0.979), RGBf(0.889, 0.436, 0.278), RGBf(0.242, 0.643, 0.304), RGBf(0.764, 0.444, 0.824),
+    RGBf(0.676, 0.556, 0.094), RGBf(0.0, 0.666, 0.681), RGBf(0.931, 0.367, 0.576), RGBf(0.777, 0.51, 0.146)] # Plots.jl default colors
+
+set_theme!(theme_latexfonts(); fontsize=16, palette=(color=plots_colors,))
+
+FR_map = map_with_stations(last.(station_gps), first.(station_gps), mean_summer_TX; station_name=station_ndep, show_value=true, colorbar_show=true, precision_scale=50, colorbar_label="°C")
 
 md"""
 ## Fitting the multivariate multisite model
@@ -186,9 +201,9 @@ We could have added these new emission distributions to the existing one, howeve
 θ = zeros(K, D, memory_order, 2degree + 1)
 B = Array{Bernoulli}(undef, K, T, D, memory_order)
 @time "Fit RO" for (j, df) in enumerate(data_stations)
-    B[:, :, j, :], θ[:, j, :, :] = fit_mle_RO(df, local_order, degree)
+    B[:, :, j, :], θ[:, j, :, :] = fit_mle_RO(df, local_order, degree; solver)
 end
-θy_fit = θ # hmm_infos["Y_param"] for old stations
+θy_fit = θ #
 a = zeros(K)
 a[data_stations[1].z[1]] = 1.0 # Initial state of the HMM
 hmm_fit = ARPeriodicHMM(a, hmm_fit_full.A, B)
@@ -201,7 +216,7 @@ We aim for a generic interface where one could easily change this choice to othe
 For now this is not supported (because of the seasonal fit).
 """
 
-@time "Fit Rainfall amounts" mix_allE = fit_mle_RR.(data_stations, local_order; mix₀=StochasticWeatherGenerators.mix_ini(T));
+@time "Fit Rainfall amounts" mix_allE = fit_mle_RR.(data_stations, local_order; solver, mix₀=StochasticWeatherGenerators.mix_ini(T));
 
 md"""
 The Gaussian copula covariance matrices are then estimated.
@@ -219,7 +234,7 @@ md"""
 #### Temperature Max
 """
 
-@time "Fit TX" ar1sTX = fit_AR1.(data_stations, :TX, degree)
+@time "Fit TX" ar1sTX = fit_AR1.(data_stations, :TX, degree; solver)
 Σ²TX = cov_ar1(data_stations, ar1sTX, :TX)
 
 
@@ -227,7 +242,7 @@ md"""
 #### Minimal Temperature
 To directly fit the `TN` one could do the following
 ```julia
-ar1sTN = fit_AR1.(data_stations, :TN, degree)
+ar1sTN = fit_AR1.(data_stations, :TN, degree; solver)
 Σ²TN = cov_ar1(dropmissing.(data_stations), ar1sTN, :TN)
 ```
 However this produce `TN` independantly of `TX` (and we can have `TN>TX`). 
@@ -235,17 +250,20 @@ To prevent that we fit the positive difference `ΔT = TX-TN` with a Gamma distri
 We will then simulate the `TN` conditionally to the `TX`
 """
 
-@time "Fit TN residuals" θ_ΔT = fit_TN.(data_stations, 1, T) # 1 is the degree
-θ_cor = cor_groupbyTXTN.(data_stations, T)
-f(θ) = Gamma(θ[1], θ[2]) # other options e.g. MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
-f(t, θ) = f([σₜ(t, θ[1:(2+1)]), σₜ(t, θ[(2+2):end])])
+@time "Fit TN residuals" θ_ΔT = fit_TN.(data_stations, 1, T; solver) # 1 is the degree
+θ_cor = cor_groupbyTXTN.(data_stations, T; solver)
+
+#!nb # !!! note
+#!nb #     `fit_TN` returns one `TimeVaryingFit` per hidden state, which carries its own
+#!nb #     parametrization: `θ_ΔT[j][k](t)` is station `j`, state `k`'s `Gamma` on day `t`, and
+#!nb #     `curve(θ_ΔT[j][k], :θ, 1:T)` its seasonal scale. 
 
 md"""
 ### Solar Irradiance (QQ)
 
 `QQ` must be positive, we will truncate at simulation time negative instances.
 """
-@time "Fit QQ" ar1sQQ = fit_AR1.(data_stations, :QQ, degree)
+@time "Fit QQ" ar1sQQ = fit_AR1.(data_stations, :QQ, degree; solver)
 Σ²QQ = cov_ar1(dropmissing.(data_stations), ar1sQQ, :QQ)
 
 md"""
@@ -253,7 +271,7 @@ md"""
 
 `ETPP` must be positive, we will truncate at simulation time negative instances.
 """
-@time "Fit ETPP" ar1sETPP = fit_AR1.(data_stations, :ETPP, degree)
+@time "Fit ETPP" ar1sETPP = fit_AR1.(data_stations, :ETPP, degree; solver)
 Σ²ETPP = cov_ar1(dropmissing.(data_stations), ar1sETPP, :ETPP)
 
 md"""
@@ -264,7 +282,7 @@ md"""
 ### Initial conditions
 """
 
-y_ini = reshape([@subset(df, :DATE .== Date(2000) - Day(1)).RO[1] for df in data_stations], :, 1) # D × order
+Y_past = reshape([@subset(df, :DATE .== Date(2000)-Day(1)).RO[1] for df in data_stations], :, 1) # D × order: the day before 2000
 tx_ini = [@subset(df, :DATE .== Date(2000)).TX[1] for df in data_stations]
 z_ini = @subset(data_stations[1], :DATE .== Date(2000)).z[1]
 
@@ -283,7 +301,7 @@ NSIMU = 300
 NYEAR = 50
 
 year_start = 1986
-date_range = Date(year_start):Day(1):Date(year_start + NYEAR - 1, 12, 31)
+date_range = Date(year_start):Day(1):Date(year_start+NYEAR-1, 12, 31)
 n2t = dayofyear_Leap.(date_range)
 years = unique(year.(date_range))
 N = length(n2t)
@@ -303,7 +321,7 @@ N = length(n2t)
     ets = zeros(D, N, NSIMU)
 
     @time "HMM" for i in 1:NSIMU
-        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; y_ini=y_ini, z_ini=z_ini, seq=true)
+        zs[:, i], ys[:, :, i] = rand(hmm_fit, n2t; Y_past, z_ini=z_ini, seq=true)
     end
     @time "Rain" for i in 1:NSIMU
         rs[:, :, i] = rand_RR(mix_allE, n2t, zs[:, i], ys[:, :, i], Σ²RR)
@@ -339,20 +357,19 @@ md"""
 md"""
 ### Settings for plotting
 
-Some settings and packages to have nice plots.
+The plot theme was set with the map of stations above. Below are the variables to plot and the legends shared by several figures.
 """
 
-using StatsPlots
-using StatsPlots.PlotMeasures # To play with margin in Plots
-
-gr() # plotly() # for interactive plots
-default(fontfamily="Computer Modern")
-cur_colors = get_color_palette(:auto, 100);
-my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
-
-file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_plot.jl")
-include(file_for_plot_utilities)
 vars = [:RR, :TN, :TX, :QQ, :ETPP]
+
+legend_simu = ([PolyElement(color=:grey, alpha=0.5), PolyElement(color=:red, alpha=0.6), LineElement(color=:red), LineElement(color=:blue)],
+    [L"Simu $q_{0,100}$", L"Simu $q_{25,75}$", L"Simu $q_{50}$", "Obs"]) # legend of the simulation envelopes vs observations
+
+quantile_colors = plots_colors[[1, 3, 2]] # for the quantiles [0.9, 0.5, 0.1]
+
+quantile_band_legend(color) = [PolyElement(color=color, alpha=0.18), PolyElement(color=color, alpha=0.72, points=Point2f[(0, 1 / 3), (1, 1 / 3), (1, 2 / 3), (0, 2 / 3)]), LineElement(color=color)]
+
+include("utilities_plot.jl") #src
 
 md"""
 ### Plot correlations
@@ -365,24 +382,24 @@ md"""
 """
 
 @time begin
-    plt_cor_multisite = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=2, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16) for i in 1:length(vars)]
+    station_pairs = [(station_1, station_2) for station_1 in 1:(D-1) for station_2 in (station_1+1):D]
+    plt_cor_multisites = Figure()
     for (i, vari) in enumerate(vars)
-        annotate!(plt_cor_multisite[i], 0.5, 1.15, ("$(string(vari))", 16))
+        row, col = fldmod1(i, 3)
+        ax = Axis(plt_cor_multisites[row, col], title=string(vari), xlabel="Observation", ylabel=(col == 1 ? "Simulation" : ""),
+            limits=(-1, 1, -1, 1), aspect=DataAspect(), width=230, height=230)
+        ablines!(ax, 0, 1, color=:black, linewidth=2)
         X = dicts_simu[vari]
-        for station_1 in 1:D-1
-            @views X₁ = X[station_1, :, :]
-            for station_2 in station_1+1:D
-                df1 = dropmissing(innerjoin(data_stations[station_1], data_stations[station_2], on=:DATE, makeunique=true))
-                @views X₂ = X[station_2, :, :]
-                @views mean_cor = mean(cor(X₁[:, r], X₂[:, r]) for r in 1:NSIMU)
-                arr = ([cor(df1[:, vari], df1[:, Symbol(string(vari, "_1"))])], [mean_cor])
-                scatter!(plt_cor_multisite[i], arr, label=ifelse(i == 2, "$(station_dep[station_1]) vs $(station_dep[station_2])", :none), markersize=6)
-            end
+        for (p, (station_1, station_2)) in enumerate(station_pairs)
+            df1 = dropmissing(innerjoin(data_stations[station_1], data_stations[station_2], on=:DATE, makeunique=true))
+            @views mean_cor = mean(cor(X[station_1, :, r], X[station_2, :, r]) for r in 1:NSIMU)
+            scatter!(ax, Point2f(cor(df1[:, vari], df1[:, Symbol(string(vari, "_1"))]), mean_cor), color=Cycled(p), markersize=12,
+                label="$(station_dep[station_1]) vs $(station_dep[station_2])")
         end
-        xlabel!("Observation")
-        i ∈ [1, 4] ? ylabel!("Simulation") : nothing
     end
-    plt_cor_multisites = plot(plt_cor_multisite..., size=(1000, 1000), layout=(3, 3), top_margin=7px)
+    Legend(plt_cor_multisites[2, 3], content(plt_cor_multisites[1, 1]), framevisible=false)
+    resize_to_layout!(plt_cor_multisites)
+    plt_cor_multisites
 end
 #-
 savefigcrop(plt_cor_multisites, "cor_space_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path); #src
@@ -391,24 +408,29 @@ md"""
 #### Correlations between weather variables at each sites.
 """
 
-markers = filter((m -> begin
-        m in Plots.supported_markers()
-    end), Plots._shape_keys)
+var_markers = [:circle, :rect, :diamond, :utriangle, :dtriangle]
 
 begin
-    plt_var = [plot(-1:0.1:1, -1:0.1:1, lw=2, label=:none, aspect_ratio=:equal, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=1, tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16) for j in 1:D]
+    plt_vars = Figure()
     for station_1 in 1:D
-        title!(plt_var[station_1], "$(station_ndep[station_1])")
+        row, col = fldmod1(station_1, 2)
+        ax = Axis(plt_vars[row, col], title=station_ndep[station_1], xlabel=(row == 2 ? "Observation" : ""), ylabel=(col == 1 ? "Simulation" : ""),
+            limits=(-1, 1, -1, 1), aspect=DataAspect(), width=300, height=300)
+        ablines!(ax, 0, 1, color=:black, linewidth=2)
+        df1 = dropmissing(data_stations[station_1])
+        p = 0 # pair of variables
         for (i, var_1) in enumerate(vars)
             for j in (i+1):length(vars)
                 var_2 = vars[j]
-                df1 = dropmissing(data_stations[station_1])
+                p += 1
                 @views mean_cor = mean(cor(dicts_simu[var_1][station_1, :, r], dicts_simu[var_2][station_1, :, r]) for r in 1:NSIMU)
-                scatter!(plt_var[station_1], [cor(df1[:, var_1], df1[:, var_2])], [mean_cor], label=ifelse(station_1 == 1, "$var_1 vs $var_2", :none), m=markers[i], ms=8)
+                scatter!(ax, Point2f(cor(df1[:, var_1], df1[:, var_2]), mean_cor), marker=var_markers[i], color=Cycled(p), markersize=14, label="$var_1 vs $var_2")
             end
         end
     end
-    plt_vars = plot(plt_var..., size=(1000, 1000))
+    Legend(plt_vars[:, 3], content(plt_vars[1, 1]), framevisible=false)
+    resize_to_layout!(plt_vars)
+    plt_vars
 end
 
 #-
@@ -425,12 +447,14 @@ md"""
 """
 
 begin
-    plt_dist_univ = Dict()
     plts_dist_univ = Dict()
     xlabel_string = Dict(:RR => L"Rain ($\mathrm{m}\mathrm{m}$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
     for XX in vars
-        plt_dist_univ[XX] = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16) for j = 1:D]
+        fig = Figure()
         for (j, df) in enumerate(data_stations)
+            row, col = fldmod1(j, 2)
+            ax = Axis(fig[row, col], title=station_ndep[j], xlabel=(row == 2 ? xlabel_string[XX] : ""), ylabel=(col == 1 ? "PDF" : ""),
+                yscale=(XX == :RR ? log10 : identity), width=350, height=250)
             dist_j = XX == :RR ? [filter(!iszero, x) for x in eachcol(dicts_simu[XX][j, :, :])] : [x for x in eachcol(dicts_simu[XX][j, :, :])] # RR>0
 
             dist_j_histo = XX == :RR ? filter(!iszero, dropmissing(df)[!, XX]) : dropmissing(df)[!, XX] # RR>0
@@ -438,24 +462,21 @@ begin
             VarMax = XX == :RR && j == 2 ? 100 : ceil(max(dist_j .|> maximum |> maximum, dist_j_histo |> maximum))
             VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_histo |> minimum))
             nbins = XX == :ETPP ? 40 : 80
-            BINS = range(VarMin, VarMax, length = nbins) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+            BINS = range(VarMin, VarMax, length=nbins) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:grey, legend=:topright, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
+            errorlinehist!(ax, dist_j, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[0, 100], centertype=:median, color=:red, secondarycolor=:grey, secondaryalpha=0.5)
 
-            errorlinehist!(plt_dist_univ[XX][j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.6, centertype=:median, bins = BINS)
+            errorlinehist!(ax, dist_j, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=:red, secondaryalpha=0.6)
 
-            errorlinehist!(plt_dist_univ[XX][j], [dist_j_histo], label=islabel(j, [1], "Obs"), groupcolor=:blue, lw=1.5, norm=:pdf, errortype=:percentile, bins = BINS, fillalpha = 0.8, alpha = 0.8)
+            errorlinehist!(ax, [dist_j_histo], bins=BINS, normalization=:pdf, errortype=:percentile, color=:blue, linewidth=1.5, alpha=0.8)
 
-            XX == :RR ? ylims!(plt_dist_univ[XX][j], 1e-5, 0, yaxis=:log10) : nothing
-            XX == :RR && j == 2 ? xlims!(plt_dist_univ[XX][j], -1, 100, yaxis=:log10) : nothing # some simulated RR are super extreme and messing with the xaxis
+            XX == :RR && ylims!(ax, 1e-5, nothing)
+            XX == :RR && j == 2 && xlims!(ax, -1, 100) # some simulated RR are super extreme and messing with the xaxis
         end
-        [xlabel!(plt_dist_univ[XX][j], xlabel_string[XX]) for j in [3, 4]]
-        [ylabel!(plt_dist_univ[XX][j], "PDF") for j in [1, 3]]
-        station_ndep
-        [title!(plt_dist_univ[XX][j], station_ndep[j]) for j = 1:D]
-
-        plts_dist_univ[XX] = plot(plt_dist_univ[XX]..., size=(1000, 700), bottom_margin=11px, left_margin=15px)
-        savefigcrop(plts_dist_univ[XX], "pdf_$(XX)_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
+        Legend(fig[:, 3], legend_simu..., framevisible=false)
+        resize_to_layout!(fig)
+        plts_dist_univ[XX] = fig
+        savefigcrop(fig, "pdf_$(XX)_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
     end
 end
 
@@ -502,36 +523,36 @@ month_rain_histo = Dict(key => [monthly_agg(@subset(df, :DATE .≥ Date(1986)), 
 qs = [0.9, 0.5, 0.1]
 
 @time "Plot monthly quantile" begin
-    plt_month = Dict()
     plts_month = Dict()
     ylabel_string = Dict(:RR => L"Cumulated Rain ($\mathrm{m}\mathrm{m}$)", :TX => L"$T_{\mathrm{max}}$ (°C)", :TN => L"$T_{\mathrm{min}}$ (°C)", :QQ => L"Solar irradiance (MJ/$\mathrm{m}^2$)", :ETPP => L"Evapotranspiration ($\mathrm{m}\mathrm{m}/\mathrm{m}^2$)")
     for XX in vars
-        plt_month[XX] = [plot(xtickfontsize=10, ytickfontsize=11, ylabelfontsize=12, legendfontsize=12, titlefontsize=12, foreground_color_legend=nothing) for j = 1:D]
+        fig = Figure()
         for j = 1:D
+            row, col = fldmod1(j, 2)
+            ax = Axis(fig[row, col], title=station_ndep[j], ylabel=(col == 1 ? ylabel_string[XX] : ""), xticks=(1:12, string.(first.(monthabbr.(1:12)))),
+                width=350, height=250)
             for (α, per) in enumerate([[0, 100], [25, 75]])
                 for (cc, q) in enumerate(qs)
-                    errorline!(plt_month[XX][j], [quantile(month_rain_simu[XX][j, i][:, m], q) for m in 1:12, i in 1:NSIMU], label=(α == 1 ? islabel(j, 4, L"Simu  $q_{%$(Int(q*100))}$") : :none), fillalpha=0.18 * α^2, centertype=:median, errortype=:percentile, percentiles=per, groupcolor=my_palette(length(qs))[cc])
+                    errorline!(ax, 1:12, [quantile(month_rain_simu[XX][j, i][:, m], q) for m in 1:12, i in 1:NSIMU], secondaryalpha=0.18 * α^2, centertype=:median, errortype=:percentile, percentiles=per, color=quantile_colors[cc])
                 end
             end
             for q in qs
-                scatter!(plt_month[XX][j], m -> quantile(skipmissing(month_rain_histo[XX][j][:, m]), q), 1:12, label=(q == qs[1] ? islabel(j, 3, "Obs") : :none), legend=:topleft, ms=2.5, c=:blue)
-                plot!(plt_month[XX][j], m -> quantile(skipmissing(month_rain_histo[XX][j][:, m]), q), 1:12, label=:none, c=:blue, lw=1.75)
+                scatterlines!(ax, 1:12, [quantile(skipmissing(month_rain_histo[XX][j][:, m]), q) for m in 1:12], color=:blue, linewidth=1.75, markersize=7)
             end
-            xticks!(plt_month[XX][j], 1:12, string.(first.(monthabbr.(1:12))))
-            XX == :RR ? ylims!(plt_month[XX][j], 0, Inf) : nothing
+            XX == :RR && ylims!(ax, 0, nothing)
         end
-        [ylabel!(plt_month[XX][j], ylabel_string[XX]) for j in [1, 3]]
-
-        [title!(plt_month[XX][j], station_ndep[j]) for j = 1:D]
-        plts_month[XX] = plot(plt_month[XX]..., size=(1000, 700), left_margin=19px)
-        savefigcrop(plts_month[XX], "EDF_like_$(XX)_$(NSIMU)_simu_monthly_quantile_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
+        Legend(fig[:, 3], [quantile_band_legend.(quantile_colors)..., [LineElement(color=:blue), MarkerElement(color=:blue, marker=:circle, markersize=7)]],
+            [[L"Simu $q_{%$(Int(q*100))}$" for q in qs]..., "Obs"], framevisible=false)
+        resize_to_layout!(fig)
+        plts_month[XX] = fig
+        savefigcrop(fig, "EDF_like_$(XX)_$(NSIMU)_simu_monthly_quantile_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
     end
 end
 
 md"""
 ##### Rainfall `RR`
 """
-plot(plts_month[:RR])
+plts_month[:RR]
 
 md"""
 ##### Temperature max `TX`
@@ -590,30 +611,29 @@ In the file `file_stics`, we implemented functions to streamline calls to the ST
 Since repeated calls to STICS are time-intensive, results are saved for reuse. Below, we show the executed code:
 """
 using Suppressor # to handle the STICS hard-printed output
-stics_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files/JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") #src
-work_path = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files", "maize") #src
+STICS_PATH = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files/JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") #src
+WORK_PATH = joinpath("C:/Users/metivier/Dropbox/PC (2)/Documents/GitLab/weather_data_mistea/stics_files", "maize") #src
 include("utilities_stics.jl") #src
 
-file_for_stics_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_stics.jl")
+file_for_stics_utilities = joinpath(pkgdir(StochasticWeatherGenerators), "examples", "utilities_stics.jl")
 include(file_for_stics_utilities)
 
+file_yield = joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_2", "results_yield.jld")
 md"""
 ```julia
-stics_path = joinpath(STICS_PATH, "JavaSTICS-1.5.1-STICS-10.0.0", "bin", "stics_modulo.exe") # or stics_modulo for Linux
-work_path = joinpath("stics_files", "maize") # folder where all maize files are
+stics_path = joinpath(STICS_PATH) # or stics_modulo for Linux
+work_path = joinpath(WORK_PATH) # folder where all maize files are
 
-@time res_YIELDs = map(Iterators.product(1:300, 1:D)) do (i, j)
-    GC.gc() # empirically this seems to help reducing memory usage
-    @show i,j
-    run_stics_mod_yield(dfs_simus[i][j], infos=100, stics_path=stics_path, work_path=work_path).YIELD
-end
-# 15650.246490 seconds (1.03 G allocations: 108.568 GiB, 1.13% gc time, 0.01% compilation time: <1% of which was recompilation)
+# Start Julia with several threads, e.g. `julia -t 16`: each thread runs STICS in its own copy of `work_path`.
+dfs_stics = [dfs_simus[i][j] for i in 1:300, j in 1:D]
+@time res_stics = run_stics_mod_yield_parallel(dfs_stics, infos=100, stics_path=stics_path, work_path=work_path)
+res_YIELDs = [r.YIELD for r in res_stics]
+# 2091.759120 seconds (1.02 G allocations: 109.402 GiB, 1.01% gc time, 7 lock conflicts, 0.36% compilation time)
 cd(@__DIR__)
-JLD.save("results_yield.jld", Dict("res_YIELDs" => res_YIELDs))
+JLD.save(file_yield, Dict("res_YIELDs" => res_YIELDs))
 ```
 """
 
-file_yield = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/refs/heads/master/assets/tuto_2/results_yield.jld")
 res_YIELDs = JLD.load(file_yield)["res_YIELDs"]
 
 md"""
@@ -628,24 +648,24 @@ md"""
 The following plot shows the typical distribution of maize yield at four location over a 50-year span. We added the envelope of these distributions to highlight uncertainty. Each location has a very different weather (see previous sections).
 """
 begin
-    plt_dist_yield = [plot(tickfont=13, legendfontsize=14, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16, legend=:topright) for j = 1:D]
+    plts_dist_yield = Figure()
     for j in 1:D
+        row, col = fldmod1(j, 2)
+        ax = Axis(plts_dist_yield[row, col], title=station_ndep[j], xlabel=(row == 2 ? "YIELD (t/ha)" : ""), ylabel=(col == 1 ? "PDF" : ""),
+            width=350, height=250)
         dist_j = Vector{Vector{Float64}}(filter.(!ismissing, res_YIELDs[:, j]))
         VarMax = ceil(dist_j .|> maximum |> maximum)
         VarMin = floor(dist_j .|> minimum |> minimum)
-        BINS = range(VarMin, VarMax, length = 16) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        BINS = range(VarMin, VarMax, length=16) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:gray, label=islabel(j, [1], L"Simu $q_{0,100}$"), norm=:pdf, errortype=:percentile, percentiles=[0, 100], fillalpha=0.5, centertype=:median, bins = BINS)
+        errorlinehist!(ax, dist_j, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[0, 100], centertype=:median, color=:red, secondarycolor=:gray, secondaryalpha=0.5)
 
-        errorlinehist!(plt_dist_yield[j], dist_j, groupcolor=:red, label=islabel(j, [1], L"Simu $q_{25,75}$"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median, bins = BINS)
-        xlims!(plt_dist_yield[j], 0, 16)
+        errorlinehist!(ax, dist_j, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=:red, secondaryalpha=0.6)
+        xlims!(ax, 0, 16)
     end
-    [xlabel!(plt_dist_yield[j], "YIELD (t/ha)") for j in [3, 4]]
-    [ylabel!(plt_dist_yield[j], "PDF") for j in [1, 3]]
-    station_ndep
-    [title!(plt_dist_yield[j], station_ndep[j]) for j = 1:D]
-
-    plts_dist_yield = plot(plt_dist_yield..., size=(1000, 700), bottom_margin=11px, left_margin=15px)
+    Legend(plts_dist_yield[:, 3], legend_simu[1][1:2], legend_simu[2][1:2], framevisible=false)
+    resize_to_layout!(plts_dist_yield)
+    plts_dist_yield
 end
 savefigcrop(plts_dist_yield, "pdf_YIELD_K_$(K)_d_$(degree)_m_$(local_order)", save_tuto_path) #src
 
@@ -663,7 +683,7 @@ for i in eachindex(dfs_stat)
         @transform!(df, :YIELD = res_YIELDs[i, j])
     end
 end
-dfs_stat[1][1][1:10,:] # show how it looks like at one station
+dfs_stat[1][1][1:10, :] # show how it looks like at one station
 
 md"""
 !!! note
@@ -676,29 +696,29 @@ begin
     j = 1 # station number
     dfi = [dropmissing(dfs_stat[i][j]) for i in eachindex(dfs_stat)]
     df_sub = [@subset(df, :YIELD .> quantile(:YIELD, 0.5)) for df in dfi]
-    plt_scat = [plot(legend=:topright, tickfont=14, legendfontsize=14, xlabelfontsize=14, ylabelfontsize=14, titlefontsize=14) for i in 1:week_date.N_period]
+    plt_sensitivity = Figure()
     for i in 1:week_date.N_period
+        row, col = fldmod1(i, 2)
+        period_range = period_range_func(groups[i])
+        ax = Axis(plt_sensitivity[row, col], title="$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))",
+            xlabel=(row == 2 ? "Rain (mm/period)" : ""), ylabel=(col == 1 ? "PDF" : ""), width=350, height=250)
         dist_j = [dfi[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         dist_j_sub = [df_sub[ii][:, Symbol("MEAN_RR_$i")] for ii in eachindex(dfi)]
         VarMax = ceil(max(dist_j .|> maximum |> maximum, dist_j_sub .|> maximum |> maximum))
         VarMin = floor(min(dist_j .|> minimum |> minimum, dist_j_sub .|> minimum |> minimum))
-        BINS = range(VarMin, VarMax, length = 20) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
+        BINS = range(VarMin, VarMax, length=20) # fixing the bins is very important to ensure fair comparison. Note that changing the bin step changes the aspect of the distributions.
 
-        errorlinehist!(plt_scat[i], dist_j, groupcolor=2, label=islabel(i, 1, L"R"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
+        errorlinehist!(ax, dist_j, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=plots_colors[2], secondaryalpha=0.1, linewidth=2, label=L"R")
 
-        errorlinehist!(plt_scat[i], dist_j_sub, groupcolor=1, label=islabel(i, 1, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, errortype=:percentile, percentiles=[25, 75], fillalpha=0.1, lw = 2, centertype=:median, bins = BINS)
+        errorlinehist!(ax, dist_j_sub, bins=BINS, normalization=:pdf, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=plots_colors[1], secondaryalpha=0.1, linewidth=2, label=L"R \mid (\mathrm{Yield} > \mathrm{median})")
 
-        ## stephist!(plt_scat[i], dfi[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R"), norm=:pdf, lw=1.75)
-        ## stephist!(plt_scat[i], df_sub[:, Symbol("MEAN_RR_$i")], label=islabel(i, 2, L"R \mid (\mathrm{Yield} > \mathrm{median})"), norm=:pdf, lw=1.75)
-        vline!([mean.(dist_j) |> mean], label=:none, s=:dot, c=2, lw=2)
-        vline!([mean.(dist_j_sub) |> mean], label=:none, s=:dot, c=1, lw=2)
-        period_range = period_range_func(groups[i])
-        title!("$(day(period_range[1])) $(monthabbr(period_range[1])) - $(day(period_range[2])) $(monthabbr(period_range[2]))")
-        (i == 3 || i == 4) ? xlabel!("Rain (mm/period)") : nothing
-        i == 3 || i == 1 ? ylabel!("PDF") : nothing
+        vlines!(ax, mean.(dist_j) |> mean, color=plots_colors[2], linestyle=:dot, linewidth=2)
+        vlines!(ax, mean.(dist_j_sub) |> mean, color=plots_colors[1], linestyle=:dot, linewidth=2)
     end
-    annotate!(plt_scat[3], 6.5, 0.82, station_ndep[j])
-    plt_sensitivity = plot(plt_scat..., size=(1000, 700), left_margin=3Plots.PlotMeasures.mm)
+    Legend(plt_sensitivity[:, 3], content(plt_sensitivity[1, 1]), framevisible=false)
+    Label(plt_sensitivity[0, 1:2], station_ndep[j], font=:bold)
+    resize_to_layout!(plt_sensitivity)
+    plt_sensitivity
 end
 savefigcrop(plt_sensitivity, "RR_per_period_cond_yield_dep_49.pdf", save_tuto_path) #src
 
@@ -718,26 +738,26 @@ idx_simu = 153  # simulation number, 1 to 300
 idx_station = 1 # station number, 1 to 4
 cs = cgrad([:red, :green], 10, categorical = true)
 ecdf_station = ecdf(Vector{Float64}(filter(!ismissing, res_YIELDs[:, idx_station] |> stack |> vec)))
-begin
-	anim = Animation()
-	for (i_year, YE) in enumerate(years)
-		df_ex_gif = @subset(dfs_simus[idx_simu][idx_station], Date(YE, 4, 27) .≤ :DATE .≤ Date(YE, 10, 27));
-		pRR = @df df_ex_gif plot(:DATE, :RR, label = "RR", c = :blue, title = "$(station_ndep[idx_station])", legend = :topleft, ylabel = "mm", ylims = (-0.01,40), lw = 1.5, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16, titlefontsize=16)
-		# vline!([Date(YE, 7,16), Date(YE, 8,4)], s = :dash, c = :black, label = :none) # when 9 periods 
-		vline!([Date(YE, 6,12), Date(YE, 7,27)], s = :dash, c = :black, label = :none) # when 9 periods         
-		yy = res_YIELDs[idx_simu, idx_station][i_year]
-		textyield = ismissing(yy) ? Plots.text("Maize Yield = ERROR", :black, :bold, 16) : Plots.text("Maize Yield = $(yy) t/ha", cs[ceil(Int, ecdf_station(yy)*10)], 16)
-		annotate!((0.5,1),textyield)
-		annotate!((0.5,0.85),Plots.text("$(YE)", :black, 18))
-		pT = @df df_ex_gif plot(:DATE, :TX, label = "TX", c = 2, legend = :topleft, ylabel = "°C", ylims = (2,40), lw = 1.5, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16)
-		@df df_ex_gif plot!(:DATE, :TN, label = "TN", c = 1)
-		pQQ = @df df_ex_gif plot(:DATE, :QQ, label = "QQ", c = 4, legend = :topleft, ylabel = L"MJ/m$^2$", ylims = (-0.01,45), lw = 1.5, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16)
-		pETPP = @df df_ex_gif plot(:DATE, :ETPP, label = "ETPP", c = 3, legend = :topleft, ylabel = L"mm/m$^2$", ylims = (-0.01,10), lw = 1.5, tickfont=12, legendfontsize=12, xlabelfontsize=16, ylabelfontsize=16)
-		plot(pRR,pT, pQQ, pETPP, layout = (4, 1), size = (800,900), left_margin=2.5Plots.mm, right_margin=2.6Plots.mm)
-	    frame(anim)
-	end
+fig_gif = Figure(size = (800, 900))
+record(fig_gif, "yield_vs_TS_station_$(idx_station)_simu_$(idx_simu).gif", eachindex(years); framerate = 1) do i_year
+    YE = years[i_year]
+    empty!(fig_gif)
+    df_ex_gif = @subset(dfs_simus[idx_simu][idx_station], Date(YE, 4, 27) .≤ :DATE .≤ Date(YE, 10, 27))
+    yy = res_YIELDs[idx_simu, idx_station][i_year]
+    Label(fig_gif[1, 1], ismissing(yy) ? "Maize Yield = ERROR" : "Maize Yield = $(yy) t/ha", color = ismissing(yy) ? :black : cs[ceil(Int, ecdf_station(yy) * 10)], fontsize = 20, font = :bold, tellwidth = false)
+    Label(fig_gif[2, 1], "$(station_ndep[idx_station]) - $(YE)", fontsize = 18, tellwidth = false)
+    axs = [Axis(fig_gif[i+2, 1], ylabel = ylabel, limits = (nothing, ylim)) for (i, (ylabel, ylim)) in enumerate(zip(["mm", "°C", L"MJ/m$^2$", L"mm/m$^2$"], [(-0.01, 40), (2, 40), (-0.01, 45), (-0.01, 10)]))]
+    lines!(axs[1], df_ex_gif.DATE, df_ex_gif.RR, label = "RR", color = :blue, linewidth = 1.5)
+    for d in (Date(YE, 6, 12), Date(YE, 7, 27)) # key period for maize
+        lines!(axs[1], [d, d], [-0.01, 40], color = :black, linestyle = :dash)
+    end
+    lines!(axs[2], df_ex_gif.DATE, df_ex_gif.TX, label = "TX", color = plots_colors[2], linewidth = 1.5)
+    lines!(axs[2], df_ex_gif.DATE, df_ex_gif.TN, label = "TN", color = plots_colors[1], linewidth = 1.5)
+    lines!(axs[3], df_ex_gif.DATE, df_ex_gif.QQ, label = "QQ", color = plots_colors[4], linewidth = 1.5)
+    lines!(axs[4], df_ex_gif.DATE, df_ex_gif.ETPP, label = "ETPP", color = plots_colors[3], linewidth = 1.5)
+    axislegend.(axs, position = :lt)
+    linkxaxes!(axs...)
 end
-gif(anim, "yield_vs_TS_station_$(idx_station)_simu_$(idx_simu).gif", fps=1)
 ```
 """
 

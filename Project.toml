@@ -1,7 +1,10 @@
 name = "StochasticWeatherGenerators"
 uuid = "3eadb0b9-5057-49d2-9b8f-52a8c334ebf6"
+version = "3.0.0"
 authors = ["David Métivier <david.metivier@inrae.fr>"]
-version = "2.0.0"
+
+[workspace]
+projects = ["docs", "test"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -32,8 +35,10 @@ MakieExt = "Makie"
 SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 
 [compat]
-Copulas = "0.1"
 CSV = "0.10, 1.1"
+Copulas = "0.1, 1"
+DataFrames = "1"
+DataFramesMeta = "0.15.6"
 Dates = "1.11"
 Distributions = "0.25"
 GeoMakie = "0.7"
@@ -47,17 +52,6 @@ OrderedCollections = "1.8, 2.0"
 Printf = "1.11"
 Random = "1.11"
 RollingFunctions = "0.8"
-Impute = "0.6, 0.7"
-Distributions = "0.25"
-NearestCorrelationMatrix = "1"
-DataFrames = "1"
-DataFramesMeta = "0.15"
-NonlinearSolve = "4.3"
-OrderedCollections = "1.8, 2.0"
-SmoothPeriodicStatsModels = "3"
+SmoothPeriodicStatsModels = "4.1"
 StatsBase = "0.34"
 julia = "1.12"
-
-[workspace]
-projects = ["docs"]
-

@@ -49,14 +49,14 @@ using SmoothPeriodicStatsModels # Small collection of smooth periodic models e.g
 
 md"""
 Since `SmoothPeriodicStatsModels.jl` v3 all the fitting code lives in a package extension: the models and
-`rand` are always available, while `fit_mle!` and friends are only defined once the SciML solver stack below
-is loaded. These four packages are the extension trigger, so forgetting one gives you an explicit
-"load Optimization, ... to fit" error rather than a `MethodError`.
+`rand` are always available, while `fit_mle` and friends are only defined once the SciML solver stack below
+is loaded: Optimization and SimpleNonlinearSolve are the extension trigger. Every fit then takes its
+optimization algorithm explicitly as `solver`.
 `LineSearches.jl` is only needed for the solver we configure by hand further down.
 """
 
-using Optimization, OptimizationOptimJL # optimization interface + the default `LBFGS()` solver
-using SimpleNonlinearSolve, ForwardDiff # nonlinear least squares (used by `fit_θ`) + the default AD backend
+using Optimization, SimpleNonlinearSolve # load the fitting routines
+using OptimizationOptimJL # the optimization algorithm, LBFGS
 using LineSearches
 #-
 Random.seed!(123)
@@ -64,26 +64,30 @@ Random.seed!(123)
 md"""
 ### Settings for plotting
 
-Some settings and packages to have nice plots.
+Plots are made with [Makie.jl](https://docs.makie.org/) and its `CairoMakie` backend.
+Loading Makie defines the plot functions of `StochasticWeatherGenerators.jl` (`errorline`, `errorlinehist`, ...).
+Loading `GeoMakie.jl` and `NaturalEarth.jl` as well defines `map_with_stations` to plot maps.
 """
 
-using StatsPlots, LaTeXStrings
-using StatsPlots.PlotMeasures # To play with margin in Plots
-
-gr() # plotly() # for interactive plots
-default(fontfamily="Computer Modern")
-cur_colors = get_color_palette(:auto, 100);
-my_palette(K) = palette(vcat(cur_colors[1], [cur_colors[c] for c in 3:4], cur_colors[2]), K)
-
-file_for_plot_utilities = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_plot.jl")
-include(file_for_plot_utilities)
+using CairoMakie, LaTeXStrings
+using GeoMakie, NaturalEarth # maps
 
 md"""
-To plot maps, we use `GeoMakie.jl` + `NaturalEarth.jl`. 
+The theme sets the LaTeX fonts and the font size of every figure. Each figure is then sized by the `width` and `height` of its axes.
 """
 
-file_for_maps_with_geomakie = download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/examples/utilities_geo_makie_features.jl") # download file from a GitHub repo
-include(file_for_maps_with_geomakie)
+plots_colors = [RGBf(0.0, 0.606, 0.979), RGBf(0.889, 0.436, 0.278), RGBf(0.242, 0.643, 0.304), RGBf(0.764, 0.444, 0.824),
+    RGBf(0.676, 0.556, 0.094), RGBf(0.0, 0.666, 0.681), RGBf(0.931, 0.367, 0.576), RGBf(0.777, 0.51, 0.146)] # Plots.jl default colors
+
+set_theme!(theme_latexfonts(); fontsize=16, palette=(color=plots_colors,))
+
+my_palette(K) = plots_colors[my_color.(1:K, K)] # blue for k = 1 (∼wetter) and orange for k = K (∼driest)
+
+month_days = vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366) # x ticks for day of the year plots
+
+month_letters = vcat(string.(first.(monthabbr.(1:12))), "")
+
+include("utilities_plot.jl") #src
 
 md"""
 ### Global Parameters
@@ -151,7 +155,7 @@ md"""
 Number of quasi-Monte Carlo samples for the multivariate normal CDF estimation in the spatial likelihood.
 """
 
-QMC_m = 30
+QMC_m = 300
 
 println("K = $K, ", "degree = $𝐃𝐞𝐠, ", "local_order = $local_order")
 
@@ -160,6 +164,7 @@ md"""
 """
 
 save_tuto_path = "../../assets/tuto_HMMspa/tuto_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)" #src
+save_tuto_path = joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "tuto_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order)") #src
 isdir(save_tuto_path) ? nothing : mkpath(save_tuto_path) #src
 
 md"""
@@ -173,7 +178,7 @@ Here we
 - Shorten station names 	
 """
 begin
-    station_file = Base.download("https://raw.githubusercontent.com/dmetivie/StochasticWeatherGenerators.jl/master/weather_files/stations.txt")
+    station_file = joinpath(pkgdir(StochasticWeatherGenerators), "weather_files/stations.txt")
     station_all = CSV.read(station_file, DataFrame, header=18, normalizenames=true, ignoreemptyrows=true)
     station_all = @chain station_all begin
         @transform(:CN = rstrip.(:CN), :STANAME = rstrip.(:STANAME))
@@ -326,7 +331,6 @@ It will be used as the initial condition for the spatial HMM fitting.
 hmm_ind_infos = JLD.load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_1", "hmm_fit_K_4_d_1_m_1.jld"))
 
 hmm_ind = hmm_ind_infos["hmm"]
-hist_ind = hmm_ind_infos["hist"]
 θq_fit_ind = hmm_ind_infos["Q_param"]
 θy_fit_ind = hmm_ind_infos["Y_param"];
 
@@ -342,23 +346,13 @@ size_degree_of_P = 2 * 𝐃𝐞𝐠 + 1
 θᴿ[:, 1] .= log.(R0)
 
 md"""
-### Build the initial `ARPeriodicHMMSpatial`
-
-The function `Trig2ARPeriodicHMMSpatial` converts trigonometric coefficient arrays into the model
-matrices `A` (transition), `B` (Bernoulli probabilities) and `R` (spatial range), and returns an
-`ARPeriodicHMMSpatial` object.
-"""
-
-hmm_spa_init = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), θq_fit_ind, θy_fit_ind, θᴿ, T, my_distance)
-
-md"""
 ### Fit the spatial HMM with EM
 
-`fit_mle!` runs the EM algorithm for `ARPeriodicHMMSpatial`.  It updates the transition parameters
+`fit_mle` runs the EM algorithm for `SmoothARPeriodicHMMSpatial`. It updates the transition parameters
 `θᴬ`, the Bernoulli emission parameters `θᴮ`, and the spatial range parameters `θᴿ` jointly.
 
-Every M-step goes through the same four keywords: `solver` (the algorithm handed to `solve`, `LBFGS()` by
-default), `adtype` (the AD backend, `AutoForwardDiff()` by default), `ensemble` (`EnsembleSerial()`,
+Every M-step goes through the same four keywords: `solver` (the algorithm handed to `solve`,
+required), `adtype` (the AD backend, `AutoForwardDiff()` by default), `ensemble` (`EnsembleSerial()`,
 `EnsembleThreads()` or `EnsembleDistributed()` for the per-state/per-site problems) and `solve_kwargs`
 (a `NamedTuple` forwarded verbatim to `solve`). Any `Optimization.jl`-compatible solver works, so the
 choice below is just the one that behaves best on the range update.
@@ -370,34 +364,40 @@ md"""
 ```julia
 solver = OptimizationOptimJL.LBFGS(linesearch=LineSearches.BackTracking())
 
-@time "FitMLE HMMSpa (EM)" history, all_θᴬ_iter, all_θᴮ_iter, all_θᴿ_iter = fit_mle!(hmm_spa_init, θq_fit_ind, θy_fit_ind, θᴿ, Y, Y_past; solver=solver, ensemble=EnsembleThreads(), n2t=n2t, maxiter=100, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, QMC_m=100);
-JLD.save(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "hmm_fit_K_4_d_1_m_1.jld"), "history", history, "all_θq_iter", all_θᴬ_iter, "all_θy_iter", all_θᴮ_iter, "all_θr_iter", all_θᴿ_iter); 
+hmm_spa_guess = SmoothARPeriodicHMMSpatial(fill(1 / K, K), θq_fit_ind, θy_fit_ind, θᴿ, T, my_distance; QMC_m=QMC_m)
+
+@time "FitMLE HMMSpa (EM)" hmm_spa_fit, history = fit_mle(hmm_spa_guess, Y, Y_past; solver=solver, ensemble=EnsembleThreads(), n2t=n2t, maxiter=60, tol=1e-3, maxiters_R=100, display=:iter, tdist=tdist, ps_iters=true);
+# on my machine
+# EM has not converged after 100 iterations, logtot = -115271.5855184366
+# FitMLE HMMSpa (EM): 440.382967 seconds (2.44 G allocations: 357.809 GiB, 13.96% gc time, 13.02% compilation time: <1% of which was recompilation)
+JLD.save(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3", "hmm_fit_K_4_d_1_m_1.jld"), "logtots", history.logtots, "ps_iters", history.ps_iters, "best_iteration", history.best_iteration);
 ```
 """
 
 hmm_infos = load(joinpath(pkgdir(StochasticWeatherGenerators), "assets", "tuto_3","hmm_fit_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).jld"))
 
-history = hmm_infos["history"]
-all_θq_iter = hmm_infos["all_θq_iter"]
-all_θy_iter = hmm_infos["all_θy_iter"]
-all_θr_iter = hmm_infos["all_θr_iter"]
+logtots = hmm_infos["logtots"]
+ps_iters = hmm_infos["ps_iters"]
 
 md"""
 In classic EM algorithm, the log-likelihood is guaranteed to increase at each iteration. However, here a modified EM (see paper) and 1) increase was not demonstrated theoretically (though it might be true) 2) the spatial likelihood is estimated with a quasi-Monte Carlo method, which adds some noise to the likelihood estimation. 
 Therefore, it is possible to observe some non-monotonicity in the log-likelihood convergence curve.
 
-Hence, we recover the iteration with the highest log-likelihood:
+Hence, `fit_mle` returns the iteration with the highest log-likelihood, `history.best_iteration`
+(`0` would be the starting point):
 """
 
-iter_best = argmax(history["logtots"])
+iter_best = hmm_infos["best_iteration"]
 #-
-history["logtots"][iter_best]
+logtots[iter_best]
 
 md"""
-Reconstruct the best model from the stored parameter iterates:
+`hmm_spa_fit` above is that model. Since the fit is not run here, we rebuild it from the saved
+coefficient iterates: `ps_iters[1]` is the starting point, so iteration `i` is `ps_iters[i + 1]`.
 """
 
-hmm_spa = Trig2ARPeriodicHMMSpatial(fill(1 / K, K), all_θq_iter[iter_best+1], all_θy_iter[iter_best+1], all_θr_iter[iter_best+1], T, my_distance)
+ps_best = ps_iters[iter_best+1]
+hmm_spa = ARPeriodicHMMSpatial(SmoothARPeriodicHMMSpatial(fill(1 / K, K), ps_best.A, ps_best.B, ps_best.R, T, my_distance; QMC_m=QMC_m))
 
 #-
 
@@ -406,12 +406,17 @@ md"""
 """
 
 begin
-    p_logtots = plot(history["logtots"], xlabel="EM iteration", ylabel="Log-likelihood", title="Convergence of the spatial HMM EM", legend=:none, lw=2)
-    vline!(p_logtots, [iter_best], c=:red, s=:dash, label="best iter")
+    p_logtots = Figure()
+    ax = Axis(p_logtots[1, 1], xlabel="EM iteration", ylabel="Log-likelihood", title="Convergence of the spatial HMM EM", width=500, height=300)
+    lines!(ax, logtots, linewidth=2)
+    vlines!(ax, iter_best, color=:red, linestyle=:dash, label="best iter")
+    axislegend(ax; position=:rc, framevisible=false)
+    resize_to_layout!(p_logtots)
+    p_logtots
 end
 
 #-
-savefig(p_logtots, joinpath(save_tuto_path, "logtots_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "logtots_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), p_logtots); #src
 
 md"""
 ## Visualisation of the fitted model parameters
@@ -422,17 +427,23 @@ md"""
 """
 
 begin
-    pA = [plot(legendfont=14, foreground_color_legend=nothing, background_color_legend=nothing, legend_columns=4, tickfont=12, legendfontsize=16) for k in 1:K]
+    pallA = Figure()
     for k in 1:K
-        [plot!(pA[k], hmm_spa.A[k, l, :], c=my_color(l, K), label=L"Q_{%$(k)\to %$(l)}", legend=:top, lw=1.75) for l in 1:K]
-        hline!(pA[k], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(pA[k], vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), ylims=(0, 1))
+        row, col = fldmod1(k, 2)
+        ax = Axis(pallA[row, col], limits=(0, 367, 0, 1), xticks=(month_days, month_letters), width=400, height=200)
+        col > 1 && hideydecorations!(ax, grid=false, ticks=false)
+        for l in 1:K
+            lines!(ax, 1:T, hmm_spa.A[k, l, :], color=my_palette(K)[l], linewidth=1.75, label=L"Q_{%$(k)\to %$(l)}")
+        end
+        hlines!(ax, 0.5, color=:black, linestyle=:dot)
+        axislegend(ax, position=:ct, nbanks=K, framevisible=false, colgap=6, patchlabelgap=2)
     end
-    pallA = plot(pA..., size=(1000, 500))
+    resize_to_layout!(pallA)
+    pallA
 end
 
 #-
-savefig(pallA, joinpath(save_tuto_path, "Q_transition_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "Q_transition_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pallA); #src
 
 md"""
 ### Spatial range $R(t)$
@@ -442,15 +453,18 @@ A larger range means stronger spatial dependence between stations.
 """
 
 begin
-    pr = plot(title="Spatial range per hidden state", ylabel="Range (km)", tickfont=12, legendfontsize=14)
+    pr = Figure()
+    ax = Axis(pr[1, 1], title="Spatial range per hidden state", ylabel="Range (km)", xticks=(month_days, month_letters), limits=(0, 367, 100, 350), width=500, height=300)
     for k in 1:K
-        plot!(pr, 1:T, hmm_spa.R[k, :], c=my_color(k, K), label=L"k = %$k", lw=2)
+        lines!(ax, 1:T, hmm_spa.R[k, :], color=my_palette(K)[k], label=L"k = %$k", linewidth=2)
     end
-    xticks!(pr, vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367))
+    Legend(pr[1, 2], ax, framevisible=false)
+    resize_to_layout!(pr)
+    pr
 end
 
 #-
-savefig(pr, joinpath(save_tuto_path, "range_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "range_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pr); #src
 
 md"""
 ### Rain occurrence probabilities $\mathbb{P}(Y = \text{wet} \mid Z = k, H = h)$
@@ -458,24 +472,24 @@ md"""
 
 begin
     mm = 1 # h = 1: day before was dry
-    jt = D
-    pB = [plot(legendfont=14, title="$(station_name[j])", titlefontsize=17, tickfont=14, legendfontsize=16) for j in 1:jt]
-    for j in 1:jt
-        [plot!(pB[j], hmm_spa.B[k, :, j, mm], c=my_color(k, K), label=islabel(j, 3, L"\mathbb{P}(Y = \textrm{wet}\mid Z = %$k, H = \textrm{dry})"), lw=2) for k in 1:K]
-        hline!(pB[j], [0.5], c=:black, label=:none, s=:dot)
-        xticks!(
-            pB[j],
-            vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366),
-            vcat(string.(first.(monthabbr.(1:12))))
-        )
-        xlims!(pB[j], (0, 367))
-        ylims!(pB[j], (0, 1))
+    pallB = Figure()
+    for (idx, j) in enumerate(staid_lat)
+        row, col = fldmod1(idx, 5)
+        ax = Axis(pallB[row, col], title=station_name[j], limits=(0, 367, 0, 1), xticks=(month_days, month_letters), width=230, height=170)
+        col > 1 && hideydecorations!(ax, grid=false, ticks=false)
+        for k in 1:K
+            lines!(ax, 1:T, hmm_spa.B[k, :, j, mm], color=my_palette(K)[k], linewidth=2)
+        end
+        hlines!(ax, 0.5, color=:black, linestyle=:dot)
     end
-    pallB = plot(pB[staid_lat]..., size=(3000 / 2, 1000 / 1), layout=(2, 5))
+    Legend(pallB[:, 6], [LineElement(color=my_palette(K)[k], linewidth=2) for k in 1:K],
+        [L"\mathbb{P}(Y = \textrm{wet}\mid Z = %$k, H = \textrm{dry})" for k in 1:K], framevisible=false)
+    resize_to_layout!(pallB)
+    pallB
 end
 
 #-
-savefig(pallB, joinpath(save_tuto_path, "proba_rain_all_station_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "proba_rain_all_station_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pallB); #src
 
 md"""
 ### Spatial map of mean rain probability
@@ -500,7 +514,7 @@ md"""
 ### Viterbi algorithm
 """
 
-ẑ = viterbi(hmm_spa, Y, Y_past; n2t=n2t, QMC_m=QMC_m)
+ẑ = viterbi(hmm_spa, Y, Y_past; n2t=n2t)
 
 ẑ_per_cat = [findall(ẑ .== k) for k in 1:K]
 
@@ -518,25 +532,24 @@ select_year = unique(sort([4:10:length(year_range); 21; 48; 64]))
 
 begin
     year_nb = length(select_year)
-    z_hat_mat = zeros(year_nb, 366)
+    z_hat_mat = fill(NaN, 366, year_nb) # day × year, NaN on day 366 of non leap years
 
     for (i, y) in enumerate(select_year)
-        if isleapyear(year_range[y])
-            z_hat_mat[i, :] = ẑ[idx_year[y]]
-        else
-            z_hat_mat[i, :] = [ẑ[idx_year[y]]; 0]
-        end
+        z_hat_mat[eachindex(idx_year[y]), i] = ẑ[idx_year[y]]
     end
-    thick = 1
-    heatmap(z_hat_mat, colorbar=:none, c=my_palette(K), minorticks=:false, framestyle=:xbox, grid=:none, thickness_scaling=thick)
-    xticks!(vcat(dayofyear_Leap.(Date.(2000, 1:12)), 366), vcat(string.(monthabbr.(1:12)), ""), xlims=(0, 367), xtickfontsize=14 / thick, ytickfontsize=14 / thick)
-    hline!((1:year_nb) .+ 0.5, c=:black, legend=:none, lw=4)
-    ylims!(0.5, year_nb + 0.5)
-    pviterbi = yticks!(1:year_nb, string.(year_range[select_year]), size=(1000, 600))
+    pviterbi = Figure()
+    ax = Axis(pviterbi[1, 1], xticks=(month_days, vcat(string.(monthabbr.(1:12)), "")), yticks=(1:year_nb, string.(year_range[select_year])),
+        yreversed=true, xgridvisible=false, ygridvisible=false, width=850, height=450)
+    heatmap!(ax, 1:366, 1:year_nb, z_hat_mat, colormap=my_palette(K), colorrange=(1, K), nan_color=:white)
+    hlines!(ax, (1:year_nb-1) .+ 0.5, color=:black, linewidth=4)
+    xlims!(ax, 0.5, 366.5)
+    Legend(pviterbi[1, 2], [PolyElement(color=my_palette(K)[k]) for k in 1:K], [L"Z = %$k" for k in 1:K], framevisible=false)
+    resize_to_layout!(pviterbi)
+    pviterbi
 end
 
 #-
-savefig(pviterbi, joinpath(save_tuto_path, "temporal_viterbi_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "temporal_viterbi_spa_K_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pviterbi); #src
 
 md"""
 Sample the spatial HMM model and output the sequence of hidden states and multi-site dry/wet.
@@ -548,7 +561,7 @@ begin
     zs = zeros(Int, N, Nb)
     ys = zeros(Bool, D, N, Nb)
     @time "Simulations Z, Y (spatial HMM)" for i in 1:Nb
-        zs[:, i], ys[:, :, i] = rand(hmm_spa, n2t; y_ini=Yall[:, 1:local_order], z_ini=1, seq=true)
+        zs[:, i], ys[:, :, i] = rand(hmm_spa, n2t; Y_past, z_ini=1, seq=true)
     end
 end
 
@@ -578,7 +591,7 @@ Simulate from the independent (non-spatial) `ARPeriodicHMM` fitted in Step 1, fo
 ys_ind = similar(ys)
 zs_ind = zeros(Int, N, Nb)
 @time "Simulations Z, Y (HMM_ind)" for i in 1:Nb
-    zs_ind[:, i], ys_ind[:, :, i] = rand(hmm_ind, n2t; y_ini=Yall[:, 1:local_order], z_ini=1, seq=true)
+    zs_ind[:, i], ys_ind[:, :, i] = rand(hmm_ind, n2t; Y_past, z_ini=1, seq=true)
 end
 
 md"""
@@ -617,31 +630,36 @@ md"""
 
 make_range(y, step=1) = range(extrema(y)..., step=step)
 
+legend_simu = ([PolyElement(color=:grey, alpha=0.4), PolyElement(color=:red, alpha=0.5), LineElement(color=:red), LineElement(color=:blue)],
+    [L"Simu $q_{0,100}$", L"Simu $q_{25,75}$", L"Simu $q_{50}$", "Obs"]) # legend of the simulation envelopes vs observations
+
 begin
     dry_or_wet = 1 # dry
-    p_spell_dry = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
-    for j = 1:D
+    pall_spell_dry = Figure()
+    for (idx, j) in enumerate(staid_lat)
+        row, col = fldmod1(idx, 5)
+        ax = Axis(pall_spell_dry[row, col], title=station_name[j], xlabel=(row == 2 ? "Nb of days" : ""), ylabel=(col == 1 ? "PMF" : ""),
+            yscale=log10, width=200, height=170)
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), len_spell_hist[j, dry_or_wet])))
-
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
-
-        errorlinehist!(p_spell_dry[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=make_range(reduce(vcat, all_spells)), errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
-
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_dry[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=spell_range, errortype=:percentile, alpha = 0.8)
-        xlims!(p_spell_dry[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
-        yaxis!(:log10)
-    end
+        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), histo_spell)))
 
-    [xlabel!(p_spell_dry[j], "Nb of days", xlabelfontsize=12) for j in staid_lat[6:10]]
-    [ylabel!(p_spell_dry[j], "PMF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
-    [title!(p_spell_dry[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_dry = plot(p_spell_dry[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
+        errorlinehist!(ax, all_spells, bins=spell_range, normalization=:probability, errortype=:percentile, percentiles=[0, 100], centertype=:median, color=:red, secondarycolor=:grey, secondaryalpha=0.4)
+
+        errorlinehist!(ax, all_spells, bins=spell_range, normalization=:probability, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=:red, secondaryalpha=0.5)
+
+        errorlinehist!(ax, [histo_spell], bins=spell_range, normalization=:probability, errortype=:percentile, color=:blue, linewidth=1.5, alpha=0.8)
+        xlims!(ax, 0, 2 + 1.5maximum(histo_spell))
+        ylims!(ax, 1e-4, 1)
+        col > 1 && hideydecorations!(ax, grid=false, ticks=false, minorgrid=false, minorticks=false)
+    end
+    Legend(pall_spell_dry[:, 6], legend_simu..., framevisible=false)
+    resize_to_layout!(pall_spell_dry)
+    pall_spell_dry
 end
 
 #-
-savefig(pall_spell_dry, joinpath(save_tuto_path, "spell_steppost_dry_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "spell_steppost_dry_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pall_spell_dry); #src
 
 md"""
 #### Wet spell
@@ -649,29 +667,31 @@ md"""
 
 begin
     dry_or_wet = 2 # wet
-    p_spell_wet = [plot(ylims=(1e-4, 1e-0), tickfont=11, legendfontsize=13) for j = 1:D]
-    for j = 1:D
+    pall_spell_wet = Figure()
+    for (idx, j) in enumerate(staid_lat)
+        row, col = fldmod1(idx, 5)
+        ax = Axis(pall_spell_wet[row, col], title=station_name[j], xlabel=(row == 2 ? "Nb of days" : ""), ylabel=(col == 1 ? "PMF" : ""),
+            yscale=log10, width=200, height=170)
         all_spells = len_spell_simu[:, j, dry_or_wet]
-        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), len_spell_hist[j, dry_or_wet])))
-
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:grey, legend=:topright, label=islabel(j, staid_lat[[1]], L"Simu $q_{0,100}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[0, 100], fillalpha=0.4, centertype=:median)
-
-        errorlinehist!(p_spell_wet[j], all_spells, groupcolor=:red, label=islabel(j, staid_lat[[1]], L"Simu $q_{25,75}$"), norm=:probability, bins=spell_range, errortype=:percentile, percentiles=[25, 75], fillalpha=0.5, centertype=:median)
-
         histo_spell = len_spell_hist[j, dry_or_wet]
-        errorlinehist!(p_spell_wet[j], [histo_spell], label=islabel(j, staid_lat[[1]], "Obs"), groupcolor=:blue, lw=1.5, norm=:probability, bins=spell_range, errortype=:percentile, alpha = 0.8)
-        xlims!(p_spell_wet[j], 0, 2 + maximum(1.5maximum.(histo_spell)))
-        yaxis!(:log10)
-    end
+        spell_range = 1:1:(1+maximum(vcat(reduce(vcat, all_spells), histo_spell)))
 
-    [xlabel!(p_spell_wet[j], "Nb of days", xlabelfontsize=12) for j in staid_lat[6:10]]
-    [ylabel!(p_spell_wet[j], "PMF", ylabelfontsize=12) for j in staid_lat[[1, 6]]]
-    [title!(p_spell_wet[j], station_name[j], titlefontsize=13) for j = 1:D]
-    pall_spell_wet = plot(p_spell_wet[staid_lat]..., size=(3000 / 2.5, 1000 / 1.5), layout=(2, 5), left_margin=0.5cm, bottom_margin=0.275cm)
+        errorlinehist!(ax, all_spells, bins=spell_range, normalization=:probability, errortype=:percentile, percentiles=[0, 100], centertype=:median, color=:red, secondarycolor=:grey, secondaryalpha=0.4)
+
+        errorlinehist!(ax, all_spells, bins=spell_range, normalization=:probability, errortype=:percentile, percentiles=[25, 75], centertype=:median, color=:red, secondaryalpha=0.5)
+
+        errorlinehist!(ax, [histo_spell], bins=spell_range, normalization=:probability, errortype=:percentile, color=:blue, linewidth=1.5, alpha=0.8)
+        xlims!(ax, 0, 2 + 1.5maximum(histo_spell))
+        ylims!(ax, 1e-4, 1)
+        col > 1 && hideydecorations!(ax, grid=false, ticks=false, minorgrid=false, minorticks=false)
+    end
+    Legend(pall_spell_wet[:, 6], legend_simu..., framevisible=false)
+    resize_to_layout!(pall_spell_wet)
+    pall_spell_wet
 end
 
 #-
-savefig(pall_spell_wet, joinpath(save_tuto_path, "spell_steppost_wet_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf")); #src
+save(joinpath(save_tuto_path, "spell_steppost_wet_$(K)_d_$(𝐃𝐞𝐠)_m_$(local_order).pdf"), pall_spell_wet); #src
 
 md"""
 ### Seasonal areal dry spells
@@ -692,47 +712,38 @@ seasonname = ["DJF", "MAM", "JJA", "SON"]
 
 idx_seasons = [findall(month.(data_stations[1][1+local_order:end, :DATE]) .∈ tuple(season)) for season in SEASONS]
 
-let
+pall_ROR = let
     perc = 0.1
     QQ = [5, 95]
 
-    p_spell_rors = [plot(ylims=(5e-4, 1e-0), xlims=(-0.01,25), tickfont=11, legendfontsize=13, legend=:left) for i in eachindex(idx_seasons)]
-    xlabel!.(p_spell_rors[3:end], "Nb of days", xlabelfontsize=12)
-    ylabel!.(p_spell_rors[[1, 3]], "PMF", ylabelfontsize=12)
+    fig = Figure()
     for m in eachindex(idx_seasons)
+        row, col = fldmod1(m, 2)
+        ax = Axis(fig[row, col], title=seasonname[m], xlabel=(row == 2 ? "Nb of days" : ""), ylabel=(col == 1 ? "PMF" : ""),
+            yscale=log10, limits=(-0.01, 25, 5e-4, 1), width=350, height=200)
         len_ror_hist = pmf_spell(ROR[idx_seasons[m]] .≤ perc, 1)
         len_ror_simu = [pmf_spell(RORs[i][idx_seasons[m]] .≤ perc, 1) for i in 1:Nb]
         len_ror_simu_ind = [pmf_spell(RORs_ind[i][idx_seasons[m]] .≤ perc, 1) for i in 1:Nb]
         len_ror_simuwgen = [pmf_spell(RORswgen[i][idx_seasons[m]] .≤ perc, 1) for i in 1:Nb]
 
-        errorlinehist!(p_spell_rors[m], [len_ror_hist], groupcolor=:blue, lw=2, norm=:probability, bins=make_range(len_ror_hist), errortype=:percentile,
-        label=label = islabel(m, 1, "Obs"),
-        legend=:bottom)
-        yaxis!(:log10)
+        errorlinehist!(ax, len_ror_simuwgen, bins=make_range(reduce(vcat, len_ror_simuwgen)), normalization=:probability, errortype=:percentile, percentiles=QQ,
+            centertype=:median, color=:green, secondaryalpha=0.25, linewidth=2, label="WGEN 4")
 
-        sim_range = make_range(reduce(vcat, len_ror_simuwgen))
-        errorlinehist!(p_spell_rors[m], len_ror_simuwgen, groupcolor=:green, legend=:topright,
-            label=islabel(m, 1, "WGEN 4"),
-            norm=:probability, bins=sim_range, errortype=:percentile, percentiles=QQ, fillalpha=0.25, centertype=:median, linewidth=2)
+        errorlinehist!(ax, len_ror_simu_ind, bins=make_range(reduce(vcat, len_ror_simu_ind)), normalization=:probability, errortype=:percentile, percentiles=QQ,
+            centertype=:median, color=:grey, secondaryalpha=0.25, linewidth=2, label="HMM_ind")
 
-        sim_range = make_range(reduce(vcat, len_ror_simu_ind))
-        errorlinehist!(p_spell_rors[m], len_ror_simu_ind, groupcolor=:grey, legend=:topright,
-            label=islabel(m, 1, "HMM_ind"),
-            norm=:probability, bins=sim_range, errortype=:percentile, percentiles=QQ, fillalpha=0.25, centertype=:median, linewidth=2)
+        errorlinehist!(ax, len_ror_simu, bins=make_range(reduce(vcat, len_ror_simu)), normalization=:probability, errortype=:percentile, percentiles=QQ,
+            centertype=:median, color=:orange, secondaryalpha=0.3, linewidth=2, label="HMM_spa")
 
-        sim_range = make_range(reduce(vcat, len_ror_simu))
-        errorlinehist!(p_spell_rors[m], len_ror_simu, groupcolor=:orange, legend=:topright,
-            label=islabel(m, 1, "HMM_spa"),
-            norm=:probability, bins=sim_range, errortype=:percentile, percentiles=QQ, fillalpha=0.3, centertype=:median, alpha=1, linewidth=2)
-        annotate!(p_spell_rors[m], median(sim_range), 1.5, seasonname[m])
-        yticks!(10.0 .^ (-4:-0))
+        errorlinehist!(ax, [len_ror_hist], bins=make_range(len_ror_hist), normalization=:probability, errortype=:percentile, color=:blue, linewidth=2, label="Obs")
+        col > 1 && hideydecorations!(ax, grid=false, ticks=false, minorgrid=false, minorticks=false)
     end
-
-    pall = plot(p_spell_rors..., layout=(2, 2), size=(1000, 600), top_margin=0.34cm, left_margin=0.3cm, bottom_margin=0.22cm)
-    file_name = "ROR_spell_season_perc_$(perc)_Q_$(QQ[1])_$(QQ[2])_no_inset"
-    file_name = replace(file_name, "." => "p")
-    savefig(pall, joinpath(save_tuto_path, file_name * ".pdf")) #src
-    pall
+    Legend(fig[:, 3], content(fig[1, 1]), framevisible=false)
+    resize_to_layout!(fig)
+    file_name = "ROR_spell_season_perc_$(perc)_Q_$(QQ[1])_$(QQ[2])_no_inset" #src
+    file_name = replace(file_name, "." => "p") #src
+    save(joinpath(save_tuto_path, file_name * ".pdf"), fig) #src
+    fig
 end
 
 md"""
@@ -752,14 +763,16 @@ cor_bin_mean_simu_ind = mean(cor(ys_ind[:, :, i], dims=2) for i in 1:Nb);
 cor_bin_mean_simu_wgen = mean(cor(ys_wgen[:, :, i], dims=2) for i in 1:Nb);
 
 begin
-    plots_cor_bin = [plot(-0.1:0.1:0.8, -0.1:0.1:0.8, aspect_ratio=true, label=:none, xlabelfontsize=16, ylabelfontsize=16, tickfont=11, legendfontsize=13) for _ in 1:1]
-    scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu), label="Correlations vs SHHMM-Spa", xlabel="Observations", ylabel="Simulations", c=:orange)
-    ## scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu_ind), label="Correlations vs HMM", c=:gray)
-    ## scatter!(plots_cor_bin[1], vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu_wgen), label="Correlations vs WGEN", c=:green)
-    [xlims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
-    [ylims!(plots_cor_bin[i], -0.1, 1) for i in 1:1]
-    annotate!(0.2, 0.7, "MSE ≃ $(round(mean(abs2, vec_triu(cor_bin_hist) - vec_triu(cor_bin_mean_simu)), digits = 4))")
-    plot_cor_bin = plot(plots_cor_bin...)
+    plot_cor_bin = Figure()
+    ax = Axis(plot_cor_bin[1, 1], xlabel="Observations", ylabel="Simulations", limits=(-0.1, 1, -0.1, 1), aspect=DataAspect(), width=350, height=350)
+    ablines!(ax, 0, 1, color=:black)
+    scatter!(ax, vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu), color=:orange, label="Correlations vs SHHMM-Spa")
+    ## scatter!(ax, vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu_ind), color=:gray, label="Correlations vs HMM")
+    ## scatter!(ax, vec_triu(cor_bin_hist), vec_triu(cor_bin_mean_simu_wgen), color=:green, label="Correlations vs WGEN")
+    text!(ax, 0.2, 0.7, text=L"\mathrm{MSE} \simeq %$(round(mean(abs2, vec_triu(cor_bin_hist) - vec_triu(cor_bin_mean_simu)), digits = 4))")
+    axislegend(ax, position=:rb)
+    resize_to_layout!(plot_cor_bin)
+    plot_cor_bin
 end
 
 #-

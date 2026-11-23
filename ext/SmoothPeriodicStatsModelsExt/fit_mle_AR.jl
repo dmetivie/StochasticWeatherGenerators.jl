@@ -1,17 +1,23 @@
 #TODO: check that dropmissing (and potentially not contigous data) does not cause issue in MLE
 """
-    fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, K = length(unique(df_full.z)), T = length(unique(n2t)))
-    fit_AR1(y::AbstractArray, z::AbstractArray, n2t, 𝐃𝐞𝐠, K = length(unique(z |> skipmissing)), T = length(unique(n2t)))
-Fit a Seasonal AR(1) model of period `T` and with `K` hidden states for the variable `X` of the DataFrame `df_full`.
-The hidden states must be given in a the column `z` of i.e. `df_full.z`.
-The correspondance between day of the year `t` and index in the time series `n` must be given in the column `n2t` i.e. `df_full.n2t`.
+    fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T = length(unique(dayofyear_Leap.(df_full.DATE))); solver, init, kwargs...)
+    fit_AR1(y::AbstractVector, z::AbstractVector, n2t, 𝐃𝐞𝐠, K, T; solver, init, kwargs...)
+    fit_AR1(y::AbstractVector, n2t, 𝐃𝐞𝐠, T; solver, init, kwargs...)
 
-``X_{n+1} = \\mu(t_n, z_n) + \\phi(t_n, z_n) X_n + \\sigma(t_n, z_n)\\xi``
+Fit a seasonal AR(1) of period `T`, one per hidden state when the states `z` are given.
 
-with ``\\xi \\sim \\mathcal{N}(0,1)``.
+``X_{n+1} = \\mu(t_n, z_n) + \\rho(t_n, z_n) X_n + \\sigma(t_n, z_n)\\xi``
 
-Extra keywords (`solver`, `adtype`, `ensemble`, `solve_kwargs`) are forwarded to
-`SmoothPeriodicStatsModels.fit_mle_AR1`.
+with ``\\xi \\sim \\mathcal{N}(0,1)`` and each parameter a trigonometric polynomial of degree `𝐃𝐞𝐠`.
+With a `DataFrame`, the series is the column `var`, the period index is the day of the year of
+`df_full.DATE`, and the hidden states are the column `z` when there is one.
+
+`init` is the starting point `(μ = …, ρ = …, σ = …)` of the fit, as in `SmoothAR1`. By default it
+is read off the data: `ρ` is the lag-1 autocorrelation of the series minus its mean per period
+index, and `μ` and `σ` give the series' mean and spread. `solver`, the optimization algorithm, is
+required. It and the other keywords (`adtype`, `ensemble`, `solve_kwargs`) go to
+`SmoothPeriodicStatsModels.fit_mle`, which fits a `SmoothAR1`. Returns the evaluated `AR1`;
+build the model yourself if you want its coefficients or its fit history.
 """
 function StochasticWeatherGenerators.fit_AR1(df_full::DataFrame, var, 𝐃𝐞𝐠, T = length(unique(dayofyear_Leap.(df_full.DATE))); kwargs...)
     if "z" ∈ names(df_full)
@@ -29,17 +35,34 @@ function StochasticWeatherGenerators.fit_AR1(df_full::DataFrame, var, 𝐃𝐞�
     end
 end
 
-function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, z::AbstractVector, n2t, 𝐃𝐞𝐠, K, T; kwargs...)
-    # `fit_mle_AR1` reduces the series to its sufficient statistics per (day, state) and solves the
-    # `K` independent problems as one `EnsembleProblem`; it replaces the per-observation JuMP model
-    # and the `observable` dictionaries this function used to assemble by hand.
-    θ_μ, θ_ρ, θ_σ = fit_mle_AR1(y, z, 𝐃𝐞𝐠, T; n2t=n2t, K=K, kwargs...)
-
-    return AR1([μₜ(t / T, θ_μ[:, k]) for k in 1:K, t in 1:T], [ρₜ(t / T, θ_ρ[:, k]) for k in 1:K, t in 1:T], [σₜ(t / T, θ_σ[:, k]) for k in 1:K, t in 1:T])
+function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, z::AbstractVector, n2t, 𝐃𝐞𝐠, K, T; init=_ar1_init(y, n2t), kwargs...)
+    # `fit_mle` reduces the series to its sufficient statistics per (day, state) and solves the
+    # `K` independent problems as one `EnsembleProblem`. Since v4 the model carries its own
+    # coefficients, so `AR1` of the fit is the whole reconstruction.
+    fitted, _ = fit_mle(SmoothAR1(𝐃𝐞𝐠, T; K, init), y, z; n2t, kwargs...)
+    return AR1(fitted)
 end
 
-function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, n2t, 𝐃𝐞𝐠, T; kwargs...)
-    θ_μ, θ_ρ, θ_σ = fit_mle_AR1(y, 𝐃𝐞𝐠, T; n2t=n2t, kwargs...)
+function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, n2t, 𝐃𝐞𝐠, T; init=_ar1_init(y, n2t), kwargs...)
+    fitted, _ = fit_mle(SmoothAR1(𝐃𝐞𝐠, T; init), y; n2t, kwargs...)
+    return AR1(fitted)
+end
 
-    return AR1([μₜ(t / T, θ_μ) for t in 1:T], [ρₜ(t / T, θ_ρ) for t in 1:T], [σₜ(t / T, θ_σ) for t in 1:T])
+# A starting point near the data. From the zero start (`μ = 0`, `ρ = 0`, `σ = 1`), a series far
+# from zero, such as a temperature, makes the optimizer push `ρ` to 1, where it cannot move any
+# more. `ρ` is measured once the mean of each period index is removed, since the seasonal cycle
+# alone would read as a lag-1 autocorrelation near 1. `μ` and `σ` then give the stationary
+# mean and spread of the series.
+function _ar1_init(y::AbstractVector, n2t::AbstractVector)
+    length(y) < 2 && return (μ=0.0, ρ=0.0, σ=1.0)
+    sums, counts = Dict{eltype(n2t),Float64}(), Dict{eltype(n2t),Int}()
+    for (yₙ, t) in zip(y, n2t)
+        sums[t] = get(sums, t, 0.0) + yₙ
+        counts[t] = get(counts, t, 0) + 1
+    end
+    a = [yₙ - sums[t] / counts[t] for (yₙ, t) in zip(y, n2t)]
+    ρ = length(a) > 2 ? cor(view(a, 2:length(a)), view(a, 1:length(a)-1)) : 0.0
+    ρ = isfinite(ρ) ? clamp(ρ, -0.9, 0.9) : 0.0   # NaN when every period index is seen once
+    s = std(a) > 0 ? std(a) : std(y) > 0 ? std(y) : 1.0
+    return (μ=mean(y) * (1 - ρ), ρ=ρ, σ=s * sqrt(1 - ρ^2))
 end

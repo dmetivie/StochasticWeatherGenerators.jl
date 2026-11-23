@@ -6,13 +6,14 @@ Run the model STICS for the input weather data frame `df` for each year of the `
 """
 function run_stics_mod_yield(df::DataFrame; infos=0, output="climat.txt", stics_path, work_path)
     all_years = unique(year.(df.DATE))
-    stics_exe = `$stics_path`
-    cd(work_path)
+    # `dir` sets the working directory of the child process only (no global `cd`), and `read` captures its output: both are thread-safe.
+    stics_exe = Cmd(`$stics_path`, dir=work_path)
     crop_yields = DataFrame(YEAR=Int[], BIOMASS=Union{Float64,Missing}[], YIELD=Union{Float64,Missing}[], YIELD40=Union{Float64,Missing}[])
     for (i, ye) in enumerate(all_years)
         write_simu2stamais(df, ye, work_path; output=output)
-        infos_stics = @capture_out run(stics_exe)
-        if split(infos_stics)[7] != "successful."
+        infos_stics = read(ignorestatus(stics_exe), String)
+        words_stics = split(infos_stics)
+        if length(words_stics) < 7 || words_stics[7] != "successful."
             @warn "Error on year $(ye)"
             push!(crop_yields, [ye; missing; missing; missing])
         else
@@ -25,6 +26,39 @@ function run_stics_mod_yield(df::DataFrame; infos=0, output="climat.txt", stics_
         end
     end
     return crop_yields
+end
+
+"""
+    run_stics_mod_yield_parallel(dfs; infos=0, output="climat.txt", stics_path, work_path, nworkers=Threads.nthreads(), tmp_root=tempdir())
+Run [`run_stics_mod_yield`](@ref) on every data frame of the array `dfs` (output has the same shape) using `nworkers` threads.
+Each worker runs STICS in its own copy of `work_path` (files over 1 MB, such as `mod_rapport.sti`, are not copied) created in `tmp_root`, so simulations never share files.
+Start Julia with `-t N` to get `N` threads.
+"""
+function run_stics_mod_yield_parallel(dfs::AbstractArray{<:DataFrame}; nworkers=Threads.nthreads(), tmp_root=tempdir(), work_path, kwargs...)
+    root = mktempdir(tmp_root)
+    free_dirs = Channel{String}(nworkers)
+    for k in 1:nworkers
+        dir = joinpath(root, "worker_$k")
+        mkpath(dir)
+        for f in readdir(work_path; join=true)
+            (isfile(f) && filesize(f) < 10^6) && cp(f, joinpath(dir, basename(f)))
+        end
+        put!(free_dirs, dir)
+    end
+    results = Array{DataFrame}(undef, size(dfs))
+    try
+        Threads.@threads :dynamic for idx in eachindex(dfs)
+            dir = take!(free_dirs)
+            try
+                results[idx] = run_stics_mod_yield(dfs[idx]; work_path=dir, kwargs...)
+            finally
+                put!(free_dirs, dir)
+            end
+        end
+    finally
+        rm(root; recursive=true, force=true)
+    end
+    return results
 end
 
 function simu2stamais(df_full, ye)

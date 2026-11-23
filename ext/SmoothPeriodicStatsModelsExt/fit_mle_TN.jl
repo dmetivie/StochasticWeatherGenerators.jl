@@ -1,39 +1,56 @@
-#TODO: rebase that (with a part inside SmoothPeriodicStatsModels maybe), allow other distribution
 """
-    fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
+    fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; solver, kwargs...)
 Fit the variable `TN` (daily minimum temperature). In fact it fits the difference `ΔT = TX - TN` to ensure a positive difference between `TX` and `TN`
+
+``\\Delta T \\mid z \\sim \\mathrm{Gamma}(\\alpha(t), \\theta(t))``, with both the shape and the
+scale seasonal: a trigonometric polynomial of degree `𝐃𝐞𝐠` pushed through `exp`, one fit per
+hidden state `z`.
+
+Returns one `TimeVaryingFit` per hidden state. Each carries the parametrization with it, so
+`fit(t)` is the `Gamma` on day `t`, `coef(fit, :α)` the shape's coefficients and
+`curve(fit, :θ, 1:T)` the scale over the year — nothing downstream has to know the layout.
+`solver`, the optimization algorithm, is required.
 """
 function StochasticWeatherGenerators.fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T; kwargs...)
     #TODO check that dropmissing (and potentially not contiguous data) does not cause issue in MLE
     df = dropmissing(df_full[:, [:DATE, :TX, :TN, :z]])
 
-    f(θ) = Gamma(θ[1], θ[2], check_args = false)# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
-    f(t, θ) = f([σₜ(t, θ[1:(2𝐃𝐞𝐠+1)]), σₜ(t, θ[(2𝐃𝐞𝐠+2):end])])
+    # `seasonal_family(Gamma, …)` is `ParamSpec(α = basis => LogLink(), θ = basis => LogLink())`,
+    # which is exactly the pair of `σₜ` polynomials this used to slice out of one flat vector by
+    # hand. Declaring it once means `rand_cond` can no longer disagree about the layout.
+    fam = seasonal_family(Gamma, TrigBasis(T, 𝐃𝐞𝐠))
+    design = PeriodicDesign(fam.spec, 1:T)
+    θ0 = zeros(ncoef(fam.spec))
 
-    θσ10 = zeros(2𝐃𝐞𝐠 + 1)
-    θσ20 = zeros(2𝐃𝐞𝐠 + 1)
-    θ0 = hcat(θσ10, θσ20)
     dfk = @chain df begin
         @transform(:n2t = dayofyear_Leap.(:DATE))
         @transform(:y = :TX - :TN)
         groupby([:z])
     end
-    sols = map(enumerate(dfk)) do (k, dfkⱼ)
-        n2t = dfkⱼ.n2t
-        ℓ(θ, x) = -sum(logpdf(f(t / T, θ), x[n]) for (n, t) in enumerate(n2t)) # = -loglikelihood
-        y = dfkⱼ.y
-        return fit_loss_optim(ℓ, y, θ0; kwargs...)
-    end
-    return sols#[t->f(t,θ_fit) for θ_fit in sols]
+    # A comprehension, not `map`: `map` over a `GroupedDataFrame` is reserved by DataFrames.
+    return [_fit_seasonal_gamma(fam, design, θ0, dfkⱼ, T; kwargs...) for dfkⱼ in dfk]
+end
+
+function _fit_seasonal_gamma(fam, design, θ0, dfkⱼ, T; kwargs...)
+    # `PeriodicNLL` builds `T` distributions per iteration instead of one per observation, and
+    # the objective is the *average* rather than the sum: that leaves the maximiser where it is
+    # and keeps the first gradient O(1), so the line search cannot throw the `exp` link into
+    # underflow on its first step.
+    nll = PeriodicNLL(fam, design, dfkⱼ.y, group_by_time(dfkⱼ.n2t, T))
+    N = length(dfkⱼ.y)
+    ℓ(θ, _x) = nll(θ) / N
+    sol = fit_loss_optim(ℓ, dfkⱼ.y, θ0; kwargs...)
+    return TimeVaryingFit(fam, sol.u, sol)
 end
 
 #TODO: robustify
 
 """
-    cor_groupby(df::DataFrame, var1, var2, T::Integer; θ0 = [0, 0.0, 0.0])
-Compute and fit the `cor` between two `var` with a smooth function for each `z`. 
+    cor_groupby(df::DataFrame, var1, var2, T::Integer; solver, θ0 = [0, 0.0, 0.0], kwargs...)
+Compute and fit the `cor` between two `var` with a smooth function for each `z`. `solver`, the
+optimization algorithm, is required; it and the other keywords go to `fit_loss_optim`.
 """
-function StochasticWeatherGenerators.cor_groupby(df::DataFrame, var1, var2, T::Integer; θ0 = [0, 0.0, 0.0])
+function StochasticWeatherGenerators.cor_groupby(df::DataFrame, var1, var2, T::Integer; θ0 = [0, 0.0, 0.0], kwargs...)
     df_groups = @chain df begin
         dropmissing
         @transform(:DAY = dayofyear_Leap.(:DATE))
@@ -44,16 +61,18 @@ function StochasticWeatherGenerators.cor_groupby(df::DataFrame, var1, var2, T::I
     end
     ρs = map(enumerate(df_groups)) do (k, df)
         ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0)
+        fit_loss_optim(ℓₖ, df.COR, θ0; kwargs...)
     end
     return ρs
 end
 
 """
-    cor_groupbyTXTN(df::DataFrame, T::Integer; θ0 = [0, 0.0, 0.0])
-Compute and fit the `cor` between `:TX` and `:TX-:TN` with a smooth function for each `z`. 
+    cor_groupbyTXTN(df::DataFrame, T::Integer; solver, θ0 = [0, 0.0, 0.0], kwargs...)
+Compute and fit the `cor` between `:TX` and `:TX-:TN` with a smooth function for each `z`.
+`solver`, the optimization algorithm, is required; it and the other keywords go to
+`fit_loss_optim`.
 """
-function StochasticWeatherGenerators.cor_groupbyTXTN(df::DataFrame, T::Integer; θ0 = [0, 0.0, 0.0])
+function StochasticWeatherGenerators.cor_groupbyTXTN(df::DataFrame, T::Integer; θ0 = [0, 0.0, 0.0], kwargs...)
     df_groups = @chain df begin
         dropmissing
         @transform(:DAY = dayofyear_Leap.(:DATE))
@@ -64,25 +83,30 @@ function StochasticWeatherGenerators.cor_groupbyTXTN(df::DataFrame, T::Integer; 
     end
     ρs = map(enumerate(df_groups)) do (k, df)
         ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0)
+        fit_loss_optim(ℓₖ, df.COR, θ0; kwargs...)
     end
     return ρs
 end
 
-#TODO: add flexibility in distribution + simplify arguments if possible (maybe dataframe?)
 #TODO: do that functions just for residu `ϵ₁` `ϵ₂` leave the transformation back to a marginal for another function
 """
     rand_cond([rng::AbstractRNG, ]ϵ, z, θ_uni, θ_cor, n2t, T)
 Generate a random variable conditionally to another one assuming a Gaussian copula dependance with correlation `ρₜ(t / T, θ_cor)` (depending on the day of the year).
 `ϵ` is assumed `Normal(0,1)`.
+
+`θ_uni[k]` is hidden state `k`'s marginal: anything callable at a day, which is what
+[`fit_TN`](@ref) returns. The distribution family is therefore the caller's choice and no
+longer fixed here.
 """
 function StochasticWeatherGenerators.rand_cond(rng::AbstractRNG, ϵ, z, θ_uni, θ_cor, n2t, T)
-    f(θ_uni) = Gamma(θ_uni[1], θ_uni[2])# MixtureModel([Exponential(θ[1]), Exponential(θ[2])], [θ[3], 1 - θ[3]])
-    f(t, θ_uni) = f([σₜ(t/T, θ_uni[1:(2+1)]), σₜ(t/T, θ_uni[(2+2):end])])
-    q(t, ϵ, θ_cor) = cdf(Normal(), rand(rng, Normal(ρₜ(t / T, θ_cor) * ϵ, (1 - ρₜ(t / T, θ_cor)^2))))
+    # given ϵ, the other standard normal is N(ρϵ, 1 - ρ²): `Normal` takes the standard deviation
+    q(t, ϵ, θ_cor) = cdf(Normal(), rand(rng, Normal(ρₜ(t / T, θ_cor) * ϵ, sqrt(1 - ρₜ(t / T, θ_cor)^2))))
     return map(enumerate(n2t)) do (n, t)
         k = z[n]
-        quantile(f(t, θ_uni[k]), q(t, ϵ[n], θ_cor[k]))
+        # `θ_uni[k](t)` is the fitted marginal on day `t`. This used to rebuild a `Gamma` from a
+        # hand-sliced coefficient vector with the degree hard-coded to 1 — a silent mis-slice
+        # for any other `𝐃𝐞𝐠` passed to `fit_TN`.
+        quantile(θ_uni[k](t), q(t, ϵ[n], θ_cor[k]))
     end
 end
 

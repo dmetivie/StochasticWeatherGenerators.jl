@@ -116,13 +116,39 @@ fit_mle_RO
 fit_mle_RR
 ```
 
-TO get an initial condition for `fit_mle_RR`, one can use (for a given hidden state `k`):
+To get an initial condition for `fit_mle_RR`, one can use (for a given hidden state `k`):
 
 ```@docs
 mix_ini
 ```
 
-TODO add `SmoothPeriodicStatsModels.fit_mle`
+`mix_ini` returns a `SmoothPeriodicStatsModels.SmoothSeasonalMixture`: a model that carries its
+own coefficients, so the starting point and the fitted result are the same kind of object.
+`fit_mle_RR` calls `SmoothPeriodicStatsModels.fit_mle` on it once per hidden state,
+
+```julia
+mixₖ, history = fit_mle(mix₀, rain_amounts; n2t = days_of_year, solver = LBFGS())
+```
+
+which returns `(model, history)` as every fit in that package does. The mixture is not tied to
+the two exponentials `mix_ini` sets up — any distribution with a `seasonal_family` declaration
+works as a component, and the components need not match each other:
+
+```julia
+using SmoothPeriodicStatsModels
+
+mix₀ = SmoothSeasonalMixture(Exponential, 2, 1, T; init = [1.0, 5.0])   # the `mix_ini` model
+mix₀ = SmoothSeasonalMixture([Exponential => 0, Gamma => 2], T;          # or mix the families
+                             init = [2.0, (α = 3.0, θ = 1.0)])
+
+mixtures(mixₖ)          # the `T` `MixtureModel`s, which is what `fit_mle_RR` hands back
+curve(mixₖ, :θ)         # K × T, each component's scale over the year
+mixture_weights(mixₖ)   # K × T, the mixing weights
+bic(fit(SeasonalFit, mix₀, rain_amounts; n2t = days_of_year))   # to choose between them
+```
+
+See the [SmoothPeriodicStatsModels README](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl)
+for declaring a family it does not already know.
 
 #### Spatial correlations
 
