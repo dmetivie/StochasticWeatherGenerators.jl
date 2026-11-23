@@ -18,9 +18,8 @@ using OrderedCollections
 # missings
 using Impute: Interpolate, impute!
 
-# using RecipesBase#: @userplot, @recipe, @series
-# import RecipesBase: @userplot
-# include("plot_recipes.jl")
+# Plot functions, defined by the Makie and GeoMakie extensions
+include("plot_recipes.jl")
 
 # Data part
 include("utilities.jl")
@@ -66,5 +65,12 @@ export longuest_spell, pmf_spell#, cartopy_map_with_stations,
 export VCX3, monthly_agg
 
 # ### Plot
+export errorline, errorline!, errorscatter, errorscatter!
+export errorlinehist, errorlinehist!, errorscatterhist, errorscatterhist!
+export map_with_stations
+
+function __init__()
+    Base.Experimental.register_error_hint(_plot_error_hint, MethodError)
+end
 
 end

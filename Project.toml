@@ -21,16 +21,29 @@ RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [weakdeps]
+GeoMakie = "db073c08-6b98-4ee5-b6a4-5efafb3259c6"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+NaturalEarth = "436b0209-26ab-4e65-94a9-6526d86fea76"
 SmoothPeriodicStatsModels = "3d8e1505-165e-443f-a184-83a230b5a9e5"
 
 [extensions]
+GeoMakieExt = ["GeoMakie", "NaturalEarth"]
+MakieExt = "Makie"
 SmoothPeriodicStatsModelsExt = "SmoothPeriodicStatsModels"
 
 [compat]
 Copulas = "0.1"
 CSV = "0.10, 1.1"
 Dates = "1.11"
+Distributions = "0.25"
+GeoMakie = "0.7"
+Impute = "0.6, 0.7"
 LinearAlgebra = "1.12"
+Makie = "0.24"
+NaturalEarth = "0.1"
+NearestCorrelationMatrix = "1"
+NonlinearSolve = "4.3"
+OrderedCollections = "1.8, 2.0"
 Printf = "1.11"
 Random = "1.11"
 RollingFunctions = "0.8"
