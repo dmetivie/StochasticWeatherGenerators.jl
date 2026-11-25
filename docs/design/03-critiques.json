@@ -1,0 +1,591 @@
+[
+ {
+  "lens": "use-case walkthrough (adversarial): wrote, on paper, v4/v5 code for tuto_add_station_variable (a), tuto_paper (b), tuto_paper_HMMspatial (c), the WGEN port (d), the censored latent Gaussian (e), and the SPSM-only tutorials tuto_genomics/ar1/mixture/hmm/hmm_dists (f), checking each call against the actual SWG 3.0 / SPSM 4.1 code.",
+  "summary": "The crop tutorial (a) is structurally sound. The auto-chosen blocks reproduce v3's model, the frozen-overlap rule equals v3's innerjoin, the ensemble array shapes match dicts_simu, and per-(member, station) partitions fit what STICS needs. The flow still dies at the first `fit`: every SPSM fit method lives in an extension triggered by Optimization + SimpleNonlinearSolve, and the umbrella never loads SimpleNonlinearSolve (blocker).\n\nBeyond that, the breaks cluster in seven places:\n\n1. **Architecture.** WGEN and CLG `resolve` into the `RegimeHMM` type and its presets, yet both list only Core + Blocks as dependencies.\n2. **Names.** `Continuous` clashes with Distributions and `curve` clashes with SPSM. The printed spec is also not valid Julia in the T0 session.\n3. **Expert reproduction of tuto_paper.** `Regimes` has no init or EM controls, so the P4 \"identical ẑ\" gate cannot be met. There is no read-out for A(t) or P(wet | k, h), and no accessor to the SPSM HMM, which (c) needs to start the spatial fit.\n4. **Persistence.** It works by eval-ing `repr(spec)`, which is unsafe and does not round-trip `Regimes(paper)` or user blocks.\n5. **Statistics.**\n   - A regime-dependent copula on a censored latent AR, estimated from same-day pairs, is biased; this affects CLG with regimes and the default `Positive()` for ETPP.\n   - WGEN with `amount = nothing` has no defined output, so the student `validate([gens...])` comparison is ill-posed.\n6. **Data handling.**\n   - There is no fit window, which breaks the WGEN `==` gate.\n   - Core drops custom columns before `resolve`, so the T2a example fails.\n   - Stage-2 occurrence has no SPSM path for missing values, while T0 no longer imputes.\n   - The precomputed STICS yields silently pair v3 weather with the v4 ensemble.\n7. **SPSM 5.0 breaks the non-weather tutorials.**\n   - It is unspecified whether `coef` aliases the model's coefficients, and the tutorials build their truth by mutating `parameters(m)`.\n   - `curve` is not specified for HMM transitions or emissions.\n   - The slice-start section can no longer be written.\n   - Several used names are demoted to `public`.\n   - Positional Y_pasts are still used in genomics, contrary to the claim that it is unaffected.\n   - v4's `fit_mle(m, y, z::Vector{Int})` silently becomes a fit with observation weights 1..K.\n\nThere is also a factual error: tuto_paper trains on 10 stations, not 37.",
+  "issues": [
+   {
+    "title": "SPSM fitting extension is never loaded, so T0 `fit` dies with a MethodError",
+    "scenario": "T0: `using StochasticWeatherGenerators, DataFrames; swg = fit(obs, RegimeHMM(regimes = Regimes(pretrained(...))))`. The umbrella's dependencies (§1 table) are the 5 libraries plus CSV, DataFrames, Impute, Downloads, Optimization and OptimizationOptimJL. Every SPSM fit method (`fit_mle` for SmoothAR1, SmoothSeasonalMixture and the HMMs; `update_B!`; `solve_unconstrained`; `fit_loss_optim`) is defined only in ext/SmoothPeriodicStatsModelsOptimizationExt.jl. That extension's trigger is [\"Optimization\", \"SimpleNonlinearSolve\"] (SPSM Project.toml [extensions]; ext lines 6 and 53). Neither the Optimization nor the OptimizationOptimJL Project.toml lists SimpleNonlinearSolve, so nothing loads it.",
+    "what_breaks": "- The first time Blocks calls SPSM's `fit_mle`, it hits a bare MethodError: `fit_mle`/`fit` are deliberately not stubbed (fit_stubs.jl:31-37). The friendly 'pass solver = LBFGS()' message of §2.3 never fires.\n- The same happens for any sublibrary loaded alone, which defeats the 'loadable alone' claim.\n- The PrecompileTools workloads in Blocks, RegimeHMM and CLG (a synthetic fit at precompile) cannot run without the solver stack as a hard dependency, which contradicts D11.\n- The claim that 'closed-form steps never need a solver: AR(1) sufficient statistics' is false: fit/ar1.jl:34 and :77-80 solve an OptimizationProblem over the trigonometric coefficients. The p0 logistic, the ΔT Gamma and the censored ρ need a solver too.",
+    "severity": "blocker",
+    "fix": "Settle the solver stack in P1. Two options:\n- (a) SPSM 4.2 makes Optimization the only extension trigger: ForwardDiff/ADTypes become hard dependencies for the default adtype, and SimpleGaussNewton moves behind its own extension. The umbrella then hard-depends on Optimization and OptimizationOptimJL.\n- (b) Blocks hard-depends on Optimization, SimpleNonlinearSolve and OptimizationOptimJL, and owns `default_solver() = LBFGS()`; the Ref/__init__ indirection is dropped.\n\nIn either case:\n- Blocks.resolve asserts `Base.get_extension(SPSM, :SmoothPeriodicStatsModelsOptimizationExt) !== nothing`, and its error names the exact `using` line.\n- Add a P3 test in a fresh environment that loads only one class library and fits.\n- Restrict the closed-form list to IndicatorBasis counts and correlations.",
+    "section": "1. Package architecture"
+   },
+   {
+    "title": "WGEN and CLG cannot be built on Core + Blocks: their `resolve` needs the RegimeHMM type and its presets",
+    "scenario": "§5: `SWGCore.resolve(w::WGEN, data) = as_wgen(SWGCore.resolve(RegimeHMM(regimes = NoRegimes(), …)))`. In the same design:\n- `expand(spec(g))` prints a RegimeHMM.\n- CLG's `others = :auto` uses the 'flagship presets for TX'.\n- The engine's `simulate_member!` dispatches on `FittedGenerator{<:RegimeHMM}` (§4.5).\n\nThe §1 table lists Core and Blocks as the only dependencies of WGEN and of CLG. The RegimeHMM type and the 'default blocks by variable kind' live in StochasticWeatherGeneratorsRegimeHMM.",
+    "what_breaks": "- `using StochasticWeatherGeneratorsWGEN` fails at precompile with UndefVarError RegimeHMM.\n- If RegimeHMM is added as a dependency, the class libraries are no longer independent and the §1 graph is wrong.\n- `FittedGenerator{WGEN}` has no `simulate_member!` method.",
+    "severity": "major",
+    "fix": "Make the product engine a concrete, class-neutral type in Blocks, for example `Blocks.ProductModel{R,B,E}`, which owns `fit_generator`, `simulate_member!`, `show` and `decode`. Move the defaults-by-kind table into Blocks. RegimeHMM, WGEN and CLG then become thin spec types: their `resolve` returns a ProductModel inside their own `FittedGenerator{Class}`, and `simulate_member!` forwards to it.\n\nThe alternative is to declare RegimeHMM as a dependency of WGEN and CLG and update the §1 table.",
+    "section": "1. Package architecture"
+   },
+   {
+    "title": "Exported names collide (`Continuous`, `curve`, `AR1`), and the printed spec is not valid Julia in the T0 session",
+    "scenario": "- T1 does `using StochasticWeatherGenerators, Distributions` and then writes `QQ = Continuous(Normal)`. Distributions exports `Continuous`, its ValueSupport type (Distributions.jl:46).\n- Core exports its own `curve` (Core does not depend on SPSM), and SPSM exports `curve` (SmoothPeriodicStatsModels.jl:54, kept in §6.3). The HMMspatial tutorial and the T1 'SPSM door' load both packages.\n- During P2–P7, SPSM 4.2 still exports `AR1` while Blocks exports `AR1()`.\n- T0 loads only SWG and DataFrames, but `show(swg)` prints `Positive(Gamma; …)` and `Mixture(Exponential, 2)`.",
+    "what_breaks": "- 'Both export Continuous; uses must be qualified' means `Continuous` fails in T1, in T0's own error fix text ('declare QQ = Continuous(Normal)') and in the legacy migration spec.\n- `curve` is unusable unqualified whenever SWG and SPSM are both loaded.\n- The Preview docs hit the `AR1` clash.\n- Copying show() output in T0 gives UndefVarError: Gamma.",
+    "severity": "major",
+    "fix": "- Rename the block (for example `Unbounded(marginal)`) and keep `:continuous` only as a kind symbol.\n- Make `curve` a single function: Core does not export it; Blocks adds methods to `SmoothPeriodicStatsModels.curve(::FittedGenerator, var, par; …)`; the umbrella re-exports SPSM's `curve`.\n- Have the umbrella re-export the supported Distributions families (Normal, Gamma, Exponential, Weibull, LogNormal), or have show() qualify them.\n- Add a CI test that loads SWG, SPSM, Distributions, DataFrames and Dates together and asserts there are no conflicting exports.",
+    "section": "7. Naming and verbs"
+   },
+   {
+    "title": "`Regimes` has no init or EM controls and two sources of truth for memory and season, so tuto_paper and the P4 'identical ẑ' gate cannot be reproduced",
+    "scenario": "(b) The v3 chain is:\n- `Random.seed!(1234)`;\n- `randARPeriodicHMM(K,T,D,1; ξ=[1,0,0,0], ref_station=1)`;\n- `fit_mle_all_slices(…; robust=true, rand_ini=true, Dirichlet_α=0.8, n_random_ini=1, Yₜ_extanted=[-12,-7,0,6,13])`;\n- `fit_θ!`;\n- `fit_mle(…; maxiter=10000, tol=1e-3, robust=true)` (tuto_paper.jl:74, 323-354).\n\nThe v4 call is `fit(obs, RegimeHMM(K = 4, RR = Rain(occurrence = Occurrence(memory = 1), season = 1)); seed = 1234)`. The paper's BIC selection (cited in docs/src/models/rain.md) ranges over K, degree and memory.",
+    "what_breaks": "- None of the following can be passed: slice window, random restarts, Dirichlet α, initial ξ, reference-station ordering, EM maxiter/tol/robust, or a starting model.\n- A different RNG stream plus SPSM's default EM settings gives a different ẑ, so P4's 'L1 regime HMM rtol 1e-6, identical ẑ' cannot be met.\n- `Regimes(memory = 1)` and `Occurrence(memory = 2)` can contradict each other, while §4.3 says the occurrence *is* the Stage-1 emission.\n- `memory::Int` forbids a range, and only K ranges are documented.\n- Mixture EM has the same gap: SPSM's default is maxiter = 100 (fit/mixture.jl:23), while v3 uses maxiter = 5000, tol = 2e-4, robust = true (fit_mle_rain.jl:41).",
+    "severity": "major",
+    "fix": "- Extend Regimes to `Regimes(; K, season, init = Slices(window, n_random, dirichlet, initial) | <SPSM HMM start>, em = (maxiter, tol, robust), order_by = :wetness | (:station => id))`.\n- When regimes are learned from RR, read the emission memory and season only from the RR Occurrence; resolve errors on any conflict.\n- Accept ranges on K, season and Occurrence memory, select them jointly by Stage-1 BIC, and store the table in info.selection.\n- Give Mixture and AR1 blocks fit options whose defaults equal v3's.\n- In the golden test, inject the v3 slice start through `init`.",
+    "section": "4. Flagship Regime-HMM product model"
+   },
+   {
+    "title": "No public read-out for the regime chain, P(wet | k, h), the copula matrices or the underlying SPSM HMM",
+    "scenario": "(b) The paper figures need:\n- transitions `hmm_fit.A[k,l,:]` (tuto_paper.jl:407);\n- `succprob.(hmm_fit.B[k,:,j,h])` per memory category (:431, and the map at :457);\n- the copula QQ plot from `cov2cor.(Σ²RR)[k][j1,j2]` (:1006, :1024).\n\n(c) needs θq_fit_ind and θy_fit_ind of the independent HMM to start the spatial EM (tuto_paper_HMMspatial.jl:331-335, :367). The design offers only `curve(g, var::Symbol, par::Symbol; station, regime)` and `swg[:TX].models[1]`.",
+    "what_breaks": "- A_{kl}(t) is not a (variable, parameter) pair.\n- `curve` has no memory-category (h) keyword.\n- The amount-mixture parameter names are unspecified.\n- The fitted copula matrices have no accessor.\n- `pretrained(...)` gives no route to the SPSM SmoothARPeriodicHMM, so (c) cannot be started from the v4 artifact.",
+    "severity": "major",
+    "fix": "Add public read-outs:\n- `regime_model(g)`, returning the SPSM HMM (the chain plus the Stage-1 emission);\n- `transitions(g)`, a K×K×T array;\n- `curve(g, :RR, :p; station, regime, history = h)`;\n- `correlation(g, var; regime, month)`.\n\nDocument the parameter names of each block. In P4, rebuild every paper figure using only these read-outs.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "Save/load by evaluating `repr(spec)` is unsafe and does not round-trip",
+    "scenario": "- T1 has `regimes = Regimes(paper)` with `paper = load_generator(\"france37_K4.swg.json\")`.\n- T2a has `HU = RegimeAnalog(window = 10)`.\n- Specs use Distributions types such as `Gamma`.\n\n§2.7: `save_generator` stores `repr(spec(g))`, and `load_generator` rebuilds the spec by evaluating that text.",
+    "what_breaks": "- In a fresh session, `Regimes(paper)` raises UndefVarError.\n- User block types and Distributions types must be in scope of whichever module runs the eval.\n- Evaluating text from a shared .json file executes arbitrary code (a security hole).\n- show() cannot honestly print `Regimes(paper)` as valid standalone Julia.",
+    "severity": "major",
+    "fix": "Serialize structurally:\n- Each spec and block type implements to_dict/from_dict (or StructTypes), with a registry keyed by (package, type, format version).\n- FrozenRegimes is written inline: chain coefficients, path, posterior and provenance.\n- An unknown block type errors with 'load package X first'.\n- Never eval.\n- show() prints frozen regimes as a descriptive comment rather than claiming valid code.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "WGEN with `amount = nothing` has no defined output, so side-by-side `validate` and the golden test are ill-posed",
+    "scenario": "- Student variant: `validate([fit(obs, RegimeHMM(K=4)), fit(obs, WGEN(order=2)), fit(obs, CensoredLatentGaussian())], obs)`.\n- tuto_paper compares WGEN Bool occurrences with the HMM (tuto_paper.jl:588-595, 700-742).\n- WGEN's default `amount = nothing` is passed to `Rain(amount = w.amount)`, but Rain documents only a Mixture amount.\n- The golden test is written as `WGEN(order = 1, copula → independent, …)`, but WGEN has no `copula` field.",
+    "what_breaks": "- The content of `sims[:RR]` for WGEN is undefined (0/1? Bool?).\n- The default RR amount statistics in validate are meaningless for WGEN.\n- `Rain(amount = nothing)` is not a documented block.\n- The golden test cannot be expressed.",
+    "severity": "major",
+    "fix": "- Define an occurrence-only output: Rain with `amount = nothing` outputs RR as Bool (or a separate RO variable) and declares an occurrence-only capability.\n- validate computes only the statistics each generator supports and shows N/A for the rest.\n- Replace WGEN's `estimator` field with `copula = MultisiteGaussian(by = :month, estimator = MomentMatching(nsim = 2000)) | nothing`.\n- Optionally default the student WGEN to `amount = Mixture(Exponential, 2)`.",
+    "section": "5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "Core converts the table before `resolve`, so declared custom variables are dropped and alias names break the defaults",
+    "scenario": "- T2a: `fit(obs, RegimeHMM(kinds = (HU = :custom,), HU = RegimeAnalog(window = 10)))`.\n- Also `RegimeHMM(WIND = Positive())`.\n- An input table with columns PRCP, TMAX, TMIN.\n\n§2.3: Core's fit runs Tables → WeatherData → resolve. §2.2: unknown columns are dropped when the WeatherData is built.",
+    "what_breaks": "- HU and WIND are dropped before RegimeHMM's own `kinds` or block names are consulted, so resolve fails and the T2a example breaks.\n- Alias columns keep their names (TMAX), but the defaults are `Difference(:TX, Gamma)` and `Regimes(from = :RR)`, so valid data raises 'no TX column'.\n- `:custom` is not a documented kind.",
+    "severity": "major",
+    "fix": "- Add class hooks `requested_variables(alg)` and `declared_kinds(alg)`, which Core passes into the Tables → WeatherData step; explicitly named blocks are always kept.\n- Either canonicalize alias names (keeping the original for output), or resolve default parents by kind at resolve time.\n- Document `:custom` as a kind for user blocks only.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "A regime-dependent copula on a censored latent AR is estimated from the wrong pairs (biased), and block BIC is not a likelihood there",
+    "scenario": "- CLG with `regimes = Regimes(K = 3)`, `copula = MultisiteGaussian(by = :regime, estimator = PairwiseCensored())` and `dynamics = LatentAR1(season = 1)`.\n- The default `ETPP = Positive()`: seasonal zeros, LatentAR1, `by = :regime`.\n\n§5 step 3 fits C from same-day pairs, and §4.1 claims the same-day correlation equals C when ρ is shared across sites.",
+    "what_breaks": "- Since w_n = ρw_{n−1} + √(1−ρ²)ε_n with ε_n ~ N(0, C_{z_n}), Corr(w_n) = ρ²Corr(w_{n−1}) + (1−ρ²)C_{z_n}: a mixture of the C of earlier regimes. The same-day estimate converges to that mixture, not to C_k. It is exact only with NoRegimes or a regime-free C.\n- The simulator then uses the biased C_k.\n- `Positive(…; season = 0:2)` chosen 'by block BIC' mixes the marginal likelihood with pairwise composite parts, so it is not a BIC.",
+    "severity": "major",
+    "fix": "- Estimate C_k on innovations. Where both lagged values are uncensored, use the censored bivariate law of (w_{s,n}, w_{s′,n}) given the lags, N(ρw_{n−1}, (1−ρ²)C_k).\n- Where a lag is censored, use a 4-variate pairwise censored likelihood, or Monte Carlo EM imputation of the censored w.\n- Until that exists, default `by = :none` for censored blocks with dynamics.\n- Restrict range selection to the likelihood of the margins.\n- Add a P6 recovery test with K = 2, ρ = 0.8 and C₁ ≠ C₂.",
+    "section": "5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "SPSM 5.0: v4's `fit_mle(m, y, z)` silently becomes 'weights = z', and the N×K axis is ambiguous for mixtures",
+    "scenario": "- v4's contract, used by SWG's `fit_AR1` and the docs, is `fit_mle(SmoothAR1(d,T;K), y, z::Vector{Int}; n2t)` (fit/ar1.jl:66).\n- The v5 rule is that the third positional argument is always weights.\n- For a mixture, `K = ncomponents(m)` (fit/mixture.jl:25), yet P1 adds 'N×K weights' to mixture.jl, and §6.1 says `loglikelihoods` returns N×K for every model, mixtures included.",
+    "what_breaks": "- An unchanged v4 call with z ∈ 1:4 dispatches to the N-vector weights method and fits with observation weights 1..4. There is no error, and the model is wrong.\n- For mixtures, an N×K weight matrix or an N×K loglikelihoods matrix could index either the components or the regimes.",
+    "severity": "major",
+    "fix": "- Accept weights only as `AbstractVector{<:AbstractFloat}`, `AbstractMatrix{<:Real}` or `OneHot`.\n- An `AbstractVector{<:Integer}` third argument throws 'pass OneHot(z, K)'.\n- Document that the column axis of W and of `loglikelihoods` is always the state/regime axis, never the mixture components.\n- Give mixtures a `states = K` keyword, or state that Blocks fits one mixture per regime using N-vector weights.",
+    "section": "6. SPSM v5"
+   },
+   {
+    "title": "SPSM tutorials lose their read-outs and starting-point tools in 5.0",
+    "scenario": "- tuto_ar1.jl:65-68 and tuto_mixture.jl:79-81 build the truth by mutating `parameters(m).μ .= …` and `component_coefs(truth,1)[2:3] .= …`.\n- tuto_hmm.jl:151,198 and tuto_genomics.jl:204,224 plot `ARPeriodicHMM(m).A/.B`; tuto_hmm_dists.jl:290 uses `PeriodicHMMDists(m₂)`; tuto_genomics.jl:80,83 uses `nbasis` and `design_matrix`.\n- The slice start in tuto_hmm.jl:184-186 chains `randARPeriodicHMM` → `fit_mle_all_slices` → `fit_θ` → `SmoothARPeriodicHMM`.\n- tuto_hmm.jl:228 and :244 call `loglikelihood(ms, Ys, Y_past_s; n2t)` and `SeasonalControls(Y, Y_past; n2t)` with a positional Y_past.\n- tuto_genomics.jl:142, 183 and 238 pass a positional Y_past or Y_pasts.",
+    "what_breaks": "- Whether `coef(m)` aliases the model's coefficients is unspecified. If it copies, the tutorials silently fit to a zero truth.\n- `curve` has no specified form for HMM transitions or for (k, j, h) emissions.\n- The slice-start section cannot be written: its inputs and its converter are removed, and the public `fit_mle_all_slices` returns an evaluated Bernoulli HMM.\n- The `past` rule covers fit and viterbi but not loglikelihood or SeasonalControls.\n- The names used above (twins, `nbasis`, `design_matrix`, `component_coefs`, `emission_coefs`, `SeasonalControls`, `fit_mle_all_slices`) are demoted to `public`, so every unqualified use errors.\n- §6.3 claims tuto_genomics is unaffected, but four of its calls change.",
+    "severity": "major",
+    "fix": "- Specify that `coef(m)` returns the live ComponentArray (keep the cache-invalidation test), or add `setcoef!`.\n- Define `curve(m, :A)` → K×K×T, `curve(m, :p)` → K×D×H×T, `curve(m, :R)`, and `m(t)` for every HMM.\n- Add `initialize(m0, Y; past, n2t, method = Slices(window, n_random, dirichlet))`, returning a smooth model.\n- Apply the `past` keyword uniformly across fit, loglikelihood(s), viterbi, rand and SeasonalControls.\n- Keep `nbasis`, `design_matrix`, `component_coefs` and `emission_coefs` exported, or rewrite the tutorials in P7 and list every change in the migration table.",
+    "section": "6. SPSM v5"
+   },
+   {
+    "title": "The `past` convention changes what `z_ini` means and leaves several initial states undefined",
+    "scenario": "- The SPSM `rand` doc says '`z_ini` is the state of the first observation' (HHMM_Bernoulli/periodichmm.jl:85-97).\n- tuto_paper.jl:565 uses `z_ini = 1`.\n- tuto_add_station_variable.jl:285-291 starts a 1986 simulation from the 2000-01-01 state.\n- WGEN of order 4 has only one observed day before 1956 (tuto_paper.jl:229; :594 pads with `rand(Bool, D, 3)`).\n- A LatentAR1 past can be 0 (censored) or missing.\n- `given = (regime = path,)` combines with `burnin = 365`.",
+    "what_breaks": "- The design maps `z_ini` to 'z of day 0 inside past', so existing `z_ini = 1` calls now draw z₁ ~ A[1,:,t₀]. The meaning changes silently.\n- The form of `past` for SPSM HMMs is undefined.\n- There is no rule for a past shorter than the memory, a censored past (w₀ undefined) or a missing past.\n- burnin under `given` has no regime path or parent values for the 365 burnin days.\n- The v3 start from a different date is not expressible and is not listed as an intentional difference.",
+    "severity": "major",
+    "fix": "SPSM:\n- Contract `past = (; Y = D×m, z = k₀)` and document what z₀ means.\n- Add a migration row for `z_ini`.\n\nCore:\n- Shorthand `past = Date(…)` that pulls every block's memory and the regime from the training data.\n- Rules: missing or short lags are drawn from the fitted conditional (or raise an error listing them); a censored lag draws w₀ from the truncated normal.\n- With `given`, require `past` and disable burnin.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "Frozen or external regimes over the same stations refit the occurrence, and the spatial HMM cannot become a FittedGenerator",
+    "scenario": "- (b) `fit(eca10, RegimeHMM(regimes = Regimes(pretrained(...))))` on the very stations that trained the regimes.\n- (c) `Regimes(hmm_spa, path)`, then the tutorial's comparison of HMM_spa, HMM_ind and WGEN (tuto_paper_HMMspatial.jl:560-595, 715-747).\n\n§4.3 reuses the occurrence only for learned regimes. §11.6 defers the spatial emission.",
+    "what_breaks": "- Under frozen regimes, the RR occurrence is refitted given a one-hot ẑ instead of reusing the EM emission, so `pretrained` does not reproduce the paper model.\n- The spatial emission, with a seasonal range R_k(t), can only be approximated by `Occurrence(copula = MultisiteGaussian(by = :regime, structure = ExponentialKernel()))`.\n- The tutorial must therefore mix SPSM `rand` arrays with a WeatherSimulation and cannot use `validate`.\n- `decode(g)` under frozen regimes is ambiguous.",
+    "severity": "major",
+    "fix": "- Add `Occurrence(from = :regimes)`, the default when the frozen model's emission covers exactly these stations and the rain variable. It reuses the regime model's own emission, independent or spatial.\n- `Regimes(hmm_spa, path)` combined with this becomes a FittedGenerator usable in `validate`.\n- Specify that `decode(g)` returns the frozen path on the overlap, and that `decode(g, newdata)` uses the current occurrence block.",
+    "section": "4. Flagship Regime-HMM product model"
+   },
+   {
+    "title": "No fit window: the memory day becomes a data day, breaking the WGEN `==` gate and the Stage-1 alignment",
+    "scenario": "(b)/(d) v3 reads data from 1955-12-31 (tuto_paper.jl:229, :251) and uses that day only as Y_past. It fits the HMM on 1956–2019, and WGEN with idx_months built from 1956 onward (:589-590). In v4, `obs` covers 1955-12-31…2019-12-31 and is passed to `fit(obs, WGEN(order = 4, counting = :v3))` and `fit(obs, RegimeHMM(K = 4))`. There is neither a date subset on WeatherData nor a window keyword on `fit`.",
+    "what_breaks": "- 1955-12-31 enters the December slice of the `:v3` counts, so the probability tables differ from v3 and the P5 `==` gate fails.\n- The Stage-1 chain starts one day earlier, so the loglik and ẑ differ from the fixtures (rtol 1e-6 gate).",
+    "severity": "major",
+    "fix": "- Add `fit(data, alg; window = Date(1956):Date(2019,12,31))`; days before the window serve only as `past`.\n- Add date subsetting `data[a:b]` on WeatherData.\n- Specify that the chain starts on the first day of the window.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "Crop tutorial: the precomputed yields no longer match the regenerated weather ensemble",
+    "scenario": "(a) `res_YIELDs = JLD.load(file_yield)[\"res_YIELDs\"]` (tuto_add_station_variable.jl:621, 637) holds STICS yields computed from the v3 `dfs_simus`. v4's `simulate(swg, 1986:2035; nsim = 300, seed = 50000)` produces a different ensemble: different RNG streams, a censored Positive and a TN η copula.",
+    "what_breaks": "The sensitivity analysis joins `stats_fortnightly(dfs_simus[i][j])` with `res_YIELDs[i, j]` (:680-685). That pairs v4 weather with yields from v3 weather. The 'critical period June 12 – July 27' conclusion and the GIF are therefore computed silently on mismatched data.",
+    "severity": "major",
+    "fix": "- In P7, rerun STICS on the v4 ensemble, or ship the v3 weather ensemble as an artifact next to the yields.\n- Store a fingerprint with the yields (spec hash, seed and package versions) and assert it in the tutorial.",
+    "section": "12. Implementation phases"
+   },
+   {
+    "title": "Stage-2 occurrence with missing RR has no SPSM path, yet T0 no longer imputes",
+    "scenario": "T0 reads `read_stations(INRAE(), station_files)` without `impute`, whereas v3 used `impute_missing = [:RR, :TX]` (tuto_add_station_variable.jl:158). The occurrence given ẑ goes through `fit_mle(hmm, Y, OneHot; fixed = (:A,))`, which replaces `fit_mle_RO`, and `fit_mle_RO` requires `Y::AbstractMatrix{<:Bool}` (fit/add_sites.jl:13). P1 lists missing-value support only for AR1, the mixture and SmoothDistribution; masked emissions are 5.1.",
+    "what_breaks": "Missing RR either breaks the Bool conversion or forces whole days to be dropped across every station. T0 errors or silently loses data, and the L3 comparison with v3 (which interpolated RR) differs.",
+    "severity": "major",
+    "fix": "- Specify that the occurrence given ẑ is fitted per site (D = 1), with sequence splitting on that site's missing days.\n- Add to the P1 list and its exit tests a sequence-vector, per-segment-past form of the weighted, A-fixed HMM M-step: `fit_mle(hmm, Ys, W; past = Y_pasts, fixed = (:A,))`.\n- Use `impute = [:RR, :TX]` in the T0 tutorial for v3 parity.",
+    "section": "6. SPSM v5"
+   },
+   {
+    "title": "The pretrained artifact is a 10-station model, not 37, and the P0 asset conversion is incomplete",
+    "scenario": "- tuto_paper.jl:194 selects 10 station names, and D = length(STAID) (:217). hmm_fit_K_4_d_1_m_1.jld is saved from that run (:379).\n- z_hat_K_4_d_1_m_1.csv holds only (DATE, z), 23 376 rows.\n- tuto_paper_HMMspatial loads assets/tuto_3/hmm_fit_K_4_d_1_m_1.jld, which stores ComponentArray ps_iters (:377-400).",
+    "what_breaks": "- `:france_eca37_K4_d1_m1`, the show comments and risk 8's 'D = 37 benchmark' all mislabel the model.\n- The posterior that FrozenRegimes promises is not in the assets.\n- The tuto_3 JLD will rot just like tuto_1, but it is not in the P0 list.",
+    "severity": "minor",
+    "fix": "- Rename the artifact to `:france_eca10_K4_d1_m1`, or train and ship a real 37-station model.\n- In P0, compute the posterior with forward-backward on the ECA files in weather_files/.\n- Convert tuto_3 and tuto_2/results_yield to plain JSON/CSV in P0.\n- Benchmark D = 37 on synthetic data.",
+    "section": "12. Implementation phases"
+   },
+   {
+    "title": "WeatherSimulation's array accessors contradict Tables semantics, and the partition order is unspecified",
+    "scenario": "(a) `sims[:TX]` returns a D×N×nsim array and `sims.regime` an N×nsim array, while WeatherSimulation is declared a Tables column table. The STICS step needs `res_YIELDs[i, j]` indexed by member i and station j (tuto :628; utilities_stics.jl:37).",
+    "what_breaks": "- Under Tables.AbstractColumns, getproperty/getcolumn must return the long column of 22M rows, so `sims.regime` cannot also be N×nsim.\n- Users must guess the order of `Tables.partitions` to rebuild the 300×4 matrix.",
+    "severity": "minor",
+    "fix": "- Keep Tables access long.\n- Expose arrays through `array(sims, :TX)` and `regimes(sims)`.\n- Add `sims[member = i, station = s]`, returning a table.\n- Document the partitions as member-major.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "`read_stations` return type, decode column names and the `station` keyword are ambiguous",
+    "scenario": "- The tutorial applies DataFramesMeta to `obs` (tuto :170) but also calls `merge(obs, obs_new)`, a WeatherData method (§3 T1).\n- `decode` returns a `date` column while the input uses `DATE`.\n- `curve(…; station = 49215002)` is written while ECA STAIDs are 32, 33, … (tuto_paper.jl:189).",
+    "what_breaks": "- If readers return a DataFrame, there is no `merge` for it; if they return a WeatherData, the DataFramesMeta code breaks.\n- Joining decode output to `obs` needs a rename.\n- `station = 32` could mean ID 32 or index 32.",
+    "severity": "minor",
+    "fix": "- Readers return a DataFrame.\n- WeatherData implements Tables.jl, and `merge` accepts tables.\n- `decode` reuses the input's date column name.\n- `station` is always an ID; `site = i` is the index.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "Kind aliases ignore units",
+    "scenario": "- ECA RR is in 0.1 mm (tuto_paper.jl:132 has `conversion_factor = 0.1`); INRAE RR is in mm.\n- CMIP `pr` is in kg m⁻² s⁻¹, and `rsds` is in W m⁻² while QQ is in MJ m⁻².\n- The v3 start `mix_ini` (θσ20 = [2, 0, 0], fit_mle_rain.jl:71) was tuned on 0.1 mm.",
+    "what_breaks": "- `merge(eca, inrae)`, `Regimes(data = eca)` and CMIP inputs silently mis-scale amounts.\n- The L1 mixture tolerance (rtol 1e-4) depends on whether the readers convert units.",
+    "severity": "minor",
+    "fix": "- Readers output canonical units and record them in WeatherData.\n- Aliases carry a conversion, or raise an error on unknown units.\n- Fixtures are generated in the canonical units.",
+    "section": "2. Core interface"
+   },
+   {
+    "title": "The resolved spec cannot represent per-site choices and is not a reproducible recipe",
+    "scenario": "- `zeros = :auto` resolves per site (§4.1), yet show prints a single `zeros = :constant`.\n- For learned regimes, `spec(g)` prints `Regimes(K = 4, …)` without a seed.",
+    "what_breaks": "- When sites resolve differently, the printed spec is wrong.\n- `fit(data, spec(g))` re-runs a random slice initialisation, so 'refits it' does not hold.",
+    "severity": "minor",
+    "fix": "- Allow per-station values in resolved specs.\n- Carry `seed` and `init` in both the spec and FitInfo.",
+    "section": "3. Three tiers, by example"
+   },
+   {
+    "title": "The shared Cholesky mask cache is a data race under threads, and too large at D = 16",
+    "scenario": "§4.5 caches Cholesky factors 'per (k, mask) when D ≤ 16', while `threads = true` is the default. T1 uses `by = (:regime, :month)`.",
+    "what_breaks": "- Lazy writes to a shared Dict from parallel members race.\n- Precomputing instead needs up to 2^16 × K × 12 factors.",
+    "severity": "minor",
+    "fix": "- Give each member its own bounded cache inside SimBuffer, or precompute only for D ≤ 8.\n- Add a P4 test that 1 thread and 8 threads give identical output.",
+    "section": "4. Flagship Regime-HMM product model"
+   },
+   {
+    "title": "The T2b KNN example relies on undefined Core API",
+    "scenario": "§3 T2b calls `standardized_features`, `circdist`, `initial_day`, `copy_day!` and the field `data.calendar`. None of these is in Core's public list, WeatherData fields are declared private, and there is no default `resolve`.",
+    "what_breaks": "The 'depends on Core only' example does not compile.",
+    "severity": "minor",
+    "fix": "Either make those helpers public in Core, together with `calendar(d)` and a default `resolve(alg, data) = alg`, or rewrite the example using only listed API.",
+    "section": "3. Three tiers, by example"
+   },
+   {
+    "title": "The MomentMatching claims and 'regime-dependent Wilks comes free' do not hold",
+    "scenario": "§5 says common random numbers make the objective 'deterministic and monotone', and that the regime-dependent Wilks model `Occurrence(copula = MultisiteGaussian(by = :regime, estimator = MomentMatching()))` comes free.",
+    "what_breaks": "- With CRN, the simulated binary correlation is a step function of ω.\n- Memory feeds the simulated history back into the thresholds, so the objective is not monotone and bisection can stop at a jump.\n- Under regimes with seasonal logistic margins, the simulation design is undefined: which t, which regime path.\n- Under learned regimes, the occurrence was fitted assuming independence.",
+    "severity": "minor",
+    "fix": "- Claim determinism only, and check the bracket against a tolerance; or use the analytic Φ₂ relation given the observed histories.\n- At launch, allow MomentMatching only with `by = :month` or `:none`, and use PairwiseLikelihood under regimes.",
+    "section": "5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "The legacy equivalence spec for QQ is not v3",
+    "scenario": "§8.3 says `QQ = Continuous(Normal; dynamics = AR1(), copula = MultisiteGaussian(estimator = NormalScores()))` must match v3. But v3's `cov_ar1` is the Pearson covariance of standardized residuals (src/AR1/fit_mle.jl:29), and v3 clips at simulation (`indicatrix`, tuto :296, :338).",
+    "what_breaks": "NormalScores differs from Pearson, and the legacy spec emits negative QQ, so the L1 and L3 comparisons against v3 diverge.",
+    "severity": "minor",
+    "fix": "Use the default Pearson estimator in the legacy spec, and list 'no clipping' as an intentional difference.",
+    "section": "8. Migration and release plan"
+   },
+   {
+    "title": "Small data-robustness gaps: δ ≤ 0 for Difference, and copula pairs with no co-wet days",
+    "scenario": "- INRAE days where TX == TN, or TN > TX.\n- In a dry regime, a station pair with fewer than 2 co-wet days. v3's `cor_RR` returns `missing` there (src/rain/correlations.jl:109), which is the root of the generation.jl:31 hack.",
+    "what_breaks": "- The Gamma logpdf at 0 is −Inf, which stalls the ΔT fit.\n- Missing copula entries have no fill rule before `nearest_cor`.",
+    "severity": "minor",
+    "fix": "- Give Difference the same error/zeros policy as Positive, naming the station and date.\n- Fill missing pairs with 0, or shrink them to the pooled correlation, with a warning, then apply `nearest_cor`.",
+    "section": "4. Flagship Regime-HMM product model"
+   }
+  ],
+  "confirmations": [
+   "(a) Auto-chosen blocks reproduce v3's crop model: RR occurrence (memory 1, degree 1) with a 2-exponential mixture and a per-regime PairwiseRank copula (cov_RR, correlations.jl:102); TX AR1 with per-regime innovation correlation (cov_ar1); TN = TX − Gamma ΔT; QQ/ETPP get the intended upgrade.",
+   "(a) The frozen-overlap rule equals v3's `innerjoin(df, df_z; on = :DATE)` (tuto :164). z_hat covers 1956-01-01 to 2019-12-31 (23 376 rows), so INRAE days after 2019 are correctly reported as dropped.",
+   "(a) The TN coupling through the parent's innovation matches what v3 simulates: `rand_cond` consumes ϵ_TX returned by `rand(ARs…; output_ϵ = true)` (AR1.jl:123-140, fit_mle_TN.jl:101-110). Fitting r on that scale fixes the mismatch between fit_mle_TN.jl:75-88 and :103.",
+   "(a) `sims[:TX]` as a D×N×nsim array matches v3's dicts_simu layout (tuto :350); the `seed` keyword replaces Random.seed!(50000); the estimate of 300 × 4 × 18 262 rows is correct.",
+   "(a) Dropping CO2 in the readers is safe for the crop chain: the STICS writer adds CO2 = 330 itself (utilities_stics.jl:72, :93). Per-(member, station) partitions provide the DATE/STAID/RR/TN/TX/QQ/ETPP frames that STICS needs.",
+   "(d) The `:v3` counting description matches wgen.jl exactly: month slices concatenated across years (:110), loop to length − p (:91-95), Y_ini carried across months in the simulator (:145-152), RNG advanced inside the root-find (:179), nearest_cor fallback (:203-210).",
+   "L2 noise injection is feasible. v3 draws ε per regime block and then calls `rand(ARs, ϵ, …)` (AR1.jl:131-156); WGEN draws U per month (wgen.jl:122). Block-major simulation can inject both.",
+   "Leap366 equals v3 `dayofyear_Leap` (utilities.jl:15), and a Monthly indicator basis on the 366-day index agrees with month(date), including 29 Feb.",
+   "(f) `fit(SeasonalFit, …)` with dof/bic carries over unchanged for degree selection in tuto_ar1, the family comparison in tuto_mixture and the basis comparison in tuto_genomics. Making n2t required is mechanical; genomics already passes n2t.",
+   "Threaded per-member simulation is safe with respect to SPSM's lazily refreshed smooth-HMM caches: `_current` takes a global lock (smooth_hmm_sequences.jl:98-100).",
+   "(c) Keeping the spatial HMM in SPSM keeps the spatial EM expressible at the SPSM level. `fit(SeasonalFit, …; past, ps_iters = true)` still provides logtots and best_iteration.",
+   "`Regimes(K = 4, data = eca)` collapses the tuto_paper → tuto_add_station_variable chain into one call. Member seeding with Xoshiro(hash(i, seed)) makes the output independent of thread count and nsim.",
+   "ECA quality and provenance columns (Q_RR, SOUID) are handled by the rule that drops unknown columns with an info line."
+  ]
+ },
+ {
+  "lens": "edge cases and statistical correctness",
+  "summary": "The statistical core holds up. The tied-variance censored latent AR gives exact marginals, and the wet-set restriction removes the d≥2 copula problem. Leap366 matches v3. The overlap rule reproduces v3's innerjoin. Block-major simulation makes the pathwise L2 tests possible. I found no blocker, but there are 13 major problems that should change the design before Core and Blocks ship as 1.0.0. I checked each against the code or the bundled data.\n\n1. **Copula estimation under regime switching.** The pretrained Viterbi path switches 9,348 times in 23,376 days, a mean spell of 2.5 days. With a latent AR(1), the same-day correlation is then a blend of the C_k of the last few regimes, not C_k itself. Fitting C_k from same-day pairs, as CLG step 3 does, is therefore biased.\n2. **Likelihood labels and BIC.** Censored blocks and pooled-site blocks contribute composite terms to a total labelled `:plugin`. The T1 example (`QQ`, `season = 0:2`) selects by a BIC that is not valid for a composite likelihood. With frozen regimes, the reported loglik adds a Stage-1 term computed on 10 other stations.\n3. **Stage-1 regimes drop whole years.** One INRAE station starts in 1993 and the others in 1985, so learning regimes from these stations discards about 21% of the record.\n4. **Sparse regime-by-season cells.** These are only warned about. v3 already simulated RR above 1000 mm from such a cell, and SPSM silently keeps the start values for a regime with no data.\n5. **Conditioning on a variable.** `given = (TX = …)` draws the regime path from the prior, which is inconsistent with the TX it conditions on.\n6. **Seeding.** `hash(i, seed)` throws a MethodError for an Int seed, and `hash` values are not guaranteed stable. One stream per member also means that editing any block changes the random draws of every block after it.\n7. **Persistence.** Rebuilding the spec by evaluating stored text runs arbitrary code, cannot represent frozen regimes, and silently changes meaning when defaults change.\n8. **`validate`.** Complete simulations are compared with gappy observations, and checking about 200 statistics at level 0.9 flags around 20 by chance on a correct model.\n9. **QQ zeros.** In the flagship data these are sensor errors (RG = 0 at all four stations on 2008-04-04, with ETPP > 0 that day), yet `zeros = :auto` models them as real zeros.\n10. **Thread safety.** The per-(k, mask) Cholesky cache is a data race under threads, and it is unnecessary.\n11. **Memory at 37 sites.** About 10 GB for the arrays and 203M rows for `DataFrame(sims)`.\n12. **NoLeap365.** It contradicts the complete Date axis.\n13. **Crop tutorial.** After migration it would silently pair v4 weather with v3 STICS yields.\n\nThe minor issues cover TN ≥ TX input rules, WGEN Ω NaN and the non-monotone common-random-numbers objective, accuracy of the fast bivariate-normal approximation near |ρ| = 1, the initial-condition laws, regime identity across refits, a misnamed pretrained artefact (10 stations, not 37), the v3 groupby order in the fixtures, ranks computed on raw seasonal rain amounts, multi-output and sub-daily protocol fields, and replicate sequences.",
+  "issues": [
+   {
+    "title": "Same-day copula C_k is mis-estimated for latent-AR blocks under regime switching (CLG, censored Positive)",
+    "scenario": "ETPP or QQ = Positive(Gamma; dynamics = LatentAR1(shared = :sites)) with copula by = :regime, under the frozen pretrained regimes. Their Viterbi path switches 9,348 times in 23,376 days, a mean spell of 2.5 days (counted in assets/tuto_1/z_hat_K_4_d_1_m_1.csv). CLG is the same case: default dynamics = LatentAR1, and §5 Fit step 3 estimates 'C by the same likelihood on same-day pairs'.",
+    "what_breaks": "With w_n = ρ w_{n−1} + √(1−ρ²) ε_n and ε_n ~ N(0, C_{z_n}), Cov(w_n) = Σ_{j≥0} (1−ρ²) ρ^{2j} C_{z_{n−j}}, not C_{z_n}. The §4.1 claim that shared ρ 'makes it equal to C' only holds inside a constant-regime stretch.\n- Grouping same-day latent pairs by z_n = k estimates this blend, not C_k.\n- Simulation then blends again, so regime contrasts in spatial correlation are shrunk twice.\n- With ρ ≈ 0.75 and 2.5-day spells, roughly a third of the same-day correlation comes from earlier regimes' C.\n- TX (form A) is unaffected because C is fitted on innovations. Censored sites (ETPP has 223 to 1,391 zero days) are affected, because the innovation is not observable there.",
+    "severity": "major",
+    "fix": "Estimate C_k only from innovations, never from same-day levels.\n- Uncensored sites: ε̂_n = (w_n − ρ w_{n−1})/√(1−ρ²), then pairwise Pearson grouped by z_n.\n- Censored sites: use the conditional pairwise censored likelihood of (w_{s,n}, w_{s′,n}) given (w_{s,n−1}, w_{s′,n−1}), restricted to transitions whose lag pair is uncensored. Selecting on the conditioning variables is ignorable. The pair is then N₂(ρ w_{n−1}, (1−ρ²) C_k), so only the current day is censored and the existing 2-d kernel suffices.\n- Correct the §4.1 'same-day correlation' paragraph.\n- Add a P3 recovery test: distinct C_k, short spells, simulate, refit, check that C_k is recovered.",
+    "section": "## 4. Flagship Regime-HMM product model (4.1, 4.4) and ## 5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "Likelihood kinds leak: composite terms inside a ':plugin' total; the T1 example selects season by an invalid BIC",
+    "scenario": "T1: `QQ = Positive(Gamma; dynamics = LatentAR1(season = 1), season = 0:2)  # season chosen by block BIC`. QQ has 3 to 11 zero days, so zeros = :auto resolves to :constant: a censored latent AR whose ρ and C come from pairwise censored likelihoods. Shared ρ is fitted by one regression pooled over correlated sites. In T0 with frozen pretrained regimes, loglikelihood(g) = Stage-1 HMM loglik + block logliks.",
+    "what_breaks": "(a) A censored latent AR(1) is not Markov in the observed y: when y_{n−1} = 0, w_{n−1} is only known to lie in an interval, so p(y_n | past) depends on the whole past. The lag-1 pair objective is a composite likelihood, so BIC and dof built on it are not a BIC, and the season = 0:2 selection is invalid.\n(b) Pooling sites in one ρ regression is an independence (composite) likelihood.\n(c) With frozen regimes, the Stage-1 term was computed on 10 ECA stations over 1956–2019. Adding it to the user's block logliks yields a meaningless number with mixed nobs and dof.\n(d) JointEM with IFM or pairwise copula steps is not generalised EM, which requires Q(θ′) ≥ Q(θ).\n(e) When regimes are learned from these stations, the occurrence loglik is already in the Stage-1 marginal. Adding it again given ẑ double-counts.",
+    "severity": "major",
+    "fix": "- Make likelihood_kind a per-block trait set after resolve (:exact, :conditional or :composite). The generator's kind is the weakest of its blocks.\n- aic and bic (total and by = :block) refuse composite blocks, with an error naming CLIC (sandwich matrix from the pairwise scores).\n- A `season` range on a composite block either uses CLIC or is rejected in resolve.\n- With frozen or observed regimes, loglikelihood(g) is the sum of the blocks given the path, kind :conditional. The Stage-1 term enters only when Stage 1 was fitted on this data.\n- Exclude the reused occurrence block from the block sum.\n- Relabel the JointEM row 'EM-type iteration with best-iterate tracking (not GEM)'.\n- Change the T1 example to a block with an exact likelihood, or to `zeros = :none`.",
+    "section": "## 4. Flagship Regime-HMM product model (4.4)"
+   },
+   {
+    "title": "Stage-1 regime learning discards whole years when stations have different date ranges or scattered gaps",
+    "scenario": "T0 without pretrained regimes: fit(obs, RegimeHMM(K = 4)) on the four INRAE files. In the CSVs, RR at 40272002 starts 1993-01-17 and the other three start 1985-12-01; 80557001 has 47 scattered missing RR days. §2.6 splits Stage-1 sequences at any day where a regime-defining station is missing.",
+    "what_breaks": "- 1986 to 1993 is dropped for every station: about 7 of 34 years, or 21%.\n- Each scattered gap also cuts a sequence. With 37 stations each 1% missing on independent days, only 0.99^37 ≈ 69% of days are complete, so sequences average about 3 days.\n- Stage-2 blocks of the complete stations also lose 1986 to 1993, because ẑ is undefined there.\n- The >5% warning would fire on essentially every real network. The only remedy offered is imputation, and linear interpolation of RR invents wet days.",
+    "severity": "major",
+    "fix": "Handle missing values exactly in the Bernoulli emissions:\n- For conditionally independent emissions this is trivial: drop site s's factor from the day-n emission log-density, and also on days n+1 … n+m while its memory category is undefined (a conditional likelihood). Alternatively, marginalise the lag using the site's predictive probability.\n- Ship masked emissions for SmoothARPeriodicHMM in SPSM 4.2, additively (a Union{Missing,Bool} matrix or a mask keyword), not in 5.1.\n- Keep sequence splitting only for the spatial HMM.\n- In the migration table, replace `impute = [:RR, :TX]` with 'not needed: missing values are handled natively'.",
+    "section": "## 2. Core interface (2.6) and ## 6. SPSM v5 (6.1)"
+   },
+   {
+    "title": "Sparse regime × season cells: seasonal curves extrapolate in simulation; unvisited regimes keep start values silently",
+    "scenario": "Frozen K = 4 regimes. Rain amounts are fitted per (site, regime) with a trigonometric season; regime 3 has 3,584 of 23,376 days overall and fewer in the 1986–2019 overlap. The v3 tutorial already shows the failure: 'super high values above 1000 mm at Mons-en-Chaussée … a bad fit of the seasonal rainfall amount model (probably in late summer)' (tuto_add_station_variable.jl:486-488). In SPSM, fit_mle(SmoothAR1, y, z) keeps the start values for a state z never visits, without a warning (fit/ar1.jl:62-63). The p0 and occurrence logistic fits separate when a cell has no events.",
+    "what_breaks": "The design only warns ('Regime 4 × JJA has 6 wet days'). The fitted chain A(t) still visits that regime in that season during simulation, so the block uses an unconstrained trigonometric extrapolation: mixture scales explode, σ(t) blows up, and p0 goes to 0 or 1. A regime with no data for a variable silently simulates from its start values.",
+    "severity": "major",
+    "fix": "- At resolve, compute the effective weight per (block, site, regime, season window). Below a threshold, pool automatically: either θ_k = θ + δ_k with a ridge penalty on δ_k, or fall back to the curve pooled over regimes. `show` prints the choice.\n- Raise an error, not a warning, when a regime has zero weight for a block, and require an explicit `pool = :regimes`.\n- Bound the links of scale parameters relative to the data range.\n- Add a simulation-time and validate check: the largest simulated value against the largest observed value times a factor.\n- Add a recovery test in which one regime never occurs in JJA.",
+    "section": "## 4. Flagship Regime-HMM product model (4.4)"
+   },
+   {
+    "title": "given = (TX = table,) draws regimes from the prior, incoherent with the conditioning variable",
+    "scenario": "An impact modeller wants TN and RR consistent with observed or GCM TX: simulate(g, dates; given = (TX = tx_obs,)). The symmetric case is given = (RR = obs,), to get temperatures consistent with observed rain.",
+    "what_breaks": "simulate_member! samples z from the chain, independently of the given TX. TN then reads ε^TX computed from the given TX under that sampled z. Under the joint model p(z | TX) ≠ p(z):\n- a heatwave TX path is paired with wet regimes;\n- the recomputed TX innovations are far from N(0,1) under the wrong regime's μ_k and ρ_k;\n- TN = TX − G⁻¹(Φ(rε + …)) takes extreme quantiles;\n- RR and the other children of z ignore the information in TX.",
+    "severity": "major",
+    "fix": "Choose one of these for 4.0:\n- (a) Accept `given` for a non-regime variable only together with `given.regime`. The error suggests `decode` or FFBS.\n- (b) Draw z ~ p(z | given) by forward-filtering backward-sampling, using the given blocks' `logdensities!`. This is cheap for StateScope blocks (TX form A, Rain occurrence).\n\nCheck the requirement in resolve or SimContext with the existing scope and capabilities traits. Document that a given variable's innovations are recomputed under the conditioned z.",
+    "section": "## 2. Core interface (2.4)"
+   },
+   {
+    "title": "RNG derivation: Int seed throws, hash is not stable, and one stream per member couples all blocks",
+    "scenario": "T0 runs `simulate(swg, 1986:2035; nsim = 300, seed = 50000)`. The §2.4 sketch computes base = something(seed, rand(rng, UInt64)) and then Xoshiro(hash(i, base)). A statistician compares amount = Mixture(Exponential, 2) with Mixture(Exponential, Gamma) under the same seed, or adds ETPP to the spec.",
+    "what_breaks": "(a) Base.hash(x, h::UInt) types its second argument as UInt, so hash(i, 50000) is a MethodError on the T0 path.\n(b) The hash docstring says 'The hash value may change when a new Julia process is started', so it gives no reproducibility guarantee. The Random docs also say a minor Julia release may change the stream for a given seed, and Distributions sampler changes can do the same.\n(c) One stream per member is consumed in topological order. Gamma rejection sampling uses a random number of draws, and adding or removing a block or changing `others` shifts consumption, so every downstream block changes. Two specs under the same seed therefore share no random numbers even for unchanged blocks, and validate([g1, g2]) differences are confounded with RNG noise.\n(d) Block-major order means a 1986–2000 run is not the first 15 years of a 1986–2035 run. The design does not state this.",
+    "severity": "major",
+    "fix": "- Derive one stream per (member, block), plus one for the regime path, from (UInt64(seed), member, stable block id) using a mixing function written in Core (for example a SplitMix64 step), not Base.hash.\n- Store the derivation version in WeatherSimulation and in the JSON file.\n- Document reproducibility as 'same Manifest and same Julia minor version'.\n- Add a `members = a:b` keyword so that chunked runs reproduce slices of a full run.\n- Seed fit-time stochastic steps (MomentMatching common random numbers) per (pair, month) the same way, so fits do not depend on the thread count.\n- State the prefix non-property in the docs.",
+    "section": "## 2. Core interface (2.4)"
+   },
+   {
+    "title": "Persistence by evaluating spec text: code execution, frozen regimes unrepresentable, default drift, ±Inf in JSON",
+    "scenario": "T1 does paper = load_generator(\"france37_K4.swg.json\"); model = RegimeHMM(regimes = Regimes(paper), …); save_generator(...). The file is later loaded with SWG 4.3, which changed a default, or in a session where a user block such as RegimeAnalog is not defined. Monthly() occurrence or p0 cells are exactly 0 or 1.",
+    "what_breaks": "(a) load_generator evaluates Julia source read from a downloaded file: arbitrary code execution. It also needs every referenced type (Distributions families, user blocks) in scope in some module.\n(b) Regimes(paper), Regimes(g) and Regimes(hmm, path) have no valid source text, because the frozen object exists only in memory. Both 'show prints valid Julia' and 'rebuild the spec from text' fail on the T1 path; only pretrained(:name) can be written as text.\n(c) If repr omits fields equal to their defaults, a version with new defaults rebuilds a different spec and loads the coefficients into a different layout, failing silently or with a BoundsError.\n(d) Logit coefficients of ±Inf and NaN cannot be written as standard JSON.",
+    "severity": "major",
+    "fix": "- Serialise a structured spec tree: a registered type name plus every field, defaults included, with the format and version tag. Never use eval.\n- User blocks opt in with `B.register_block(:RegimeAnalog, RegimeAnalog)`. An unknown type raises an error naming the package to load.\n- Store frozen regimes as data: A coefficients, path, posterior, dates and a source id/hash. `show` prints `Regimes(load_generator(\"…\"))  # frozen, id …` only when the regimes came from a file.\n- Store closed-form tables as probabilities, or encode ±Inf explicitly.\n- Add one cross-version load fixture per release to CI.",
+    "section": "## 2. Core interface (2.7)"
+   },
+   {
+    "title": "Crop tutorial migration silently pairs v4 simulated weather with v3 STICS yields",
+    "scenario": "tuto_add_station_variable.jl:621 and :637 load results_yield.jld. Those yields were computed by STICS from v3's 300 × 4 simulations (a 2,091 s run of a private binary). Lines 680-685 attach res_YIELDs[i, j] to the statistics of dfs_simus[i][j]. In P9 the tutorial switches to v4 simulate, which has new RNG streams and the intentional model differences.",
+    "what_breaks": "The sensitivity analysis and the yield-vs-weather GIF pair v4 weather member i with the yields of v3 member i, so the results are meaningless. The tutorial still runs, so the P7 exit check 'every tutorial runs' passes. The .jld also needs v3 types to load.",
+    "severity": "major",
+    "fix": "- In P0, export the v3 weather members actually fed to STICS (Arrow or CSV partitions) together with the yields, as one artifact with a content hash.\n- In the v4 tutorial, the yield sections load that weather, and assert the hash. v4 simulation is used only in the generator sections.\n- Alternatively, label the yield section explicitly as v3 data.",
+    "section": "## 8. Migration and release plan"
+   },
+   {
+    "title": "QQ zeros in the flagship data are sensor errors, but zeros = :auto models them as a real atom",
+    "scenario": "In the INRAE CSVs, RG (which becomes QQ = RG/100, extracting.jl:140) is 0 on 2008-04-04 at all four stations, while ETPP is 2.1–2.8 mm and TX 8.5–18.2 °C that day. It is also 0 on 2015-09-11 at two stations (TX 28.5 and 24.2 °C, ETPP 3.4 and 2.2 mm), and on 1996-12-03 and 2016-01-07 at two stations each. That is 3 to 11 days per station (counted). With these, zeros = :auto resolves to :constant, as the design's own `show` output prints.",
+    "what_breaks": "Physically impossible zero-radiation days are modelled as a censored atom. The ensemble produces about p0 × 18,262 × 300 × 4 days with QQ = 0 that are fed to STICS. Network-wide joint zeros also push up the estimated censored-pair dependence. Positive ETPP on the same day proves these are data errors.",
+    "severity": "major",
+    "fix": "- Make the zero policy depend on the variable kind. For radiation (QQ, rsds), zeros are `:suspect` and become missing, with one warning listing the dates and highlighting same-day zeros across the network.\n- Apply zeros = :auto to ETPP-like kinds only, and require zeros to cluster seasonally. ETPP zeros at 80557001 do: 394 in January, 606 in December, none from May to July, so they are genuine.\n- Add plausibility rules, for example QQ = 0 with ETPP > 0 is suspect.",
+    "section": "## 2. Core interface (2.2) and ## 4. Flagship Regime-HMM product model (4.1)"
+   },
+   {
+    "title": "validate compares complete simulations with gappy observations, and flags about 10% of statistics by design",
+    "scenario": "validate(swg, obs; nsim = 100, level = 0.9) on the four INRAE stations. ETPP at 80557001 has 910 missing days, station 40272002 starts in 1993, and about 200 statistics are checked (monthly sums, spells, annual maxima). In the student example, WGEN has amount = nothing.",
+    "what_breaks": "- Observed monthly sums are biased low and observed spells are cut by gaps, while the simulations are complete. This gives systematic false flags.\n- At level 0.9 per statistic with no multiplicity control, about 20 statistics are flagged on a correctly specified model. With seed = nothing the flags change on every call, and novices read a flag as a model failure.\n- WGEN without amounts writes 0/1 values in a column named RR, which is then compared with amounts in mm.",
+    "severity": "major",
+    "fix": "- Simulate on exactly the observed dates and apply each station × variable missing mask to every member before computing any statistic.\n- Report the expected number of flags, (1 − level) × n, and a global envelope or Holm-adjusted summary.\n- Default to a deterministic seed, for example one derived from a hash of the data.\n- Report statistics a class does not produce as NA. WGEN with amount = nothing outputs a column named RO, not RR.",
+    "section": "## 2. Core interface (2.3) and ## 3. Three tiers, by example"
+   },
+   {
+    "title": "Wet-set sampling: the per-(k, mask) Cholesky cache is unnecessary and races under threads",
+    "scenario": "simulate(...; nsim = 300, threads = true) with D = 16 or D = 37, and rain amounts with copula by = :regime or by = (:regime, :month).",
+    "what_breaks": "- A shared cache filled lazily from concurrent tforeach tasks is a data race: a corrupted Dict, a crash, or a wrong factor.\n- Filling the cache eagerly is infeasible: 2^16 masks × K = 4 × 16² × 8 B ≈ 0.5 GB, and 12 times more with by month.\n- Risk 8 (cost of the D = 37 per-day factorisation) remains open.",
+    "severity": "major",
+    "fix": "- Draw ε ~ N(0, C_k) on all D sites with one cached, read-only Cholesky factor per (k[, month]), then keep ε[𝒲]. A subvector of a Gaussian vector is exactly N(0, C_k[𝒲, 𝒲]), so no mask-specific factor is needed. The cost is O(D²) per day and the path is thread-safe.\n- Keep per-mask factors only in the noise-hook path of the L2 test against v3's SklarDist(GaussianCopula(Σ[nz, nz])), and in per-task scratch for the 4.1 log-densities.\n- Remove Risk 8.",
+    "section": "## 4. Flagship Regime-HMM product model (4.5) and ## 9. Risks, trade-offs, open questions"
+   },
+   {
+    "title": "At 37 sites, the full ensemble and DataFrame(sims) do not fit in laptop memory",
+    "scenario": "37 stations × 18,262 days (1986–2035) × 300 members × 5 variables.",
+    "what_breaks": "- D × N × nsim in Float64 is 1.62 GB per variable. Five variables plus the TX innovations kept for children come to about 9.7 GB.\n- DataFrame(sims) has 203M rows. The §2.5 figure of 22M rows is for 4 stations.\n- About 600M Gamma quantile calls (TN, QQ, ETPP) at 1 to 3 µs each take 10 to 30 minutes single-threaded.\n- validate's default nsim = 100 needs about 3 GB.",
+    "severity": "major",
+    "fix": "- Add `members = a:b`, which reproduces exactly the same members as a full run thanks to per-member seeding.\n- Add a `sink`: a callback or writer per Tables partition, so members are generated, written and released.\n- Keep innovations in a per-member block buffer, not in WeatherSimulation.\n- Put a 37 × 50 × 300 time and peak-memory budget in the P4 exit criteria.",
+    "section": "## 2. Core interface (2.5)"
+   },
+   {
+    "title": "NoLeap365 contradicts the complete Date axis; the simulation calendar is unspecified",
+    "scenario": "CMIP noleap output for 1990–2010 passed to WeatherData(table; calendar = NoLeap365()). Or simulate(g, gcm_dates; given = (regime = gcm_types,)) where gcm_dates skips 29 February. Or a 360-day GCM calendar.",
+    "what_breaks": "- WeatherData.dates is a 'COMPLETE' StepRange{Date,Day}, so it contains 2000-02-29. NoLeap365 'raises an error' on 29 February, so any multi-year NoLeap365 dataset either errors or gets undefined n2t entries.\n- Monthly() is defined on the 366-day index, so a 365-day index would mislabel months after February.\n- simulate(g, ::AbstractVector{Date}) with non-contiguous dates has undefined semantics: are 28 Feb and 1 Mar consecutive steps for AR memory?\n- A 360-day calendar cannot be expressed as Date values at all.\n- Core ships as 1.0.0 with NoLeap365 exported.",
+    "severity": "major",
+    "fix": "- Keep T = 366 internally for every calendar. period_index maps calendar days onto the Leap366 index: noleap skips index 60; a 360-day calendar uses round(d·366/360).\n- WeatherData stores consecutive model steps plus the calendar. For NoLeap365 the axis excludes 29 February by construction.\n- simulate takes steps with an explicit calendar and documents that the given dates are consecutive steps. Non-contiguous Gregorian vectors are rejected.\n- Fix this before the 1.0 release, or do not export NoLeap365.",
+    "section": "## 2. Core interface (2.1, 2.2)"
+   },
+   {
+    "title": "Difference(:TX, Gamma): no rule for TN ≥ TX in the input, and no dynamics slot",
+    "scenario": "read_stations(MeteoFrance()) or ECA data, where TN and TX are measured over different 24-hour windows, so TN ≥ TX occurs on frontal days. The four INRAE files have no such day (checked), so the tutorial itself is unaffected.",
+    "what_breaks": "- For δ < 0 the Gamma logpdf is −Inf, and at δ = 0 it is ±Inf depending on α. The weighted NLL becomes non-finite, and LBFGS either errors or returns garbage. Only QQ < 0 has a designed error message.\n- Δ has no temporal dependence apart from iid ε^TX, so DTR persistence and TN cold-spell persistence are underestimated. Adding dynamics later changes the block's memory and scope.",
+    "severity": "minor",
+    "fix": "- resolve checks δ > 0. Violations raise an error listing STAID and dates, with the option `nonpositive = :error | :missing | :floor`.\n- Reserve `dynamics = nothing` on Difference now (a LatentAR1 on v can be added later).\n- Add DTR lag-1 autocorrelation to validate's default statistics.",
+    "section": "## 4. Flagship Regime-HMM product model (4.1, 4.2)"
+   },
+   {
+    "title": "WGEN Ω: the common-random-numbers objective is not monotone, and constant months give NaN that breaks nearest_cor",
+    "scenario": "WGEN(order = 2) on a site with no wet day in some month across all years: an arid site, or the regime-dependent Wilks variant in the dry regime 4 (8,372 of 23,376 days). Or order = 4 with many empty history cells.",
+    "what_breaks": "- The correlation of a constant series is NaN. In v3 (wgen.jl:177-186) the root-find then fails, warns and returns sol.u anyway. One NaN entry makes nearest_cor and the Cholesky fail for the whole month, and simulate crashes.\n- With common random numbers, the sample correlation is piecewise constant and not monotone in ω, because threshold crossings feed back into the memory categories. Bisection can return any of several crossings, and the Monte Carlo SD is about 1/√2000 ≈ 0.02.\n- Empty history cells get p = 0, yet the simulated chain can still reach them, which forces dry days.",
+    "severity": "minor",
+    "fix": "- Compute the stationary lag-0 occurrence correlation exactly, from the 2^{2p}-state bivariate chain whose transition probabilities are bivariate-normal orthant probabilities. This is deterministic and smooth, has at most 256 states for p ≤ 4, and can be solved with Brent's method.\n- Set Ω_ss′ to 0 (or the value pooled over months) when a site is constant in a month, and down-weight it in a weighted nearest_cor.\n- For empty history cells, back off to the order p − 1 estimate with a warning.\n- Keep the Monte Carlo estimator only as MomentMatching(legacy = true) for the equivalence test.",
+    "section": "## 5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "Pairwise and censored kernels: approximation accuracy, |ρ| → 1, and AD in later estimation modes",
+    "scenario": "The Positive and CLG pairwise censored likelihoods and WGEN's PairwiseLikelihood reuse norm_cdf_2d_vfast, a Tsay–Ke approximation (fast_bivariate_cdf.jl:19). Some joint probabilities are small: about 1e-2 for both wet in the dry regime, about 1e-4 for both-censored ETPP in summer. Latent ρ for ETPP is around 0.9. A JointEM M-step (4.2) would fit Gamma margins jointly with the coupling.",
+    "what_breaks": "- approxcdf claims 3 to 5 correct decimals. On small orthant probabilities that absolute error becomes a large relative error, which biases pairwise ML.\n- pairwise_loglikelihood_memory computes P(0,0) by subtraction and floors it at 1e-10, creating kinks.\n- As |ρ| → 1, the term Φ((c′ − ρw)/√(1−ρ²)) becomes a step, and denom = 0 gives NaN.\n- The Iij buffers are typed by eltype(R), so a free ω or Dual-valued margin parameters do not fit.\n- ForwardDiff cannot differentiate gamma_inc with respect to the shape, so joint (non-IFM) M-steps for Gamma-based Difference and Positive blocks are not available. The 4.2 claim 'full MLE if every M-step maximises Q_b' cannot hold for them.",
+    "severity": "minor",
+    "fix": "- Use an accurate bivariate-normal CDF (Drezner–Wesolowsky or Genz), generic in the element type, in all likelihoods. Keep vfast for starting values only.\n- Use IntervalLink(−0.995, 0.995) for latent ρ and the coupling r.\n- Write the new censored kernel generic in eltype and test ForwardDiff gradients against finite differences.\n- State in the block protocol that blocks with Gamma or Positive latent margins remain IFM under JointEM.",
+    "section": "## 5. WGEN port and censored latent Gaussian and ## 4. Flagship Regime-HMM product model (4.4)"
+   },
+   {
+    "title": "Initial conditions: laws for censored or missing `past`, z₀ and burn-in under `given` are unspecified",
+    "scenario": "simulate(g, Date(2000):…; past = obs_tail) where ETPP on 1999-12-31 is 0 (censored) or missing; or `past` has no regime column; or burnin = 365 is combined with given = (regime = gcm_path,).",
+    "what_breaks": "- The Positive block needs w₀, but y₀ = 0 only implies w₀ ≤ Φ⁻¹(p0).\n- A missing past day leaves a block's memory undefined.\n- 'z₀ drawn from the chain' does not say from which distribution. v3 used a one-hot `a` at the first training state (tuto :207-208).\n- During burn-in the given regime path does not exist.",
+    "severity": "minor",
+    "fix": "- Censored `past` values: draw w₀ from the truncated normal, using the block's own stream.\n- Missing `past` values: that block and site fall back to burn-in.\n- z₀: draw from the periodic-stationary distribution at t(first − 1), obtained by iterating A(t) over one period, or from the filtered posterior when `past` contains the regime-defining variables.\n- With given.regime: either run burn-in with the chain bridged to end at given.regime[1] (backward sampling), or hold the regime at z₁ during burn-in. Pick one and document it.",
+    "section": "## 2. Core interface (2.4)"
+   },
+   {
+    "title": "Regime identity: label switching across refits and stale decode tables",
+    "scenario": "g1 = fit(obs, RegimeHMM(K = 4)) learns regimes. Later, g2 = fit(merge(obs, obs_new), spec(g1)); spec(g1) prints Regimes(K = 4, …), so the regimes are relearned. Then simulate(g2; given = (regime = decode(g1, obs),)).",
+    "what_breaks": "- spec(g) of a learned-regime fit refits the regimes, which can give a different optimum and labels. order_by = :wetness does not prevent this when wetness orderings cross between seasons.\n- 'Add stations under the same regimes' silently does not hold.\n- A path decoded from g1 is applied with g2's labels without any error.\n- curve(g, :TX, :ρ; regime = 2) cannot be compared across fits.\n- decode(g, data) with frozen pretrained regimes is undefined on new data: the Stage-1 emission needs the 10 ECA stations.",
+    "severity": "minor",
+    "fix": "- Give every regime set an id: a hash of the A coefficients, K and the source. decode tables and WeatherSimulation carry it, and `given.regime` with a mismatched id raises an error.\n- For learned regimes, `show` adds '# learned here; use Regimes(swg) to freeze', and spec(g; freeze_regimes = true) returns the frozen form.\n- Define decode for frozen regimes: either the frozen path on covered dates, or FFBS with the Stage-2 occurrence blocks as emission, labelled as such.",
+    "section": "## 4. Flagship Regime-HMM product model (4.2, 4.3)"
+   },
+   {
+    "title": "Facts the equivalence plan relies on: pretrained station count and v3 groupby order",
+    "scenario": "The P0 artifact is named france_eca37_K4 and described as 'the 37-ECA-station regime generator from tuto_paper'. The L1 test compares fit_TN margins with the fixtures.",
+    "what_breaks": "- tuto_paper.jl:194-201 selects 10 stations (BOURGES … ORLY), so the asset is a K = 4, D = 10 HMM, not 37 stations.\n- v3 fit_TN groups with groupby([:z]) (fit_mle_TN.jl:28), and rand_cond indexes θ_uni[k] by regime label (:109). For 40272002, whose data start on 1993-01-17 after clean_data drops leading missing rows, z first appears in the order 2, 4, 3, 1 (checked in the z_hat CSV).\n- If DataFrames returns groups in first-appearance order, v3's mapping is permuted for that station. L1 and L3 differences would then be wrongly attributed to the intentional changes.",
+    "severity": "minor",
+    "fix": "- Rename the artifact france_eca10_K4_d1_m1.\n- In make_v3.jl, record keys(dfk) per station and compare fits per key.\n- Add an explicit fixture test of v3's group order.",
+    "section": "## 8. Migration and release plan (8.3)"
+   },
+   {
+    "title": "Rain amount copula is estimated on raw ranks pooled over seasons; a positive threshold is not subtracted from amounts",
+    "scenario": "The PairwiseRank default reproduces cor_RR: Spearman on raw RR of co-wet days, pooled over the year within regime k (correlations.jl:107-111). Separately, a user sets Rain(threshold = 1.0) with an Exponential-mixture amount.",
+    "what_breaks": "- The margins are seasonal, and shared seasonal changes of scale make ranks co-move. This inflates the correlation relative to the PIT scale, u = F_{s,k,t}(r), that simulation uses.\n- With threshold = 1.0, amounts fitted on r, not on r − threshold, produce 'wet' days with less than 1 mm.",
+    "severity": "minor",
+    "fix": "- Compute ranks or normal scores on the PITs of the fitted seasonal margins: PairwiseRank(scale = :pit) as the default, with scale = :raw for the v3 golden test.\n- Fit amounts on r − threshold and add the threshold back in simulation.",
+    "section": "## 4. Flagship Regime-HMM product model (4.4)"
+   },
+   {
+    "title": "Multi-output and sub-daily classes need spec-key and context changes that would break later",
+    "scenario": "Future classes: a Richardson VAR over (TX, TN, QQ); an MSTWeatherGen joint field over (RR, TX, TN) with weather types; AWE-GEN-2d at hourly resolution with diurnal × annual seasonality and daily → hourly disaggregation.",
+    "what_breaks": "- RegimeHMM(; blocks...) is keyed by variable name, so a block with three outputs has no key.\n- Defaults by kind would still add default TX and TN blocks.\n- g[:TX] and curve(g, :TX, …) assume one block per variable.\n- given = (TX = …) for one output of a joint block needs partial conditional sampling, which the protocol lacks.\n- The T2a example publishes ctx.n2t[n] and ctx.period as protocol fields. Sub-daily needs (day-of-year, hour) indices and blocks at different resolutions, so changing these fields later breaks published code.\n- Dense D × N × nsim buffers do not scale to gridded fields.",
+    "severity": "minor",
+    "fix": "Before 1.0:\n- Make spec keys block names, with outputs(b) defaulting to (key,). resolve builds a map from variable to (block, output), used by g[var], curve and given.\n- Reserve simulate_block!(…; given_outputs), erroring by default.\n- Expose time only through accessors (B.period_index(ctx, n), B.date(ctx, n), B.timestep(b)) and keep context fields private.\n- Reserve the streaming `sink` from the memory issue.",
+    "section": "## 3. Three tiers, by example (T2a protocol) and ## 9. Risks, trade-offs, open questions (9.11)"
+   },
+   {
+    "title": "Replicate sequences over the same dates cannot be fitted",
+    "scenario": "Refit on all 300 simulated members to check parameter recovery, or fit to several GCM runs that cover the same dates.",
+    "what_breaks": "WeatherData has a single axis of unique dates, so replicates over identical dates cannot be represented. Concatenating them bridges sequences; shifting dates breaks the seasonality. The recovery check in §2.5 (members(sims) refitted) works only one member at a time.",
+    "severity": "minor",
+    "fix": "Accept fit(data::AbstractVector{<:WeatherData}, alg) as independent sequences, passed to SPSM as seq_ends; the HMMs already support this (smooth_hmm_sequences.jl:13-23). Pairwise estimators pool over sequences.",
+    "section": "## 2. Core interface (2.2)"
+   }
+  ],
+  "confirmations": [
+   "Tied variance σ = √(1−ρ²) keeps Var(w_n) = ρ_n²·1 + (1−ρ_n²) = 1 for any time-varying ρ_n and any regime path. Positive and CLG marginals are therefore exactly the fitted hurdle law per (z_n, t_n), positivity holds by construction, and the clipping of v3's indicatrix (tuto :296, :338-341) goes away.",
+   "The lag-1 pair (w_{s,n−1}, w_{s,n}) is exactly N₂ with correlation ρ_{z_n}, even under regime switching. Estimating ρ from lag-1 pairs is valid; only the same-day C estimator needs fixing.",
+   "The wet-set restriction of a Gaussian copula is its exact marginal. Dropping Copulas.jl removes the d ≥ 2 constraint, so one-site wet days and a varying wet-set dimension need no special branch (v3's length(nz_r) == 1 branch, generation.jl:16-19, disappears).",
+   "Leap366 period_index matches dayofyear_Leap exactly (SWG src/utilities.jl:15). Monthly() on the 366-day index agrees with month(date) in leap and non-leap years.",
+   "The frozen-overlap rule reproduces v3's innerjoin: z_hat covers 1956-01-01 to 2019-12-31 (23,376 rows, checked) and the INRAE files end on 2022-12-31.",
+   "Dropping post-gap AR terms is cheap: ar1_sufficient_statistics already takes an index set ns (SPSM AR/AR1.jl:321), so masked conditional likelihoods reuse the O(T) NLL. This fixes cov_ar1's gap bridging via dropmissing! (src/AR1/fit_mle.jl:14-27) and its zero first residual in cov.",
+   "IntervalLink(−1, 1) on ρ(t) keeps the periodic AR(1) stable for any regime path, and _warn_if_unit_root (fit/ar1.jl:117) already exists.",
+   "The Difference density factorisation is correct: Jacobian g/φ × conditional normal × η copula. TN < TX holds by construction, and the four INRAE files have 0 days with TN ≥ TX, so the flagship data fit.",
+   "ETPP zeros are genuinely seasonal (80557001: 394 in January, 606 in December, none May to July), and the totals 223/961/834/1391 match the design. zeros = :seasonal is justified for ETPP.",
+   "Rejecting conditioning on a child to simulate its parent through the DAG is statistically correct.",
+   "The description of WGEN :v3 counting matches wgen.jl:91-95 and :110. v3's simulator carries Y_ini across months (wgen.jl:149-150), so :calendar counting is the estimator consistent with it.",
+   "Block-major simulation plus the noise hook makes the L2 pathwise tests feasible. Declaring full-run bitwise equality with v3 impossible is correct, because v3 draws variable by variable from one global RNG (tuto :311-342).",
+   "Per-member streams make ensemble output independent of the thread count and of nsim, once the seed derivation is fixed.",
+   "Pairwise-complete correlations followed by nearest_cor handle sites with different date ranges for continuous innovations.",
+   "norm_cdf_2d_vfast is plain generic Julia built on erf, so ForwardDiff can differentiate it with respect to ρ, which is all the launch IFM steps need.",
+   "Removing v3's 'regime K independent' workaround (generation.jl:31) in favour of PD projection is sound.",
+   "With Gaussian innovations and one Cholesky factor per group, a single-station dataset reduces to the d = 1 case. resolve should still set copula = nothing when D = 1 so that `show` is honest."
+  ]
+ },
+ {
+  "lens": "maintainer, packaging and migration",
+  "summary": "Most of the packaging design holds up: subdir registration, per-lib [sources] and SPSM in its own repo all match how OrdinaryDiffEq does it. The delivery plan does not hold up as written. The blocker is the single [workspace] manifest. The v3 umbrella declares SPSM as a weakdep with compat \"4.1\", and its ext uses fit_mle_RO, fit_θ and μₜ, all of which 5.0 deletes. So the workspace cannot resolve SPSM 5 before the umbrella cutover, and the P9 order (test libs on 5.0, widen their compat, then cut the umbrella over) cannot be run. The umbrella also sits at the repo root, so the v4 umbrella has no home before release day. That means the T0 five-line workflow, the default solver and the Preview tutorials are first exercised on release day. The umbrella's dependency list would not load SPSM's fitting extension: it needs both Optimization and SimpleNonlinearSolve, and OptimizationOptimJL pulls in only OptimizationBase. Dependency graph: WGEN builds a RegimeHMM, but the table gives it only Core and Blocks. Naming: Continuous clashes with Distributions.Continuous, and curve clashes between Core and SPSM. Persistence: specs are saved with repr and reloaded with eval, which is unsafe and ties the file format to show. SPSM v5 contract: \"third positional argument is always weights\" silently reinterprets the v4 call fit_mle(SmoothAR1(d,T), y, z::Vector{Int}). Several methods also differ between 4.2 and 5.0 (HMM rand return value, positional Y_past), so the \"API present in both\" premise does not hold for them. Migration table: it leaves 34 of the 54 SWG exports unassigned. It wrongly says tuto_genomics is unaffected; it breaks in three places. It also ignores that General has only SWG 1.3.1 registered. Numerical tests: the WGEN Ω atol 0.03 test is statistically infeasible, and four numerical changes are missing from the intentional-differences list (regime relabelling, dropped leading rows, gap bridging in the AR1 margins, TVP average objective). Releasing every launch library at 1.0.0 freezes struct fields and non-public helpers that the docs examples already use.",
+  "issues": [
+   {
+    "title": "Single [workspace] manifest makes the P9 release-day sequence impossible to test",
+    "scenario": "P9 says: after their CI passes against SPSM 5.0, patch Blocks/RegimeHMM/WGEN/CLG to compat \"4.2, 5\", then do the umbrella cutover. During P2–P8 the root Project.toml is still SWG v3. It has SmoothPeriodicStatsModels as a weakdep with compat \"4.1\" (SWG Project.toml [weakdeps]/[compat]), and ext/SmoothPeriodicStatsModelsExt imports fit_mle_RO, μₜ, ρₜ, σₜ, αₜ, fit_loss_optim, TimeVaryingFit and parameters, all of which 5.0 deletes. The libs share the workspace, and Pkg resolves one manifest using every member's compat, weakdep compat included.",
+    "what_breaks": "There is no state of the repo in which the libs resolve SPSM 5 while the root is still v3. The 'lib CI passes against 5.0, then widen compat, then cut over' order cannot be executed. The single manifest also makes the libs co-resolve with docs-only dependencies (CairoMakie 0.15, GeoMakie 0.7, JLD 0.13 in docs/Project.toml). CI then tests libs against dependency versions held back by GeoMakie or JLD, versions that users installing a lib alone never get. OrdinaryDiffEq itself does not use [workspace]: its root and sublibraries use only [sources] (root Project.toml, lib/OrdinaryDiffEqTsit5/Project.toml).",
+    "severity": "blocker",
+    "fix": "1. Remove the libs from [workspace]. Each lib keeps its own [sources] to siblings (path = \"../StochasticWeatherGeneratorsCore\"), its own gitignored Manifest and its own test env, as OrdinaryDiffEqTsit5 does. Keep a workspace only for the umbrella's test/ and docs/, and only after the cutover.\n2. Turn P9 into one pre-built 'cutover' branch: lib compat \"4.2, 5\" plus the umbrella v4. Its CI runs against the SPSM v5 branch through a temporary [sources] {url, rev}.\n3. Merge that branch right after SPSM 5.0.0 is registered. Register the lib patches and umbrella 4.0.0 from the same commit (subdir= for each lib).",
+    "section": "## 1. Package architecture (Registration and versioning) and ## 8.1 / ## 12 P9"
+   },
+   {
+    "title": "With the umbrella at the repo root, the v4 umbrella cannot exist before the cutover, so T0 is first exercised on release day",
+    "scenario": "P4's exit criterion is 'T0 runs in ≤ 6 lines'. P7's exit is 'every tutorial runs' under Preview (v4). T0 needs `using StochasticWeatherGenerators` to provide read_stations, pretrained, re-exported fit/simulate, and the default LBFGS set in the umbrella's __init__. The root stays v3 until P9. P4 instead adds read_stations/pretrained/example_data to the v3 umbrella.",
+    "what_breaks": "pretrained returns a FittedGenerator/FrozenRegimes from Core, Blocks and RegimeHMM. The v3 root would therefore hard-depend on libraries that stay unregistered until P8. No v3.x hotfix can be registered from master between P4 and P9, and any such v3.x would carry the new dependencies. Preview tutorials cannot use the real T0 entry point or its default solver. The 5-line T0 experience, the solver Ref and the umbrella's export list are first run end to end on release day.",
+    "severity": "major",
+    "fix": "Pick one of two options. (a) Develop on a long-lived `v4` branch where the root is already the v4 umbrella. Register the libs from it (`@JuliaRegistrator register branch=v4 subdir=lib/X`) and keep master for v3 patches. (b) Add a temporary, unregistered project `lib/StochasticWeatherGeneratorsNext` holding the v4 umbrella code, and `git mv` it to the root at cutover. Either way, leave the v3 root's deps untouched, and run the T0 and student tutorials through the real umbrella from P4 on.",
+    "section": "## 12. Implementation phases (P4, P7, P9) and ## 8.1"
+   },
+   {
+    "title": "The umbrella's dependencies do not trigger SPSM's fitting extension, and the solver error message is wrong",
+    "scenario": "SPSM's fitting code is the extension `SmoothPeriodicStatsModelsOptimizationExt = [\"Optimization\", \"SimpleNonlinearSolve\"]` (SPSM Project.toml). The design's umbrella hard deps list Optimization and OptimizationOptimJL only. OptimizationOptimJL 0.4.21 depends on OptimizationBase, not Optimization. Core's error message reads 'pass solver = LBFGS() after using OptimizationOptimJL'.",
+    "what_breaks": "`fit(obs, RegimeHMM(...))` reaches SPSM fits whose stubs throw '`…` needs the solver stack' (fit_stubs.jl:11-19), or a bare MethodError for fit_mle. T0 fails. A user of a lib alone who follows the message (`using OptimizationOptimJL`) still has no extension loaded. Lib PrecompileTools workloads that 'fit' cannot run, because the libs have no solver, so the fit path is never precompiled outside the umbrella. The default also lives in a mutable Ref set by the umbrella's __init__, so any package calling set_default_solver! changes the results of other code.",
+    "severity": "major",
+    "fix": "1. Add SimpleNonlinearSolve (and ForwardDiff, which the default AutoForwardDiff adtype needs) to the umbrella's hard deps. Alternatively, have SPSM 5 split its extension so the AR1, mixture and SmoothDistribution fits trigger on OptimizationBase alone, and only the NLLS paths need SimpleNonlinearSolve.\n2. Make the error message list the exact packages to load.\n3. Replace the Ref with a Core package extension on OptimizationOptimJL that defines default_solver(), so users of a lib alone also get it deterministically.\n4. Record the solver in FitInfo provenance.\n5. Restrict lib precompile workloads to closed-form fits and simulate. Put the full fit workload only in the umbrella, with threads = false.",
+    "section": "## 2. Core interface (2.3 Solver) and ## 1 package table, D11"
+   },
+   {
+    "title": "WGEN (and CLG with others = :auto) depend on RegimeHMM, but the dependency table says Core + Blocks",
+    "scenario": "§5 implements `SWGCore.resolve(w::WGEN, data) = as_wgen(SWGCore.resolve(RegimeHMM(regimes = NoRegimes(), …)))`, and `expand(spec(g))` prints a RegimeHMM. CLG's `others = :auto ⇒ flagship presets for TX` uses the 'default blocks by variable kind', which the §1 table places in the RegimeHMM library. The §1 table lists WGEN deps as Core, Blocks and CLG deps as Core, Blocks.",
+    "what_breaks": "`using StochasticWeatherGeneratorsWGEN; fit(obs, WGEN())` raises UndefVarError: RegimeHMM. The registration order in P8 is also wrong: WGEN and CLG need RegimeHMM merged first, which adds another sequential 3-day wait. 'One sublibrary per model class, loadable alone' becomes 'every class loads the flagship'.",
+    "severity": "major",
+    "fix": "Move the generic product generator type (e.g. an internal `ProductGenerator`, with resolve, fit_generator and simulate_member!) and the kind→default-block table into Blocks. RegimeHMM becomes a thin preset constructor over it, and WGEN/CLG resolve to the Blocks type, so expand() prints the Blocks form. If RegimeHMM must stay the engine, declare it as a dependency of WGEN and CLG and order P8 as Core → Blocks → RegimeHMM → WGEN/CLG.",
+    "section": "## 1. Package architecture (table) and ## 5. WGEN port and censored latent Gaussian"
+   },
+   {
+    "title": "T1 vocabulary clashes with Distributions and SPSM exports",
+    "scenario": "The T1 example starts `using StochasticWeatherGenerators, Distributions`, then uses `Continuous(Normal; …)`. Distributions exports `Continuous` (Distributions.jl src line 46, a ValueSupport type). Core exports its own `curve(g, var, par; …)`, while SPSM exports TVP's `curve`. The T2 door (`swg[:TX].models[1]`, then `curve(m, :μ)` after `using SmoothPeriodicStatsModels`) loads both. In the 4.2 lane, SPSM 4.x exports `AR1` (the evaluated twin), and Blocks defines `AR1()`.",
+    "what_breaks": "Julia warns that both modules export the name and that uses must be qualified, then throws UndefVarError for Continuous in every T1 session. The same happens for `curve` as soon as an expert loads SPSM next to SWG, which is exactly the T1→T2 path. Blocks, which itself uses Distributions and must distinguish Continuous from Discrete ValueSupport, has to qualify the name everywhere. The student 'small consistent vocabulary' breaks at its first use.",
+    "severity": "major",
+    "fix": "1. Rename the block, e.g. `Marginal(Normal; …)` or `ContinuousVariable`.\n2. Make `curve` a single function: Core does not export its own `curve`; Blocks adds `SmoothPeriodicStatsModels.curve(::FittedGenerator, …)` methods, and the umbrella re-exports SPSM's `curve`.\n3. Add a CI test that runs `using StochasticWeatherGenerators, Distributions, SmoothPeriodicStatsModels, DataFrames, StatsBase` and asserts every T0/T1 name resolves unqualified.\n4. Document that the T2 door needs `] add SmoothPeriodicStatsModels`: it is an indirect dependency and cannot be `using`'d otherwise.",
+    "section": "## 3. Three tiers, by example (T1 vocabulary) and ## 4.2 Spec objects"
+   },
+   {
+    "title": "Persistence by repr(spec) + eval is fragile, unsafe and missing class hooks",
+    "scenario": "load_generator 'rebuilds the spec by evaluating that text'. Core has no dependency on Blocks, RegimeHMM or Distributions, so the text `RegimeHMM(RR = Rain(amount = Mixture(Exponential, 2)…))` has to be evaluated in some module that has these names. Specs can hold data: Regimes(paper), Regimes(path = table), Regimes(data = eca37), and show prints `Regimes(pretrained(:…))`. Custom blocks (the RegimeAnalog θ holds a Dict{Tuple{Int,Int},…}) and T2b classes (KNN params hold a WeatherData) have no serialisation hook: the 'what a class implements' list omits one. The pretrained JSON stores flat SPSM coefficient vectors, and 5.1 plans a SoftmaxLink rewrite of the transition coefficients.",
+    "what_breaks": "(1) Loading fails for users of a lib alone and for any custom block. (2) A shared .swg.json runs arbitrary code. (3) Any cosmetic change to `show` breaks old files, the pretrained artifacts included. (4) Specs holding data do not round-trip as text, so the claim that 'show prints valid Julia' fails for frozen regimes. (5) A coefficient-layout change in an SPSM minor silently misreads stored vectors, a silent numerical change in a pretrained generator.",
+    "severity": "major",
+    "fix": "1. Serialise the spec as a structured JSON tree: type tag, version and kwargs.\n2. Add public `to_plain`/`from_plain` hooks per block and per class, with an erroring fallback, so `save_generator` names the type that lacks support.\n3. Never call eval.\n4. Version the format and keep a reader for every past version.\n5. Store evaluated curves (A(t), p(t), μ/ρ/σ(t)) next to the coefficients, and on load check that the rebuilt model reproduces them.\n6. Freeze the format at P8, not P0. P0 should dump neutral raw arrays only.",
+    "section": "## 2. Core interface (2.7 Save, load, pretrained)"
+   },
+   {
+    "title": "SPSM 4.2∩5.0 is not a consistent common API, and 'third positional is always weights' silently reinterprets v4 calls",
+    "scenario": "(a) In v4, `fit_mle(SmoothAR1(d, T), y, z::Vector{Int}; n2t)` (fit/ar1.jl:66) infers K = maximum(z) when the model was built without K (fit/ar1.jl:129-133, documented at :60). Under 5.0's 'N-vector = weights', the same call is a K = 1 fit weighted by the labels 1..K. (b) The 4.x method `fit_mle(::SmoothARPeriodicHMM, Y, Y_past::AbstractArray{<:Bool})` (fit/smooth_hmm.jl:227) captures a Bool N×K weight matrix, and also captures OneHot if OneHot <: AbstractMatrix{Bool} and no more specific method exists. (c) `rand(hmm, n2t)` returns `y` in 4.x (HHMM_Bernoulli/periodichmm.jl:98-107, seq = false) but `(; z, Y)` in 5.0. (d) `fit(SeasonalFit, m::_SmoothHMM, Y, Y_past)` (smooth_hmm.jl:573) takes Y_past as a required positional argument.",
+    "what_breaks": "(a) is a silent wrong model with no error. (b)–(d) mean the premise 'the libraries use only API present in both 4.2 and 5.0: … keyword rand, fit(SeasonalFit, …)' does not hold method by method, so the pre-registered libs (compat \"4.2\") may break when widened to 5.",
+    "severity": "major",
+    "fix": "1. Require typed weights in 5.0: `OneHot(z, K)`, a `StateWeights(W)` wrapper, or StatsBase `AbstractWeights`.\n2. Make `fit_mle(m, y, ::AbstractVector{<:Integer})` throw \"did you mean OneHot(z, K)? For integer frequency weights pass float.(w)\".\n3. Publish an explicit per-method table of what exists in 4.2 and in 5.0, and add a Blocks CI lane against 4.2.\n4. Have the libs call only `fit(SeasonalFit, …; past)` (added in 4.2) and their own regime samplers, never SPSM's HMM `rand`.\n5. Optionally, 4.2 emits `Base.depwarn` on the old positional forms. Pkg.test enables depwarns, so downstream suites see them before 5.0. This is not a shim in 5.0.",
+    "section": "## 6. SPSM v5 (6.1 Engine contract) and ## 8.1 P1"
+   },
+   {
+    "title": "The migration table is incomplete against the real export lists and mislabels the genomics tutorial",
+    "scenario": "SWG v3 exports 54 names (src/StochasticWeatherGenerators.jl:43-70). §8.2 and §7 give a fate for about 20 of them. No fate is given for these 34: cor_RR, joint_rain, Σ_Spearman2Pearson, Σ_Kendall2Pearson, corTail, fit_markov_chain, cor_groupby, select_in_range_df, collect_data_ECA, collect_data_ECA!, collect_data_MeteoFrance, download_data_MeteoFrance, clean_data, isvalid_data_ECA, shortname, distance_x_to_y, distance_x_to_all_stations, dms_to_dd, haversine, LLA, vec_triu, zerofy, my_color, whole_year, pmf_spell, errorline(!), errorscatter(!), errorlinehist(!), errorscatterhist(!), map_with_stations. The `wgen(…, ncat > 2)` categorical option is also unmentioned. On the SPSM side, §6.3 says tuto_genomics uses API that is 'unchanged'. In fact it calls `rand(truth, 1:T; Y_past, seq=true)` (:142), `fit(SeasonalFit, m0, Ys, Y_pasts; n2t)` (:183, :256) and `viterbi(m, Ys, Y_pasts; n2t)` (:238), all of which break under 'past replaces positional Y_past'. Finally, General lists only SWG 1.3.1 (Versions.toml); 2.x and 3.0.0 were never registered.",
+    "what_breaks": "Under a clean break with no shims, every unlisted name is an UndefVarError with no documented replacement. The domain-agnostic showcase tutorial breaks. Users of the registered SWG version are on 1.3.1, with N×D layouts and no solver keyword, and their path is not in the guide at all.",
+    "severity": "major",
+    "fix": "1. Generate the table mechanically from `names(M)` for SWG 1.3.1, SWG 3.0.0 and SPSM 4.1.\n2. Add a CI test asserting that every old exported name has a row: keep, rename, move to the plot extension, or remove, with its replacement.\n3. Add rows for `fit(SeasonalFit, hmm, Ys, Y_pasts)`, `viterbi(m, Ys, Y_pasts)`, the vector-of-sequences `past`, and `rand(…; seq)`/`z_ini`.\n4. Correct the §6.3 genomics claim.\n5. Add a column for 1.3.1, or state explicitly which baseline the guide covers.",
+    "section": "## 8. Migration and release plan (8.2) and ## 6.3 Exports"
+   },
+   {
+    "title": "Registration facts and timing: version skip, unregistered v3 pin, sequential 3-day waits",
+    "scenario": "General's Versions.toml for SWG contains only 1.3.1, and the local repo has only the tag v1.3.1. P0 pins fixtures to 'SWG 3.0.0 + SPSM 4.1.0' in a committed Manifest. P8 pre-registers Core → Blocks → classes 'at least 2 weeks' before release. The umbrella goes from 1.3.1 to 4.0.0. The local remote is `StochasticWeatherGenerator.jl` (singular), while General records `StochasticWeatherGenerators.jl.git`. The dev_pkg LocalRegistry (docs/add_local_registry.jl) carries the same UUID at 1.x-DEV.",
+    "what_breaks": "SWG 3.0.0 cannot be resolved from any registry, so the fixture Manifest must pin by repo-url plus git-tree-sha1. If test/reference is a workspace member, its dependency on SWG (UUID 3eadb0b9) collides with the root package's own UUID. Umbrella 4.0.0 fails AutoMerge's sequential-version check and needs `[merge approved]`. AutoMerge's install check needs a package's dependencies already merged, and new packages wait 3 days, so P8 takes at least 9–12 days with no slack (more if WGEN must follow RegimeHMM). Any slip runs into release day.",
+    "severity": "major",
+    "fix": "1. Decide now whether to register 3.0.0, which makes 4.0.0 sequential and gives the fixtures a registry pin, or to skip it and plan the `[merge approved]` step.\n2. Pin the v3 fixtures by git tree and keep test/reference out of [workspace].\n3. Start P8 at least 4 weeks before release, or ask the General maintainers to batch-merge the monorepo packages.\n4. Fix the remote URL.\n5. Retire add_local_registry.jl and the dev_pkg entries.",
+    "section": "## 1. Package architecture (Registration and versioning) and ## 12 P0/P8"
+   },
+   {
+    "title": "Launching Core and Blocks at 1.0.0 freezes struct fields and helpers that are not public",
+    "scenario": "The design's own examples access fields: g.params, g.spec.k, swg.info.selection, swg[:TX].models[1], ctx.y, ctx.name, ctx.n2t, ctx.period, ctx.z, out.values, out.innovations, and data.calendar (although WeatherData fields are 'private'). The T2b KNN class calls SWGCore.standardized_features, initial_day, circdist and copy_day!, none of which is in Core's export or public list. The precedent: OrdinaryDiffEqTsit5 and the OrdinaryDiffEq root both require `OrdinaryDiffEqCore = \"4.15.1\"`, so Core has gone through several majors.",
+    "what_breaks": "The first needed change to FitContext, SimContext, BlockOutput or FittedGenerator layout is Blocks or Core 2.0. That cascades into compat bumps in every class lib and, through re-exports, an umbrella major. Third-party class authors following the T2b example depend on non-semver internals, which contradicts 'other classes addable later without breaking changes'. Re-exporting future 0.x classes from the 4.x umbrella ties the umbrella's semver to their churn.",
+    "severity": "major",
+    "fix": "1. Expose accessor functions only: spec(g), params(g), fitinfo(g), selection(g), models(block), and ctx accessors.\n2. List every class-author and block-author function as `public` before 1.0, or label the T2 protocol 'experimental: may change in minor releases' in the docs and in the `public` docstrings.\n3. Have the umbrella re-export only T0/T1 names. Keep the T2 protocol behind `import StochasticWeatherGeneratorsBlocks as B`.\n4. Do not re-export 0.x classes until they reach 1.0.",
+    "section": "## 1. Package architecture and ## 3. Three tiers (T2a/T2b), ## 2.3"
+   },
+   {
+    "title": "No CI lane tests registered sibling combinations or lower bounds",
+    "scenario": "Every CI lane develops the siblings by [sources] path. Suppose RegimeHMM 1.1 starts calling a function added in Blocks 1.1 but keeps compat `StochasticWeatherGeneratorsBlocks = \"1\"`.",
+    "what_breaks": "Users who resolve Blocks 1.0 (because another package holds it back) get UndefVarError at runtime. CI never sees this because it always uses HEAD of every sibling. The listed Downgrade workflow does not help: path-sourced deps bypass it.",
+    "severity": "major",
+    "fix": "1. Adopt the OrdinaryDiffEq rule that a sibling's lower bound is bumped whenever new sibling API is used (cf. `OrdinaryDiffEqCore = \"4.15.1\"`).\n2. Add a 'registered siblings' CI lane on release PRs that strips [sources] and resolves the siblings from General at their declared lower bounds.\n3. Run Downgrade per lib with siblings taken from the registry.",
+    "section": "## 1. Package architecture (.github/workflows) and ## 12 P0"
+   },
+   {
+    "title": "The SPSM coupling is wider than the stated ~12-function contract, and the Downstream job goes silent exactly when it matters",
+    "scenario": "Blocks uses SPSM `public` internals: norm_cdf_2d_vfast, pairwise_loglikelihood_memory, ar1_sufficient_statistics, PeriodicNLL, update_dist, solve_objective and fit_mle_all_slices. §6.3 marks about 45 names `public`. 5.1 and 5.2 plan a SoftmaxLink dedup, CachedLogDensity and masked emissions. The Downstream job runs only the Blocks and RegimeHMM tests. When SPSM main moves to 5.0.0-DEV, libs with compat \"4.2\" fail to resolve, and SciML-style downstream templates treat a ResolutionError as a skip.",
+    "what_breaks": "Under Julia's `public` semantics, any signature change to those kernels is an SPSM major, which forces lockstep majors again; otherwise it silently breaks Blocks. CLG (SmoothDistribution, latent kernels) and WGEN (pairwise kernels) are never tested downstream. During the 5.0 breaking PR the Downstream job reports green without running anything.",
+    "severity": "major",
+    "fix": "1. Make `public` only the engine contract Blocks actually needs, and list it explicitly. Leave the other internals unmarked, and have Blocks pin those internals with tight compat or vendor them.\n2. Have Downstream run all four libs.\n3. On SPSM's v5 branch, check out a SWG branch whose compat admits the dev version, and fail on ResolutionError instead of skipping.\n4. Add a nightly SWG lane against SPSM main.",
+    "section": "## 6. SPSM v5 (6.3) and ## 1 (SPSM stays in its own repo)"
+   },
+   {
+    "title": "Numerical changes missing from the intentional-differences list, and an infeasible WGEN Ω tolerance",
+    "scenario": "Regimes has `order_by = :wetness`. collect_data_INRAE→clean_data deletes leading rows of every variable while an imputed column is missing (src/data/extracting.jl:161-163), whereas WeatherData keeps the complete axis. v3 fit_AR1 calls dropmissing and bridges gaps (ext fit_mle_AR.jl:1, :24-25), affecting the margins as well as cov_ar1. SPSM 5 switches the TVP fit to the average objective; it is unnormalised today (TVP fit.jl:139-149). The WGEN Ω test uses atol 0.03 against v3 fit_Ω, which runs a 2000-day Monte Carlo inside the root find and advances the RNG there (wgen.jl:179). Member seeds are Xoshiro(hash(i, seed)).",
+    "what_breaks": "Learned or pretrained regimes could be silently relabelled, so `curve(...; regime = 2)`, sims.regime and the my_color ordering no longer match the v3 z_hat or the paper figures. TN, QQ and ETPP fits use extra early days, and AR1 margins change on gappy stations, but neither appears in the intentional-differences list. The v3 Ω estimate itself has a Monte Carlo SD of a few 0.01, so CRN versus v3 differences above 0.03 are routine: with 36+ pair-months the test either fails or gets loosened ad hoc. Ensembles are reproducible only within one Julia and Distributions version, because Base.hash and the samplers are not version-stable.",
+    "severity": "major",
+    "fix": "1. Never relabel frozen or pretrained regimes, and assert that ẑ labels equal z_hat_K_4_d_1_m_1.csv exactly.\n2. Either replicate the leading-row trim in read_stations(INRAE()) or add it to the list. Also add 'AR1 margins drop gap terms' and 'TVP average objective' to the list.\n3. Compare WGEN Ω against a high-nsim v3 reference (e.g. 10^6 days) with a tolerance in Monte Carlo SE units, Bonferroni-corrected.\n4. Derive member RNGs through a documented seeding (e.g. Xoshiro seeded with [base, i]), and store the Julia and Distributions versions in the WeatherSimulation provenance.",
+    "section": "## 8. Migration and release plan (8.3 Numerical equivalence)"
+   },
+   {
+    "title": "CI and docs mechanics for the monorepo are underspecified",
+    "scenario": "The design proposes a CI.yml with path filters, a Documentation.yml that runs on `tags: '*'` (existing), deploydocs(repo, devbranch = \"master\") (docs/make.jl:88), a @time_imports gate at 1.5× budget, CompatHelper with subdirs while the repo already uses Dependabot for /, /docs and /test, and lib/X/test projects.",
+    "what_breaks": "(1) Path-filtered required checks stay 'pending' and block merges, and a Core-only change must still trigger every dependent lib. (2) Each lib tag such as StochasticWeatherGeneratorsCore-v1.0.0 starts a full docs build (37-station tutorial fits) that Documenter then refuses to deploy. 'Stable' docs follow umbrella tags only, so a lib minor's docs are visible only under dev. (3) Import-time gates on shared runners are flaky. (4) Two dependency bots, or neither, end up covering lib/*. (5) lib test envs that are neither listed in a workspace nor declared via [extras]/[targets] will not resolve under Pkg.test.",
+    "severity": "minor",
+    "fix": "1. Use a single always-run workflow with dorny/paths-filter and an explicit dependency map (Core → all).\n2. Build docs on `v*` tags only, with tag_prefix set.\n3. Track load time as a nightly metric and fail only above 2×.\n4. Pick one bot and list every lib directory.\n5. Specify per-lib test deps through [extras]/[targets].",
+    "section": "## 1. Package architecture (.github/workflows)"
+   },
+   {
+    "title": "The umbrella tarball carries about 100 MB of data, and master-relative URLs break at cutover",
+    "scenario": "The root is the umbrella, so its registered tree includes lib/, weather_files (53 MB) and assets (46 MB). The tutorials download from refs/heads/master paths: tuto_paper.jl:184, :251 and tuto_add_station_variable.jl:139 (assets/tuto_1/hmm_fit_K_4_d_1_m_1.jld). examples/tuto_paper_ascmo.qmd is the paper's reproducibility code.",
+    "what_breaks": "Every umbrella install downloads the whole repo tree. Moving or deleting those files at cutover breaks the v3 docs, users' copies of the tutorials and the paper code.",
+    "severity": "minor",
+    "fix": "1. Ship pretrained, example_data and weather_files as lazy Artifacts (GitHub release tarballs).\n2. Keep the old master paths, or rewrite the v3 links to a tag.\n3. Freeze the paper code in a folder with a Manifest pinned to 3.0.0 or 1.3.1.",
+    "section": "## 2.7 Save, load, pretrained and ## 12 P0/P9"
+   },
+   {
+    "title": "'Copulas leaves SWG' brings no load-time gain while SPSM still loads it",
+    "scenario": "SPSM keeps `using Copulas` (SmoothPeriodicStatsModels.jl:15). The only use is the multisite rand at AR/AR1.jl:131-132, which 5.0 moves to Blocks. Copulas 1.0.1 depends on Optim, ForwardDiff, HCubature, Roots and TaylorSeries, among others (SPSM Manifest).",
+    "what_breaks": "The Blocks ≤ 3.5 s and umbrella ≤ 8 s budgets still pay for Copulas and its Optim stack through SPSM.",
+    "severity": "minor",
+    "fix": "Drop Copulas from SPSM 5.0's [deps] and keep it as a test-only dependency. Measure SciMLBase's share of load time, which is still a hard dependency.",
+    "section": "## 6. SPSM v5 and ## 1 (Load time)"
+   },
+   {
+    "title": "The Aqua disambiguation method is type piracy in Blocks",
+    "scenario": "§7 closes the ambiguity between fit(::Type{<:Distribution}, x) and fit(data, ::AbstractGenerator) with an erroring method defined in Blocks. Blocks owns neither StatsAPI.fit, nor Distribution, nor AbstractGenerator (which belongs to Core).",
+    "what_breaks": "Aqua's piracy test fails in Blocks. Similar ambiguities exist with StatsBase's fit(::Type{Histogram}, …) and are not caught by testing Core alone.",
+    "severity": "minor",
+    "fix": "Define the disambiguations in Core package extensions on Distributions and StatsBase (weakdeps). Run Aqua's ambiguity test on the umbrella with those packages loaded.",
+    "section": "## 7. Naming and verbs"
+   }
+  ],
+  "confirmations": [
+   "Subdir registration is standard practice. General's Package.toml for OrdinaryDiffEqCore records repo = OrdinaryDiffEq.jl.git and subdir = \"lib/OrdinaryDiffEqCore\" (verified in the local General tarball).",
+   "The OrdinaryDiffEq root and its sublibraries use [sources] path entries to siblings (root Project.toml; lib/OrdinaryDiffEqTsit5/Project.toml), and the registry ignores [sources]. The design's 'dev only' use of [sources] is sound; only adding [workspace] on top causes the coupling problem.",
+   "SPSM 4.0.0 and 4.1.0 are registered in General, so an additive 4.2 and then 5.0 are sequential versions with no AutoMerge skip problem for SPSM.",
+   "SPSM and SWG require julia = \"1.12\", so `public`, [sources] and [workspace] are all available natively. No Compat.@compat is needed.",
+   "Leap366's period_index is exactly v3 dayofyear_Leap (SWG src/utilities.jl:15), so Date→t is unchanged.",
+   "All 94 SPSM v4 exports (SmoothPeriodicStatsModels.jl:51-199) are assigned in §6.3 to exported, public or removed. fit_loss_optim maps to solve_objective and params/parameters/nparams map to m(t)/coef/dof.",
+   "HMM_Spatial_codepaper's Manifest pins SPSM 2.1.2, so 5.0's removals (randARPeriodicHMM, Trig2ARPeriodicHMMSpatial, parameters) do not break it.",
+   "The 5.0 change of fit_mle from returning a tuple to returning the model fails loudly: SmoothAR1, the mixture and the HMM types are not iterable, so `m, h = fit_mle(...)` errors instead of mis-destructuring. Making n2t required is also loud.",
+   "WGEN counting = :v3 can be bitwise ==. v3 probabilities are integer count/total divisions (wgen.jl:91-101), and p(wet | s) = transition_probs[j][s][[s[2:p]; 1]] (wgen.jl:127) maps one to one onto a closed-form P(O = 1 | h) table.",
+   "The L2 noise-injection test against v4 rand(ARs, ϵ, n2t, z, Σ; y₁) is feasible because that method is deterministic given ϵ and never reads Σ (AR1.jl:147-156). GaussianCopula normalises cov_ar1's covariance, so switching to correlation plus nearest_cor does not change the innovations' scale.",
+   "Dropping NonlinearSolve and OrderedCollections from SWG is feasible: they are used only by wgen.jl (IntervalNonlinearProblem in fit_Ω, OrderedDict tables), which is being rewritten.",
+   "Making the MeteoFrance download lazy correctly removes the network call at precompile time (src/data/extracting.jl:176).",
+   "SWG has no test CI today (only Documentation.yml and TagBot.yml, and tests run only as a side effect of the docs build's coverage), so P0 'test CI first' is necessary and can be merged on its own.",
+   "Keeping SPSM in its own repo is justified: it has a co-author and its own General history (2.0.3 to 4.1.0), and its domain-agnostic users (tuto_genomics) do not need SWG.",
+   "New packages may be registered directly at 1.0.0 under AutoMerge, and the long StochasticWeatherGenerators* names are far enough from existing names to pass the similarity checks."
+  ]
+ }
+]
