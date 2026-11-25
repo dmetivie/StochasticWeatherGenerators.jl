@@ -591,7 +591,7 @@ wgen4_model = fit_wgen(Y, idx_months, wgen_order)
 
 ys_wgen = similar(ys)
 @time "Simulation Y wgen 4" for i in 1:Nb
-    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_ini=hcat(rand(Bool, D, wgen_order - 1), Y_past))
+    ys_wgen[:, :, i] = rand(wgen4_model, 1956:2019; Y_past=hcat(rand(Bool, D, wgen_order - 1), Y_past))
 end
 
 md"""

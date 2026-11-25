@@ -173,6 +173,9 @@ function clean_data(df::DataFrame; show_warning=false, impute_missing=[])
     return df
 end
 
+# The Météo France functions are disabled: the data.gouv.fr API changed in 2024 and they no longer work.
+# `df_api_url` also downloaded a file at load time, i.e. when the package is precompiled.
+#=
 const meteofrance_id_to_url = "https://www.data.gouv.fr/fr/datasets/r/966dcd99-2856-44d0-8a2d-0b1a1c5ee737"
 
 df_api_url = CSV.read(Base.download(meteofrance_id_to_url), DataFrame)
@@ -229,3 +232,5 @@ function collect_data_MeteoFrance(STAID; show_warning=false, impute_missing=[], 
     rename!(df_full, :NUM_POSTE => :STAID, :NOM_USUEL => :STANAME, :AAAAMMJJ => :DATE)#, :GLOT => :QQ)
     return clean_data(df_full; show_warning=show_warning, impute_missing=impute_missing)
 end
+
+=#

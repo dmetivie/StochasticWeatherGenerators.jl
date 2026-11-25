@@ -14,6 +14,20 @@ Pkg.add("StochasticWeatherGenerators")
 pkg> add StochasticWeatherGenerators
 ```
 
+## Getting started
+
+The seasonal fits (hidden Markov models, AR(1), rain amounts) are provided by [SmoothPeriodicStatsModels.jl](https://github.com/dmetivie/SmoothPeriodicStatsModels.jl) through package extensions, and each fit takes its optimization algorithm as a `solver` keyword. Load them with:
+
+```julia
+using StochasticWeatherGenerators
+using SmoothPeriodicStatsModels
+using Optimization, SimpleNonlinearSolve # activate the fits
+using OptimizationOptimJL # an optimization algorithm, e.g. solver = LBFGS()
+```
+
+The plot functions need `using Makie` (or a backend such as `CairoMakie`), and `map_with_stations` also `using GeoMakie, NaturalEarth`.
+See the [Get started page](https://dmetivie.github.io/StochasticWeatherGenerators.jl/dev/getstarted/) of the documentation for the conventions and a first example.
+
 ## Stochastic Weather Generators
 
 Stochastic Weather Generators (SWGs) are statistical tools that create realistic sequences of weather data by mimicking patterns found in observations. They are used to study climate variability and provide synthetic data for impact models in fields like hydrology and agriculture.

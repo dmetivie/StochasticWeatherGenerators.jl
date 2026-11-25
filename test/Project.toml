@@ -24,7 +24,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 StochasticWeatherGenerators = {path = ".."}
 
 [compat]
-CSV = "0.10.16, 1"
+CSV = "0.10, 1"
 DataFrames = "1.8"
 DataFramesMeta = "0.15"
 Dates = "1.11"

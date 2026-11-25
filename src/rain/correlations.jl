@@ -37,7 +37,7 @@ function Σ_Spearman2Pearson(M::AbstractMatrix; dims=1)
     if n > 1
         return 2sin.(corspearman(X) .* (π / 6))
     else
-        return [j == 1 ? 1 : missing for i in 1:d, j in 1:d]
+        return [i == j ? 1.0 : missing for i in 1:d, j in 1:d]
     end
 end
 
@@ -53,7 +53,7 @@ function Σ_Kendall2Pearson(M::AbstractMatrix; dims=1)
     if n > 1
         return sin.(corkendall(X) .* (π / 2))
     else
-        return [j == 1 ? 1 : missing for i in 1:d, j in 1:d]
+        return [i == j ? 1.0 : missing for i in 1:d, j in 1:d]
     end
 end
 
@@ -131,8 +131,11 @@ function cor_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pears
     return ΣS_k
 end
 
+# `cor2cov` of StatsBase does not accept `missing` coefficients, which `cor_RR` can return.
+_cor2cov(Σ, s) = any(ismissing, Σ) ? Σ .* (s * s') : cor2cov(Σ, s)
+
 """
-    cov_RR(dfs::AbstractArray{<:DataFrame}[, K]; cor_method=Σ_Spearman2Pearson, force_PosDef = true)
+    cov_RR(dfs::AbstractArray{<:DataFrame}[, K];cor_method=Σ_Spearman2Pearson, force_PosDef = true)
 Compute the (strictly positive) rain pair covariance `cov(Rs₁ > 0, Rs₂ > 0)` between each pair of stations `s₁, s₂` for each hidden state `Z = k`.
 
 Input: a array `dfs` of `df::DataFrame` of length `S` (number of station) where each `df` have :DATE, :RR, :z (same :z for each df).
@@ -151,17 +154,17 @@ Options:
 """
 function cov_RR(dfs::AbstractArray{<:DataFrame}, K; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     ΣS_k = cor_RR(dfs, K; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
-    return [cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
+    return [_cor2cov(Σ, [std(@subset(df, :z .== k, :RR .> 0).RR) for df in dfs]) for (k, Σ) in enumerate(ΣS_k)]
 end
 
 function cor_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     D = length(dfs)
-    ΣS = zeros(D, D) + StochasticWeatherGenerators.I
+    ΣS = Matrix{Union{Float64,Missing}}(zeros(D, D) + LinearAlgebra.I)
     for j1 in 2:D
         for j2 in 1:j1-1
             R1R2 = @subset(innerjoin(dfs[j1], dfs[j2], on=:DATE, makeunique=true), :RR .> 0, :RR_1 .> 0)
             R1R2 = permutedims(R1R2[!, [:RR, :RR_1]] |> Matrix) # 2 × n
-            ΣS[j1, j2] = ΣS[j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2, 2) < 1, impute_missing, cor_method(R1R2; dims=2)[1, 2])
+            ΣS[j1, j2] = ΣS[j2, j1] = ifelse(!isnothing(impute_missing) && size(R1R2, 2) < 2, impute_missing, cor_method(R1R2; dims=2)[1, 2])
         end
     end
     if all((!ismissing).(ΣS)) # are they no missing?
@@ -180,5 +183,5 @@ end
 
 function cov_RR(dfs::AbstractArray{<:DataFrame}; cor_method=Σ_Spearman2Pearson, force_PosDef=true, impute_missing=nothing)
     ΣS = cor_RR(dfs; cor_method=cor_method, force_PosDef=force_PosDef, impute_missing=impute_missing)
-    return cor2cov(ΣS, [std(@subset(df, :RR .> 0).RR) for df in dfs])
+    return _cor2cov(ΣS, [std(@subset(df, :RR .> 0).RR) for df in dfs])
 end

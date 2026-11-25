@@ -21,21 +21,9 @@ collect_data_ECA
 
 ## [Météo France](@id DataMeteofrance)
 
-Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
-This package provides a simple command to extract the data of one station (given its STAtionID) from the API.
-
-````@example data
-collect_data_MeteoFrance(34154001)[1:10,:] # Montpellier Airport
-````
-
-!!! warning 
-    As it is rather new, this DataGov/MeteoFrance API may change in the future making this function not working anymore.
-    It is currently not fully working. One would have to call the DataGov API directly.
-
-```@docs
-collect_data_MeteoFrance 
-download_data_MeteoFrance 
-```
+Météo France publishes its daily data on [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
+The functions that read it from the API (`collect_data_MeteoFrance`, `download_data_MeteoFrance`) are disabled since the API changed in 2024. I'll try to fix it in future versions.
+Download the files from the website and read them with `CSV.jl`, then pass the `DataFrame` to [`clean_data`](@ref).
 
 ## INRAE
 

@@ -14,8 +14,8 @@ With a `DataFrame`, the series is the column `var`, the period index is the day 
 
 `init` is the starting point `(μ = …, ρ = …, σ = …)` of the fit, as in `SmoothAR1`. By default it
 is read off the data: `ρ` is the lag-1 autocorrelation of the series minus its mean per period
-index, and `μ` and `σ` give the series' mean and spread. `solver`, the optimization algorithm, is
-required. It and the other keywords (`adtype`, `ensemble`, `solve_kwargs`) go to
+index, `μ` follows the mean of the series per period index, and `σ` is its spread. `solver`, the
+optimization algorithm, is required. It and the other keywords (`adtype`, `ensemble`, `solve_kwargs`) go to
 `SmoothPeriodicStatsModels.fit_mle`, which fits a `SmoothAR1`. Returns the evaluated `AR1`;
 build the model yourself if you want its coefficients or its fit history.
 """
@@ -35,7 +35,7 @@ function StochasticWeatherGenerators.fit_AR1(df_full::DataFrame, var, 𝐃𝐞�
     end
 end
 
-function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, z::AbstractVector, n2t, 𝐃𝐞𝐠, K, T; init=_ar1_init(y, n2t), kwargs...)
+function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, z::AbstractVector, n2t, 𝐃𝐞𝐠, K, T; init=_ar1_init(y, n2t, 𝐃𝐞𝐠, T), kwargs...)
     # `fit_mle` reduces the series to its sufficient statistics per (day, state) and solves the
     # `K` independent problems as one `EnsembleProblem`. Since v4 the model carries its own
     # coefficients, so `AR1` of the fit is the whole reconstruction.
@@ -43,7 +43,7 @@ function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, z::AbstractVecto
     return AR1(fitted)
 end
 
-function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, n2t, 𝐃𝐞𝐠, T; init=_ar1_init(y, n2t), kwargs...)
+function StochasticWeatherGenerators.fit_AR1(y::AbstractVector, n2t, 𝐃𝐞𝐠, T; init=_ar1_init(y, n2t, 𝐃𝐞𝐠, T), kwargs...)
     fitted, _ = fit_mle(SmoothAR1(𝐃𝐞𝐠, T; init), y; n2t, kwargs...)
     return AR1(fitted)
 end
@@ -51,9 +51,11 @@ end
 # A starting point near the data. From the zero start (`μ = 0`, `ρ = 0`, `σ = 1`), a series far
 # from zero, such as a temperature, makes the optimizer push `ρ` to 1, where it cannot move any
 # more. `ρ` is measured once the mean of each period index is removed, since the seasonal cycle
-# alone would read as a lag-1 autocorrelation near 1. `μ` and `σ` then give the stationary
-# mean and spread of the series.
-function _ar1_init(y::AbstractVector, n2t::AbstractVector)
+# alone would read as a lag-1 autocorrelation near 1. `μ` is the seasonal mean of the series times
+# `1 - ρ`, projected on the trigonometric basis: from a constant `μ`, a series with a strong
+# seasonal cycle ends at a poor optimum where `ρ(t)` carries the cycle. `σ` gives the stationary
+# spread of the series.
+function _ar1_init(y::AbstractVector, n2t::AbstractVector, 𝐃𝐞𝐠::Integer, T::Integer)
     length(y) < 2 && return (μ=0.0, ρ=0.0, σ=1.0)
     sums, counts = Dict{eltype(n2t),Float64}(), Dict{eltype(n2t),Int}()
     for (yₙ, t) in zip(y, n2t)
@@ -64,5 +66,9 @@ function _ar1_init(y::AbstractVector, n2t::AbstractVector)
     ρ = length(a) > 2 ? cor(view(a, 2:length(a)), view(a, 1:length(a)-1)) : 0.0
     ρ = isfinite(ρ) ? clamp(ρ, -0.9, 0.9) : 0.0   # NaN when every period index is seen once
     s = std(a) > 0 ? std(a) : std(y) > 0 ? std(y) : 1.0
-    return (μ=mean(y) * (1 - ρ), ρ=ρ, σ=s * sqrt(1 - ρ^2))
+    ts = collect(keys(counts))
+    # the basis is `1, cos(2π t/T), sin(2π t/T), cos(4π t/T), ...`
+    X = [j == 1 ? 1.0 : iseven(j) ? cos(2π * (j ÷ 2) * t / T) : sin(2π * (j ÷ 2) * t / T) for t in ts, j in 1:(2𝐃𝐞𝐠+1)]
+    μ = X \ [(1 - ρ) * sums[t] / counts[t] for t in ts]
+    return (μ=μ, ρ=ρ, σ=s * sqrt(1 - ρ^2))
 end

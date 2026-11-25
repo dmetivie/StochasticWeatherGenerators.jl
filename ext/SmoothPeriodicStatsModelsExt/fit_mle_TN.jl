@@ -22,10 +22,11 @@ function StochasticWeatherGenerators.fit_TN(df_full::DataFrame, 𝐃𝐞𝐠, T;
     design = PeriodicDesign(fam.spec, 1:T)
     θ0 = zeros(ncoef(fam.spec))
 
+    _check_states(df.z)
     dfk = @chain df begin
         @transform(:n2t = dayofyear_Leap.(:DATE))
         @transform(:y = :TX - :TN)
-        groupby([:z])
+        groupby(:z, sort=true)
     end
     # A comprehension, not `map`: `map` over a `GroupedDataFrame` is reserved by DataFrames.
     return [_fit_seasonal_gamma(fam, design, θ0, dfkⱼ, T; kwargs...) for dfkⱼ in dfk]
@@ -45,25 +46,42 @@ end
 
 #TODO: robustify
 
+# The fits come back in the order of the hidden states, so index `k` is state `k` only if every
+# state of `1:K` is present in the data.
+function _check_states(z)
+    states = sort!(unique(z))
+    states == 1:maximum(states) ||
+        @warn "The hidden states in the data are $states, not 1:$(maximum(states)): the fits are returned for these states only, so the index of a fit is not its state."
+    return nothing
+end
+
+# Fit `ρₜ` to the daily correlations of each hidden state. The loss is the mean over days, not the
+# sum: the sum is large enough at `θ0` for the first line search step to land where `ρₜ` is
+# saturated at ±1, where the gradient vanishes and the solver stops with a success.
+function _fit_cor_by_state(df_cor::DataFrame, T::Integer, θ0; kwargs...)
+    _check_states(df_cor.z)
+    return [_fit_cor(dfₖ, T, θ0; kwargs...) for dfₖ in groupby(df_cor, :z, sort=true)]
+end
+
+function _fit_cor(df, T, θ0; kwargs...)
+    ℓ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY)) / length(x)
+    return fit_loss_optim(ℓ, df.COR, θ0; kwargs...)
+end
+
 """
     cor_groupby(df::DataFrame, var1, var2, T::Integer; solver, θ0 = [0, 0.0, 0.0], kwargs...)
 Compute and fit the `cor` between two `var` with a smooth function for each `z`. `solver`, the
 optimization algorithm, is required; it and the other keywords go to `fit_loss_optim`.
 """
 function StochasticWeatherGenerators.cor_groupby(df::DataFrame, var1, var2, T::Integer; θ0 = [0, 0.0, 0.0], kwargs...)
-    df_groups = @chain df begin
+    df_cor = @chain df begin
         dropmissing
         @transform(:DAY = dayofyear_Leap.(:DATE))
         groupby([:DAY, :z])
         @combine(:COR = cor($(var1), $(var2)))
         @subset(@byrow !isnan(:COR))
-        groupby(:z)
     end
-    ρs = map(enumerate(df_groups)) do (k, df)
-        ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0; kwargs...)
-    end
-    return ρs
+    return _fit_cor_by_state(df_cor, T, θ0; kwargs...)
 end
 
 """
@@ -73,19 +91,14 @@ Compute and fit the `cor` between `:TX` and `:TX-:TN` with a smooth function for
 `fit_loss_optim`.
 """
 function StochasticWeatherGenerators.cor_groupbyTXTN(df::DataFrame, T::Integer; θ0 = [0, 0.0, 0.0], kwargs...)
-    df_groups = @chain df begin
+    df_cor = @chain df begin
         dropmissing
         @transform(:DAY = dayofyear_Leap.(:DATE))
         groupby([:DAY, :z])
         @combine(:COR = cor(:TX, :TX-:TN))
         @subset(@byrow !isnan(:COR))
-        groupby(:z)
     end
-    ρs = map(enumerate(df_groups)) do (k, df)
-        ℓₖ(θ, x) = sum(abs2, ρₜ(t / T, θ) - x[n] for (n, t) in enumerate(df.DAY))
-        fit_loss_optim(ℓₖ, df.COR, θ0; kwargs...)
-    end
-    return ρs
+    return _fit_cor_by_state(df_cor, T, θ0; kwargs...)
 end
 
 #TODO: do that functions just for residu `ϵ₁` `ϵ₂` leave the transformation back to a marginal for another function

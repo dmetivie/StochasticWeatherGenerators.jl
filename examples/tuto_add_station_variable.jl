@@ -74,25 +74,13 @@ md"""
 To get the interesting weather variables, we use weather station provided by a the French research institute for agronomy and environment (INRAE).
 This data is available through the INRAE CLIMATIK platform[^climatik] ([https://agroclim.inrae.fr/climatik/](https://agroclim.inrae.fr/climatik/), in French) managed by the AgroClim laboratory of Avignon, France.
 Unfortunately, these data are not yet open access (they should be soon).
-Météo France do have a version of this data and it is accessible through an API on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/).
-This package provide a simple command to extract the data of one station (given its STAtionID) from the API.
-
-```julia
-# Download the four stations used in this tutorial from MeteoFrance collection
-dfs = collect_data_MeteoFrance.([49215002, 80557001, 40272002, 63345002])
-```
-
-See the [Data section of the documentation](@ref DataMeteofrance) section.
+Météo France do have a version of this data on the website [Data.Gouv.fr](https://www.data.gouv.fr/en/datasets/), see the [Data section of the documentation](@ref DataMeteofrance).
 """
 
 
 md"""
 However, the data there does not exactly match the available on CLIMATIK, (less data, different values ...).
 For now I stored the CLIMATIK data on a private repo until the Météo France data is fixed.
-
-!!! warning
-    While testing this function, it appears that MeteoFrance API might bug sometimes returning an error for some stations (and working for others).
-    In that case, you can check the API directly [here](https://www.data.gouv.fr/fr/datasets/donnees-climatologiques-de-base-quotidiennes/#).
 
 [^climatik]: Delannoy, David; Maury, Olivier; Décome, Jérémie, 2022, “CLIMATIK : système d’information pour les données du réseau agroclimatique INRAE”, [https://doi.org/10.57745/AJNXEN](https://doi.org/10.57745/AJNXEN), Recherche Data Gouv, V1
 """

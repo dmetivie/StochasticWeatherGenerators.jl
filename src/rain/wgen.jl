@@ -20,9 +20,9 @@ D = 5
 Y = rand(Bool, D, length(date_range)) # D × N
 idx_months = [findall(x -> month.(x) == m, date_range) for m in 1:12]
 # Fit returning a `wgen` struct
-wgen4_model = fit_wgen(Y, idx_months, wgen_order)
+wgen4_model = fit_wgen(Y, idx_months, p)
 # Simulate from `wgen` struct
-Y_simu = rand(wgen4_model, 1956:2019; Y_ini=rand(Bool, D, p)) # returns D × N
+Y_simu = rand(wgen4_model, 1956:2019; Y_past=rand(Bool, D, p)) # returns D × N
 ```
 
 ## References
@@ -36,14 +36,14 @@ end
 
 function wgen(p::Integer, D::Integer, ncat::Integer=2)
     state_space = MarkovStateSpace(p, ncat)
-    transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in D]
+    transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in 1:D]
     Ω = Diagonal(fill(1, D))
     return wgen(transition_probs, Ω)
 end
 
 function wgen(p::Integer, D::Integer, idxs::AbstractArray, ncat::Integer=2)
     state_space = MarkovStateSpace(p, ncat)
-    transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in D, m in eachindex(idxs)]
+    transition_probs = [OrderedDict(s => OrderedDict(s′ => 0.0 for s′ in state_space) for s in state_space) for j in 1:D, m in eachindex(idxs)]
     Ω = [Diagonal(fill(1, D)) for m in eachindex(idxs)]
     return wgen(transition_probs, Ω)
 end
@@ -110,18 +110,19 @@ fit_markov_chain(Y::AbstractMatrix{<:Integer}, p::Integer) = [fit_markov_chain(c
 fit_markov_chain(Y::AbstractMatrix{<:Integer}, idxs::AbstractArray, p::Integer) = @views [fit_markov_chain(Y[j, idx], p) for j in axes(Y, 1), idx in idxs]
 
 """
-    simulate_markov_gaussian([rng::AbstractRNG, ]N::Integer, ΩX::AbstractMatrix, transition_probs; Y_ini)
-    simulate_markov_gaussian([rng::AbstractRNG, ]years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_ini)
-Function to simulate `Xt` given a correlation matrix `ΩX` and transition probabilities.
+    simulate_markov_gaussian([rng::AbstractRNG, ]N::Integer, ΩX::AbstractMatrix, transition_probs; Y_past)
+    simulate_markov_gaussian([rng::AbstractRNG, ]years::AbstractArray{<:Integer}, ΩX, transition_probs; Y_past)
+Simulate a `D × N` binary sequence given a correlation matrix `ΩX` and transition probabilities.
+`Y_past` (`D × p`) holds the `p` days before the first simulated day, as in SmoothPeriodicStatsModels, and is not modified.
 
-- If `N` is an integer then it return a sequence of size `N` with fixed parameters.
-- If not then it 
+- If `N` is an integer, the sequence has `N` days and fixed parameters.
+- If `years` is given, the days of each year are simulated month by month with `ΩX[m]` and `transition_probs[:, m]` for month `m`.
 """
-function simulate_markov_gaussian(rng::AbstractRNG, N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini)
-    d, p = size(Y_ini)  # Number of locations, order of the chain
+function simulate_markov_gaussian(rng::AbstractRNG, N::Integer, ΩU::AbstractMatrix, transition_probs; Y_past)
+    d, p = size(Y_past)  # Number of locations, order of the chain
     U = rand(rng, MvNormal(zeros(d), ΩU), N)  # Generate multivariate normal samples
     X = BitArray(undef, d, N)
-    states = [Y_ini[j, :] for j in axes(Y_ini, 1)]
+    states = [Y_past[j, :] for j in axes(Y_past, 1)]
     for n in 1:N
         for (j, s) in enumerate(states)
             pr = transition_probs[j][s][[s[2:p]; 1]] # rain proba
@@ -133,37 +134,37 @@ function simulate_markov_gaussian(rng::AbstractRNG, N::Integer, ΩU::AbstractMat
     return X
 end
 
-simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_ini) = simulate_markov_gaussian(GLOBAL_RNG, N, ΩU, transition_probs; Y_ini)
+simulate_markov_gaussian(N::Integer, ΩU::AbstractMatrix, transition_probs; Y_past) = simulate_markov_gaussian(GLOBAL_RNG, N, ΩU, transition_probs; Y_past)
 
-function simulate_markov_gaussian(rng::AbstractRNG, years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini)
-    d, p = size(Y_ini)
+function simulate_markov_gaussian(rng::AbstractRNG, years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_past)
+    d, p = size(Y_past)
     @assert d == size(transition_probs, 1)
     @assert size(transition_probs, 2) == length(ΩX)
 
-    X = BitArray(undef, d, length(Date(years[1]):Day(1):Date(years[end], 12, 31)))
+    X = BitArray(undef, d, sum(daysinmonth(y, m) for y in years for m in eachindex(ΩX)))
+    Y_prev = copy(Y_past) # the last `p` days, updated as the simulation goes on
     id = 0
     for y in years
         for m in eachindex(ΩX) # typically 1:12 for all months
             N = daysinmonth(y, m)
             idend = (id + N)
-            X[:, (id+1):idend] .= simulate_markov_gaussian(rng, N, ΩX[m], transition_probs[:, m]; Y_ini=Y_ini)
-            Y_ini .= X[:, (idend-(p-1)):idend]
+            X[:, (id+1):idend] .= simulate_markov_gaussian(rng, N, ΩX[m], transition_probs[:, m]; Y_past=Y_prev)
+            Y_prev .= X[:, (idend-(p-1)):idend]
             id = idend
         end
     end
     return X
 end
 
-simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_ini) = simulate_markov_gaussian(GLOBAL_RNG, years, ΩX, transition_probs; Y_ini)
+simulate_markov_gaussian(years::AbstractArray{<:Integer}, ΩX::AbstractArray, transition_probs; Y_past) = simulate_markov_gaussian(GLOBAL_RNG, years, ΩX, transition_probs; Y_past)
 
 """
-    rand([rng::AbstractRNG, ]model::wgen, years::AbstractArray{<:Integer}; Y_ini)
-Takes a `wgen` struct
-TODO    
+    rand([rng::AbstractRNG, ]model::wgen, years::AbstractArray{<:Integer}; Y_past)
+Simulate a `D × N` binary sequence from a `wgen` model for the days of `years`, starting from `Y_past` (`D × p`), which is not modified.
 """
-Base.rand(rng::AbstractRNG, model::wgen, years::AbstractArray{<:Integer}; Y_ini) = simulate_markov_gaussian(rng, years, model.Ω, model.transition_probs; Y_ini)
+Base.rand(rng::AbstractRNG, model::wgen, years::AbstractArray{<:Integer}; Y_past) = simulate_markov_gaussian(rng, years, model.Ω, model.transition_probs; Y_past)
 
-Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_ini) = rand(GLOBAL_RNG, model, years; Y_ini)
+Base.rand(model::wgen, years::AbstractArray{<:Integer}; Y_past) = rand(GLOBAL_RNG, model, years; Y_past)
 
 """
     fit_Ω([rng::AbstractRNG, ]transition_probs, Y; ω0=(-0.999, 0.999))
@@ -176,7 +177,7 @@ function fit_Ω(rng::AbstractRNG, transition_probs, Y; ω0=(-0.999, 0.999))
     # find, so even a last-bit change in ρ moves the answer: keep the matrix form of `cor`.
     ρ = cor(permutedims(Y))[1, 2]
     p_order = Int(log2(length(transition_probs[1])))
-    f(ω, p) = abs(ω) < 1 ? (cor(permutedims(simulate_markov_gaussian(rng, 2000, [1.0 ω; ω 1.0], transition_probs; Y_ini=zeros(Int, 2, p_order))))[1, 2] - ρ) : Inf
+    f(ω, p) = abs(ω) < 1 ? (cor(permutedims(simulate_markov_gaussian(rng, 2000, [1.0 ω; ω 1.0], transition_probs; Y_past=zeros(Int, 2, p_order))))[1, 2] - ρ) : Inf
 
     prob = IntervalNonlinearProblem(f, ω0)
     sol = solve(prob)
@@ -219,14 +220,14 @@ fit_Ω(transition_probs::AbstractMatrix, Y, idxs; kwargs...) = fit_Ω(GLOBAL_RNG
 # using LinearAlgebra
 # ΩX = Diagonal(ones(D))
 # mark_model[1:2, 1]
-# simulate_markov_gaussian(31, ΩX, mark_model[:, 1]; Y_ini=Y_past)
+# simulate_markov_gaussian(31, ΩX, mark_model[:, 1]; Y_past=Y_past)
 # cor(Yall)
 
 # y = rand(Bool) #generate_markov_chain(a, 200000)
 # b = fit_markov_chain(y, 2)
 # D = 10
 # ΩXs = fill(Diagonal(ones(D)), 12)
-# yy = [simulate_markov_gaussian(1956:2019, ΩXs, mark_model; Y_ini=Y_past) for i in 1:1000]
+# yy = [simulate_markov_gaussian(1956:2019, ΩXs, mark_model; Y_past=Y_past) for i in 1:1000]
 
 # using LinearAlgebra
 # using Dates
@@ -237,4 +238,4 @@ fit_Ω(transition_probs::AbstractMatrix, Y, idxs; kwargs...) = fit_Ω(GLOBAL_RNG
 # p = 2
 # ms = fit_markov_chain(y, idxs, p)
 # ΩXs = fit_Ω(ms, y, idxs)
-# yy = [simulate_markov_gaussian(1956:2019, ΩXs, ms; Y_ini=zeros(Bool, p, D)) for i in 1:1000]
+# yy = [simulate_markov_gaussian(1956:2019, ΩXs, ms; Y_past=zeros(Bool, p, D)) for i in 1:1000]

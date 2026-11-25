@@ -43,6 +43,8 @@ Constructor converting coordinate strings Degrees:Minutes:Seconds to Decimal Deg
 """
 LLA(x::String, y::String, z) = LLA(dms_to_dd(x), dms_to_dd(y), z)
 
+LLA(LAT::Real, LON::Real, ALT::Real) = LLA(promote(LAT, LON, ALT)...)
+
 haversine(LLA_x::LLA, LLA_y::LLA, r=6372.8; kwargs...) = haversine(LLA_x.LAT, LLA_x.LON, LLA_y.LAT, LLA_y.LON, r; kwargs...)
 
 """
@@ -50,7 +52,7 @@ haversine(LLA_x::LLA, LLA_y::LLA, r=6372.8; kwargs...) = haversine(LLA_x.LAT, LL
 Distance in km between two stations. Does not take into account altitude. `station` must have a field `LAT` and `LON` in Decimal Degree.
 """
 function distance_x_to_y(station_x, station_y)
-    coord_station_x = LLA(station_x.LAT, station_y.LON, 0.0)
+    coord_station_x = LLA(station_x.LAT, station_x.LON, 0.0)
     coord_station_y = LLA(station_y.LAT, station_y.LON, 0)
     return haversine(coord_station_x, coord_station_y) # distance in km
 end

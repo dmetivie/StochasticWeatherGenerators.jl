@@ -49,6 +49,7 @@ SUBSECTION_MODELS = ["Rainfall" => joinpath("models", "rain.md"), "Temperature &
 
 pages = [
     "Home" => "index.md",
+    "🚀 Get started" => "getstarted.md",
     "📘 Models" => SUBSECTION_MODELS,
     "📅 Weather Data" => "data.md",
     "📎 Tutorials" => [

@@ -56,7 +56,7 @@ See the [WGEN model section](@ref TutoWGEN) of the [tutorial](@ref TutoSHHMM) fo
 wgen
 fit_wgen
 fit_Ω
-rand(rng::AbstractRNG, model::wgen, years::AbstractArray{<:Integer}; Y_ini)
+rand(rng::AbstractRNG, model::wgen, years::AbstractArray{<:Integer}; Y_past)
 ```
 
 For simple Markov chain of order $p$

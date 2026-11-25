@@ -60,11 +60,16 @@ idx_year = [findall(x-> year.(x) == m, df[:, :DATE]) for m in year_range]
 VCX3(df.Temperature, idx_year)
 ```
 """
-VCX3(y::AbstractVector, idxs, nb = 3) = [maximum(rollmean(y[idx], nb)) for idx in idxs]
+VCX3(y::AbstractVector, idxs; nb = 3) = [maximum(rollmean(y[idx], nb)) for idx in idxs]
+VCX3(y::AbstractVector, idxs, nb::Integer) = VCX3(y, idxs; nb = nb)
 # VC(y::AbstractArray, idxs, nb = 3, outer_op = maximum, inner_op = rollmean(x, nb)) = [outer_op(inner_op(y[idx], nb)) for idx in idxs]
 
 """
-    monthly_agg(y::AbstractArray, idxs)
+    monthly_agg(y::AbstractArray, idxs, aggfunc = sum)
+    monthly_agg(df::DataFrame, y_col, aggfunc = sum; matrixform = true)
+Aggregate `y` with `aggfunc` over each group of indices of `idxs`.
+For a `DataFrame` with a `DATE` column, it returns the matrix of the monthly aggregates of `y_col`, one row per year and one column per month, with `missing` for the months absent from `df`.
+With `matrixform = false` it returns the vector of the 12 monthly vectors.
 ```julia
 using DataFrames, Dates
 time_range = Date(1956):Day(1):Date(2019,12,31)
@@ -82,15 +87,18 @@ monthly_agg(df.Temperature, idx_all)
 monthly_agg(y::AbstractArray, idxs, aggfunc = sum) = [aggfunc(y[idx]) for idx in idxs]
 
 
-function monthly_agg(df::DataFrame, y_col, aggfunc = sum; maxtrixform = true) 
-    dfs_agg = @chain df begin 
+function monthly_agg(df::DataFrame, y_col, aggfunc = sum; matrixform = true, maxtrixform = matrixform) # `maxtrixform` is the former, misspelled, name
+    df_agg = @chain df begin
         @transform(:MONTH = month.(:DATE), :YEAR = year.(:DATE))
-        @by([:MONTH, :YEAR], :agg = aggfunc($y_col))
-        groupby(:MONTH)
+        @by([:YEAR, :MONTH], :agg = aggfunc($y_col))
     end
+    agg = Dict((r.YEAR, r.MONTH) => r.agg for r in eachrow(df_agg))
+    years = minimum(df_agg.YEAR):maximum(df_agg.YEAR)
+    M = [get(agg, (y, m), missing) for y in years, m in 1:12]
+    any(ismissing, M) || (M = disallowmissing(M))
     if maxtrixform == true
-        return reduce(hcat, [df_agg.agg for df_agg in dfs_agg])
-    else 
-        return [df_agg.agg for df_agg in dfs_agg]
+        return M
+    else
+        return [collect(skipmissing(col)) for col in eachcol(M)]
     end
 end
