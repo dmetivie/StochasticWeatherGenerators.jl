@@ -1,0 +1,64 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+      - evolution
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+jobs:
+  test:
+    name: ${{ matrix.project }} - Julia ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.12'
+          - '1'
+        # the umbrella and the libraries in lib/; a project that does not exist yet is skipped
+        project:
+          - '.'
+          - lib/StochasticWeatherGeneratorsCore
+          - lib/StochasticWeatherGeneratorsBlocks
+          - lib/StochasticWeatherGeneratorsRegimeHMM
+          - lib/StochasticWeatherGeneratorsWGEN
+    steps:
+      - uses: actions/checkout@v7
+      - id: present
+        run: |
+          if [ -f "${{ matrix.project }}/Project.toml" ]; then
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::${{ matrix.project }} does not exist yet, skipped"
+          fi
+      - if: steps.present.outputs.yes == 'true'
+        uses: julia-actions/setup-julia@v3
+        with:
+          version: ${{ matrix.version }}
+      - if: steps.present.outputs.yes == 'true'
+        uses: julia-actions/cache@v3
+      - if: steps.present.outputs.yes == 'true'
+        uses: julia-actions/julia-buildpkg@v1
+        with:
+          project: ${{ matrix.project }}
+      - if: steps.present.outputs.yes == 'true'
+        uses: julia-actions/julia-runtest@v1
+        with:
+          project: ${{ matrix.project }}
+      - if: steps.present.outputs.yes == 'true'
+        uses: julia-actions/julia-processcoverage@v1
+        with:
+          directories: ${{ matrix.project }}/src
+      - if: steps.present.outputs.yes == 'true'
+        uses: codecov/codecov-action@v7
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

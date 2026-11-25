@@ -11,12 +11,18 @@ updates:
     #     patterns:
     #       - "*"
   - package-ecosystem: "julia"
+    # test/reference is left out on purpose: its Manifest pins legacy SWG and SPSM 4.1.0
     directories:
       - "/"
       - "/docs"
       - "/test"
+      - "/lib/*"
+      - "/lib/*/test"
     schedule:
       interval: "weekly"
+    ignore:
+      # the umbrella and its libraries come from path `[sources]`, not from the registry
+      - dependency-name: "StochasticWeatherGenerators*"
     # To group all Julia dependency updates into a single PR, uncomment the following:
     groups:
       julia-dependencies:
